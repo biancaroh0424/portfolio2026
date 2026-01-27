@@ -197,7 +197,8 @@ export default function RichTextEditor({
       action: () => {
         if (editor) {
           const { from } = editor.state.selection
-          editor.chain().focus().deleteRange({ from: from - slashMenuQuery.length - 1, to: from }).setColumns().run()
+          const chain = editor.chain().focus().deleteRange({ from: from - slashMenuQuery.length - 1, to: from })
+          ;(chain as unknown as { setColumns: () => { run: () => void } }).setColumns().run()
         }
       },
     },
@@ -1253,7 +1254,7 @@ export default function RichTextEditor({
         </button>
         <div className="w-px h-4 bg-gray-600 mx-1" />
         <button
-          onClick={() => editor.chain().focus().setColumns().run()}
+          onClick={() => (editor.chain().focus() as unknown as { setColumns: () => { run: () => void } }).setColumns().run()}
           className={`px-2 py-1 rounded text-sm ${
             editor.isActive('columns') ? 'bg-white text-black' : 'bg-gray-700 hover:bg-gray-600 text-white'
           }`}
