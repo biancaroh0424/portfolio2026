@@ -753,7 +753,8 @@ export default function AdminPage() {
   const handleAddField = () => {
     if (!editingProject) return
     const currentTranslation = getCurrentTranslation(editingProject, currentEditLanguage)
-    const updatedFields = [...(currentTranslation.fields || []), { label: '', value: '', type: 'default' }]
+    const newField: ProjectField = { label: '', value: '', type: 'default' }
+    const updatedFields: ProjectField[] = [...(currentTranslation.fields || []), newField]
     const updatedTranslation: ProjectTranslation = {
       ...currentTranslation,
       fields: updatedFields
@@ -775,11 +776,18 @@ export default function AdminPage() {
   const handleFieldChange = (index: number, field: 'label' | 'value' | 'type', newValue: string) => {
     if (!editingProject) return
     const currentTranslation = getCurrentTranslation(editingProject, currentEditLanguage)
-    const updatedFields = [...(currentTranslation.fields || [])]
-    updatedFields[index] = { ...updatedFields[index], [field]: newValue }
-    if (field === 'type' && (newValue === 'note' || newValue === 'duration' || newValue === 'summary')) {
-      updatedFields[index] = { ...updatedFields[index], label: '' }
-    }
+    const baseFields = currentTranslation.fields || []
+    const updatedFields: ProjectField[] = baseFields.map((f, i) => {
+      if (i !== index) return f
+      const next =
+        field === 'type'
+          ? { ...f, type: (['default', 'note', 'duration', 'summary'].includes(newValue) ? newValue as ProjectField['type'] : f.type) }
+          : { ...f, [field]: newValue }
+      if (field === 'type' && (newValue === 'note' || newValue === 'duration' || newValue === 'summary')) {
+        return { ...next, label: '' }
+      }
+      return next as ProjectField
+    })
     const updatedTranslation: ProjectTranslation = {
       ...currentTranslation,
       fields: updatedFields
@@ -1182,7 +1190,7 @@ export default function AdminPage() {
                       </button>
                     </div>
                   ))}
-                  {(!getCurrentTranslation(editingProject, currentEditLanguage).fields || getCurrentTranslation(editingProject, currentEditLanguage).fields.length === 0) && (
+                  {!getCurrentTranslation(editingProject, currentEditLanguage).fields?.length && (
                     <p className="text-sm text-gray-400 text-center py-4">
                       추가 정보가 없습니다. &quot;+ 필드 추가&quot; 버튼을 클릭하여 필드를 추가하세요.
                     </p>
