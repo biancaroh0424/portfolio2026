@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
+import { put } from '@vercel/blob'
 import path from 'path'
 import { randomBytes } from 'crypto'
 
@@ -26,9 +26,7 @@ export async function POST(request: NextRequest) {
     const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']
     const allowedPdfTypes = ['application/pdf']
     const allowedTypes = [...allowedImageTypes, ...allowedVideoTypes, ...allowedPdfTypes]
-    
-    console.log('File type:', file.type, 'File size:', file.size, 'File name:', file.name)
-    
+
     if (!allowedTypes.includes(file.type)) {
       console.error('Invalid file type:', file.type)
       return NextResponse.json(
@@ -47,22 +45,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 파일명 생성
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
     const extension = path.extname(file.name)
     const filename = `${randomBytes(16).toString('hex')}${extension}`
+    const pathname = `uploads/${filename}`
 
-    // 업로드 디렉토리 생성
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads')
-    await mkdir(uploadDir, { recursive: true })
-
-    // 파일 저장
-    const filepath = path.join(uploadDir, filename)
-    await writeFile(filepath, buffer)
-
-    // URL 반환
-    const url = `/uploads/${filename}`
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const { url } = await put(pathname, buffer, { access: 'public' })
 
     return NextResponse.json({ url, filename })
   } catch (error) {

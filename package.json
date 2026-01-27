@@ -29,7 +29,8 @@
     "react-dom": "^18.3.0",
     "react-markdown": "^9.1.0",
     "remark-gfm": "^4.0.1",
-    "supports-color": "^10.2.2"
+    "supports-color": "^10.2.2",
+    "@vercel/blob": "^2.0.0"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
