@@ -50,12 +50,12 @@ export const Video = Node.create({
 
   addCommands() {
     return {
-      setVideo: (options: { src: string; controls?: boolean; style?: string }) => ({ commands }) => {
+      setVideo: (options: { src: string; controls?: boolean; style?: string }) => ({ commands }: { commands: { insertContent: (content: { type: string; attrs: object }) => boolean } }) => {
         return commands.insertContent({
           type: this.name,
           attrs: options,
         })
       },
-    }
+    } as any
   },
 })
