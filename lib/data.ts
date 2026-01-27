@@ -67,6 +67,7 @@ export interface Resume {
   en?: string // 영어 Resume PDF 파일 경로
   ko?: string // 한국어 Resume PDF 파일 경로
   it?: string // 이탈리아어 Resume PDF 파일 경로
+  content?: string // HTML 콘텐츠 (있을 경우 페이지에 렌더)
 }
 
 export interface Content {
