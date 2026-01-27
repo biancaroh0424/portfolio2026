@@ -21,9 +21,9 @@ export const Spacing = Node.create({
   
   addCommands() {
     return {
-      setSpacing: () => ({ commands }) => {
+      setSpacing: () => ({ commands }: { commands: { insertContent: (content: string) => boolean } }) => {
         return commands.insertContent('<div data-type="spacing" class="editor-spacing"></div>')
       },
-    }
+    } as any
   },
 })
