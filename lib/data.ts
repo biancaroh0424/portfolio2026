@@ -14,7 +14,7 @@ async function loadProjectsData(): Promise<any[]> {
   try {
     const data = await fs.readFile(PROJECTS_FILE, 'utf-8')
     cachedProjects = JSON.parse(data)
-    return cachedProjects
+    return Array.isArray(cachedProjects) ? cachedProjects : []
   } catch (error) {
     console.error('Error loading projects.json:', error)
     return []
