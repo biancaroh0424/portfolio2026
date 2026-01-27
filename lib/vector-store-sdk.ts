@@ -112,7 +112,7 @@ export async function initializeVectorStore(force?: boolean): Promise<void> {
       const batch = allContent.slice(i, i + batchSize)
       const ids: string[] = []
       const embeddings: number[][] = []
-      const metadatas: Record<string, unknown>[] = []
+      const metadatas: Record<string, string | number | boolean | null>[] = []
       const documents: string[] = []
       for (const content of batch) {
         try {
