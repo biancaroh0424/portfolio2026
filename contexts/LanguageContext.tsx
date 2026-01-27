@@ -1,0 +1,124 @@
+'use client'
+
+import { createContext, useContext, useState, useEffect, ReactNode, ReactElement } from 'react'
+
+export type Language = 'en' | 'ko' | 'it'
+
+type LanguageContextType = {
+  language: Language
+  setLanguage: (lang: Language) => void
+  t: (key: string) => string
+  renderText: (key: string) => ReactElement
+}
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
+
+// 번역 데이터
+const translations: Record<Language, Record<string, string>> = {
+  en: {
+    'nav.project': 'Portfolio',
+    'nav.resume': 'Resumé',
+    'nav.aiAssistant': 'AI Assistant',
+    'nav.contact': 'Contact',
+    'nav.language.english': 'ENGLISH',
+    'nav.language.korean': '한국어',
+    'nav.language.italian': 'ITALIANO',
+    'home.title': 'Designing Intuitive,\nHuman-centered Experiences',
+    'home.description': 'Hi, I\'m YoungJoo Roh - a product designer who turns data into intuitive experiences. Ask me anything about my work.',
+    'home.button.projects': 'Go to Portfolio',
+    'home.button.aiAssistant': 'AI Assistant',
+    'chatbot.greeting': '👋 Hi, I\'m YJ Assistant.\n\nI help recruiters and hiring managers quickly understand Youngjoo Roh\'s design work and measurable impact.\n\nWhat would you like to know?',
+  },
+  ko: {
+    'nav.project': '포트폴리오',
+    'nav.resume': '이력서',
+    'nav.aiAssistant': 'AI 어시스턴트',
+    'nav.contact': '연락하기',
+    'nav.language.english': 'ENGLISH',
+    'nav.language.korean': '한국어',
+    'nav.language.italian': 'ITALIANO',
+    'home.title': 'Designing Intuitive,\nHuman-centered Experiences',
+    'home.description': '데이터를 직관적인 경험으로 전환하는\n프로덕트 디자이너 노영주입니다. \n진행한 프로젝트에 대해 무엇이는 물어보세요!',
+    'home.button.projects': '포트폴리오 보기',
+    'home.button.aiAssistant': 'AI 어시스턴트',
+    'chatbot.greeting': '👋 안녕하세요! 저는 YJ Assistant입니다.\n\n노영주님의 디자인 작업과 측정 가능한 성과를 빠르게 이해할 수 있도록 도와드립니다.\n\n무엇이 궁금하신가요?',
+  },
+  it: {
+    'nav.project': 'Portfolio',
+    'nav.resume': 'Curriculum',
+    'nav.aiAssistant': 'Assistente AI',
+    'nav.contact': 'Contatto',
+    'nav.language.english': 'ENGLISH',
+    'nav.language.korean': '한국어',
+    'nav.language.italian': 'ITALIANO',
+    'home.title': 'Progettare Esperienze\nIntuitive e Centrate sull\'Uomo',
+    'home.description': 'Ciao, sono YoungJoo Roh - una product designer che trasforma i dati in esperienze intuitive. Chiedimi qualsiasi cosa sul mio lavoro.',
+    'home.button.projects': 'Vai al Portfolio',
+    'home.button.aiAssistant': 'Assistente AI',
+    'chatbot.greeting': '👋 Ciao! Sono YJ Assistant.\n\nAiuto recruiter e responsabili delle assunzioni a comprendere rapidamente il lavoro di design e l\'impatto misurabile di Youngjoo Roh.\n\nCosa vorresti sapere?',
+  },
+}
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<Language>('en')
+
+  // 브라우저 언어 감지 및 localStorage에서 언어 불러오기
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedLanguage = localStorage.getItem('language') as Language | null
+      if (savedLanguage && ['en', 'ko', 'it'].includes(savedLanguage)) {
+        setLanguageState(savedLanguage)
+      } else {
+        // 브라우저 언어 감지
+        const browserLang = navigator.language || (navigator as any).userLanguage || 'en'
+        if (browserLang.startsWith('ko')) {
+          setLanguageState('ko')
+        } else if (browserLang.startsWith('it')) {
+          setLanguageState('it')
+        } else {
+          setLanguageState('en')
+        }
+      }
+    }
+  }, [])
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('language', lang)
+    }
+  }
+
+  const t = (key: string): string => {
+    return translations[language]?.[key] || key
+  }
+
+  const renderText = (key: string): ReactElement => {
+    const text = t(key)
+    const lines = text.split('\n')
+    return (
+      <>
+        {lines.map((line, index, array) => (
+          <span key={index}>
+            {line}
+            {index < array.length - 1 && <br />}
+          </span>
+        ))}
+      </>
+    )
+  }
+
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t, renderText }}>
+      {children}
+    </LanguageContext.Provider>
+  )
+}
+
+export function useLanguage() {
+  const context = useContext(LanguageContext)
+  if (context === undefined) {
+    throw new Error('useLanguage must be used within a LanguageProvider')
+  }
+  return context
+}

@@ -1,0 +1,2012 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  src: url('/fonts/PretendardVariable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Noto Serif KR';
+  src: url('/fonts/NotoSerifKR-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 500 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'galmuri';
+  src: url('/fonts/GalmuriMono9.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* GalmuriMono9 별칭 — dropdown 등에서 사용, Safari는 font-family 이름 일치 필요 */
+@font-face {
+  font-family: 'GalmuriMono9';
+  src: url('/fonts/GalmuriMono9.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+/* Reset for design system work. Keep in sync. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+
+/* Custom Projects Button Styles */
+.custom-projects-button {
+  display: inline-flex !important;
+  padding: 12px 16px !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border-radius: 24px !important;
+  background: var(--button-primary, #FFF) !important;
+  transition: background 0.2s ease;
+}
+
+.custom-projects-button:hover {
+  background: var(--button-hovered, #E6E6E6) !important;
+}
+
+.custom-ai-assistant-button:hover {
+  background: var(--fill-white-10, rgba(255, 255, 255, 0.1)) !important;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--greyscale-800);
+}
+
+/* 텍스트 선택 시 배경색 (orange-400 50% 투명도) */
+::selection {
+  background-color: var(--orange-400-50);
+  color: inherit;
+}
+
+::-moz-selection {
+  background-color: var(--orange-400-50);
+  color: inherit;
+}
+
+
+
+:root {
+  --background: #ffffff;
+  --foreground: #000000;
+  --text-label: #E6E6E6;
+  --text-primary: #FFF;
+  --text-hovered: #E6E6E6;
+  --text-primaryInactive: rgba(255, 255, 255, 0.40);
+  --greyscale-white: #ffffff;
+  --greyscale-100: #e6e6e6;
+  --greyscale-200: #b3b3b3;
+  --greyscale-300: #838383;
+  --greyscale-400: #606266;
+  --greyscale-500: #46474a;
+  --greyscale-600: #303333;
+  --greyscale-700: #222424;
+  --greyscale-800: #181a1a;
+  --greyscale-900: #121313;
+  --body-primary: var(--greyscale-900);
+  --color: #1a7d4a;
+  --lightblue-100: #c1d5db;
+  --lightblue-200: #9eccdb;
+  --lightblue-300: #72c1db;
+  --lightblue-400: #30b1db;
+  --lightblue-500: #0d95c2;
+  --lightblue-600: #0b82a9;
+  --lightblue-700: #09627f;
+  --lightblue-800: #074f66;
+  --lightblue-900: #1d2e33;
+  --lightyellow-100: #f2efe1;
+  --lightyellow-200: #f2e4b1;
+  --lightyellow-300: #f2df99;
+  --lightyellow-400: #f2da80;
+  --lightyellow-500: #d9be5d;
+  --lightyellow-600: #bfa33f;
+  --lightyellow-700: #bf8e06;
+  --lightyellow-800: #735504;
+  --lightyellow-900: #402f02;
+  --lightgreen-100: #b7c9c0;
+  --lightgreen-200: #6bb08c;
+  --lightgreen-300: #3e9668;
+  --lightgreen-400: #1a7d4a;
+  --lightgreen-500: #0b6335;
+  --lightgreen-600: #014a24;
+  --lightgreen-700: #05301a;
+  --lightgreen-800: #081a10;
+  --lightgreen-900: #050a08;
+  --orange-100: #dbcac1;
+  --orange-200: #dbb29e;
+  --orange-300: #db9572;
+  --orange-400: #db6930;
+  --orange-400-50: rgba(219, 105, 48, 0.5);
+  --orange-500: #c2490d;
+  --orange-600: #a9400b;
+  --orange-700: #7f3009;
+  --orange-800: #662707;
+  --orange-900: #33241d;
+  --pink-100: #dbc1ca;
+  --pink-200: #db9eb2;
+  --pink-300: #db7295;
+  --pink-400: #db3069;
+  --pink-500: #c20d49;
+  --pink-600: #a90b40;
+  --pink-700: #7f0930;
+  --pink-800: #660727;
+  --pink-900: #331d24;
+  --fill-white-4: rgba(255, 255, 255, 0.04);
+  --fill-white-10: rgba(255, 255, 255, 0.1);
+  --fill-white-20: rgba(255, 255, 255, 0.2);
+  --fill-white-40: rgba(255, 255, 255, 0.4);
+  --fill-white-60: rgba(255, 255, 255, 0.6);
+  --fill-white-80: rgba(255, 255, 255, 0.8);
+  --dropdownList-hovered: rgba(255, 255, 255, 0.10);
+  --fill-black-10: rgba(0, 0, 0, 0.1);
+  --fill-black-20: rgba(18, 19, 19, 0.2);
+  --fill-black-80: rgba(18, 19, 19, 0.8);
+  --dropdown-border: rgba(255, 255, 255, 0.20);
+  --dropdown-body: #121313;
+  --tooltip-body: rgba(18, 19, 19, 0.80);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--body-primary);
+  background: var(--greyscale-800);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  .text-title-1-bold {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .text-title-1-regular {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 48px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .text-title-2-bold {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .text-title-2-regular {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 42px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .text-title-3-bold {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .text-title-3-regular {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 38px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .text-title-4-bold {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .text-title-4-regular {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  .text-label-large {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .text-label-medium {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .text-paragraph-large-bold {
+    font-family: 'Pretendard Variable', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .text-paragraph-large {
+    font-family: 'Pretendard Variable', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .text-paragraph-bold {
+    font-family: 'Pretendard Variable', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .text-paragraph {
+    font-family: 'Pretendard Variable', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .text-link-underlined {
+    font-family: 'Pretendard Variable', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+  }
+
+  .text-paragraph-small-bold {
+    font-family: 'Pretendard Variable', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .text-paragraph-small {
+    font-family: 'Pretendard Variable', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .text-paragraph-xsmall-bold {
+    font-family: 'Pretendard Variable', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .text-paragraph-xsmall {
+    font-family: 'Pretendard Variable', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .text-button {
+    font-family: 'galmuri', monospace;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  .text-link-underlined-galmuri {
+    font-family: 'galmuri', monospace;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+  }
+
+  .text-caption {
+    font-family: 'galmuri', monospace;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  .text-caption-small {
+    font-family: 'galmuri', monospace;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* TipTap Editor Styles - 초기화 */
+.ProseMirror {
+  outline: none;
+  position: relative;
+  /* 모든 기본 스타일 리셋 */
+  margin: 0;
+  padding: 24px 24px 40px;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.ProseMirror > * {
+  position: relative;
+  /* 모든 기본 마진/패딩 리셋 */
+  margin: 0;
+  padding: 0;
+}
+
+.ProseMirror > *:hover {
+  background-color: rgba(0, 0, 0, 0.01);
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* 모든 제목 스타일 리셋 - 기본값: font-weight 400 */
+.ProseMirror h1,
+div[contenteditable="true"].prose h1,
+div[contenteditable="true"].prose-lg h1,
+.ProseMirror.prose h1,
+.ProseMirror.prose-lg h1,
+.heading-noto-serif.h1 {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 38px !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  color: var(--greyscale-white) !important;
+}
+
+.ProseMirror h2,
+div[contenteditable="true"].prose h2,
+div[contenteditable="true"].prose-lg h2,
+.ProseMirror.prose h2,
+.ProseMirror.prose-lg h2 {
+  margin: 0 !important;
+  padding: 8px 0px 40px !important;
+  font-size: 48px !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  color: var(--greyscale-white) !important;
+}
+
+.ProseMirror h3,
+div[contenteditable="true"].prose h3,
+div[contenteditable="true"].prose-lg h3,
+.ProseMirror.prose h3,
+.ProseMirror.prose-lg h3 {
+  margin: 0 !important;
+  padding: 8px 0px 40px !important;
+  font-size: 38px !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  color: var(--greyscale-white) !important;
+}
+
+.ProseMirror h4,
+div[contenteditable="true"].prose h4,
+div[contenteditable="true"].prose-lg h4,
+.ProseMirror.prose h4,
+.ProseMirror.prose-lg h4 {
+  margin: 0 !important;
+  padding: 8px 0px 40px !important;
+  font-size: 28px !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  color: var(--greyscale-white) !important;
+}
+
+.ProseMirror h5,
+div[contenteditable="true"].prose h5,
+div[contenteditable="true"].prose-lg h5,
+.ProseMirror.prose h5,
+.ProseMirror.prose-lg h5 {
+  margin: 0 !important;
+  padding: 8px 0px 24px !important;
+  font-size: 24px !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  color: var(--greyscale-white) !important;
+}
+
+.ProseMirror h6,
+div[contenteditable="true"].prose h6,
+div[contenteditable="true"].prose-lg h6,
+.ProseMirror.prose h6,
+.ProseMirror.prose-lg h6 {
+  margin: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  line-height: 140% !important;
+  font-family: 'Noto Serif KR', serif !important;
+  color: var(--GreyScale-white, #FFF) !important;
+}
+
+/* bold가 적용된 경우에만 font-weight: 700, 폰트는 Noto Serif KR 유지, font-size는 레벨별로 유지 */
+.ProseMirror h1 strong,
+.ProseMirror h1[style*="font-weight: 700"],
+.ProseMirror h1[style*="font-weight:700"],
+.ProseMirror h1[style*="font-weight: bold"],
+.ProseMirror h1[style*="font-weight:bold"],
+div[contenteditable="true"].prose h1 strong,
+div[contenteditable="true"].prose-lg h1 strong,
+.ProseMirror.prose h1 strong,
+.ProseMirror.prose-lg h1 strong {
+  font-weight: 700 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  font-size: 38px !important;
+  padding: 8px 0px 40px !important;
+  color: var(--greyscale-white) !important;
+}
+
+.ProseMirror h2 strong,
+.ProseMirror h2[style*="font-weight: 700"],
+.ProseMirror h2[style*="font-weight:700"],
+.ProseMirror h2[style*="font-weight: bold"],
+.ProseMirror h2[style*="font-weight:bold"],
+div[contenteditable="true"].prose h2 strong,
+div[contenteditable="true"].prose-lg h2 strong,
+.ProseMirror.prose h2 strong,
+.ProseMirror.prose-lg h2 strong {
+  font-weight: 700 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  padding: 8px 0px 40px !important;
+  font-size: 42px !important;
+  color: var(--greyscale-white) !important;
+}
+
+.ProseMirror h3 strong,
+.ProseMirror h3[style*="font-weight: 700"],
+.ProseMirror h3[style*="font-weight:700"],
+.ProseMirror h3[style*="font-weight: bold"],
+.ProseMirror h3[style*="font-weight:bold"],
+div[contenteditable="true"].prose h3 strong,
+div[contenteditable="true"].prose-lg h3 strong,
+.ProseMirror.prose h3 strong,
+.ProseMirror.prose-lg h3 strong {
+  font-weight: 700 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  padding: 8px 0px 40px !important;
+  font-size: 42px !important;
+  color: var(--greyscale-white) !important;
+}
+
+.ProseMirror h4 strong,
+.ProseMirror h4[style*="font-weight: 700"],
+.ProseMirror h4[style*="font-weight:700"],
+.ProseMirror h4[style*="font-weight: bold"],
+.ProseMirror h4[style*="font-weight:bold"],
+div[contenteditable="true"].prose h4 strong,
+div[contenteditable="true"].prose-lg h4 strong,
+.ProseMirror.prose h4 strong,
+.ProseMirror.prose-lg h4 strong {
+  font-weight: 700 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  padding: 8px 0px 40px !important;
+  font-size: 38px !important;
+  color: var(--greyscale-white) !important;
+}
+
+.ProseMirror h5 strong,
+.ProseMirror h5[style*="font-weight: 700"],
+.ProseMirror h5[style*="font-weight:700"],
+.ProseMirror h5[style*="font-weight: bold"],
+.ProseMirror h5[style*="font-weight:bold"],
+div[contenteditable="true"].prose h5 strong,
+div[contenteditable="true"].prose-lg h5 strong,
+.ProseMirror.prose h5 strong,
+.ProseMirror.prose-lg h5 strong {
+  font-weight: 700 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  padding: 8px 0px 24px !important;
+  font-size: 28px !important;
+  color: var(--greyscale-white) !important;
+}
+
+.ProseMirror h6 strong,
+.ProseMirror h6[style*="font-weight: 700"],
+.ProseMirror h6[style*="font-weight:700"],
+.ProseMirror h6[style*="font-weight: bold"],
+.ProseMirror h6[style*="font-weight:bold"],
+div[contenteditable="true"].prose h6 strong,
+div[contenteditable="true"].prose-lg h6 strong,
+.ProseMirror.prose h6 strong,
+.ProseMirror.prose-lg h6 strong,
+.ProseMirror h6,
+div[contenteditable="true"].prose h6,
+div[contenteditable="true"].prose-lg h6,
+.ProseMirror.prose h6,
+.ProseMirror.prose-lg h6 {
+  font-weight: 700 !important;
+  font-family: 'Noto Serif KR', serif !important;
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+  font-size: 24px !important;
+  line-height: 140% !important;
+  color: var(--GreyScale-white, #FFF) !important;
+}
+
+/* 리스트 스타일 리셋 */
+.ProseMirror ul,
+.ProseMirror ol {
+  margin: 0;
+  padding: 0;
+}
+
+.ProseMirror li {
+  margin: 0;
+  padding: 0;
+}
+
+/* 에디터 내부 ordered list 스타일 */
+.ProseMirror ol li {
+  padding: 8px 0px !important;
+  color: var(--GreyScale-white, #FFF) !important;
+  font-family: "Pretendard Variable" !important;
+  font-size: 16px !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  line-height: 160% !important; /* 25.6px */
+}
+
+/* 에디터 내부 li 안에 p 태그가 있으면 패딩 제거 */
+.ProseMirror li:has(> p) {
+  padding: 0 !important;
+}
+
+/* 에디터 내부 ordered list li - bold 처리했을 때 */
+.ProseMirror ol li strong,
+.ProseMirror ol li[style*="font-weight: bold"],
+.ProseMirror ol li[style*="font-weight:bold"],
+.ProseMirror ol li b {
+  font-weight: 700 !important;
+}
+
+/* 코드 스타일 리셋 */
+.ProseMirror code {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.ProseMirror pre {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.ProseMirror pre code {
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+
+/* 구분선 리셋 */
+.ProseMirror hr {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+/* 이미지 리셋 */
+.ProseMirror img {
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0;
+  display: block;
+}
+
+.ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* 블록quote 리셋 */
+.ProseMirror blockquote,
+.ProseMirror.prose blockquote,
+.prose.ProseMirror blockquote,
+.ProseMirror.prose-lg blockquote,
+.prose blockquote,
+.prose-lg blockquote,
+div[contenteditable="true"].prose blockquote,
+div[contenteditable="true"].prose-lg blockquote {
+  font-family: 'Noto Serif KR', serif !important;
+  margin: 0;
+  padding-top: 8px;
+  padding-bottom: 16px;
+  border: none !important;
+  border-left: none !important;
+}
+
+.ProseMirror blockquote *,
+.ProseMirror.prose blockquote *,
+.prose.ProseMirror blockquote *,
+.ProseMirror.prose-lg blockquote *,
+.prose blockquote *,
+.prose-lg blockquote *,
+div[contenteditable="true"].prose blockquote *,
+div[contenteditable="true"].prose-lg blockquote * {
+  font-family: 'Noto Serif KR', serif !important;
+}
+
+/* 링크 스타일 - 텍스트 에디터 */
+.ProseMirror a {
+  color: var(--GreyScale-white, #FFF) !important;
+  font-family: "Pretendard Variable" !important;
+  font-size: 14px !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  line-height: 160% !important; /* 22.4px */
+  text-decoration-line: underline !important;
+  text-decoration-style: dotted !important;
+  text-decoration-skip-ink: auto !important;
+  text-decoration-color: var(--orange-400, #DB6930) !important;
+  text-decoration-thickness: auto !important;
+  text-underline-offset: auto !important;
+  text-underline-position: from-font !important;
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+  margin: 0 !important;
+}
+
+/* Spacing 요소 - div 기반 */
+.ProseMirror div[data-type="spacing"],
+.prose div[data-type="spacing"],
+div[data-type="spacing"],
+.editor-spacing {
+  height: 66px !important;
+  min-height: 66px !important;
+  max-height: 66px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 0 !important;
+  display: block !important;
+  overflow: hidden;
+  font-size: 0 !important;
+  box-sizing: border-box !important;
+  width: 100%;
+}
+
+/* Columns 요소 - 2 column 레이아웃 */
+.ProseMirror div[data-type="columns"],
+.prose div[data-type="columns"],
+div[data-type="columns"],
+.editor-columns {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 24px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ProseMirror div[data-type="column"],
+.prose div[data-type="column"],
+div[data-type="column"],
+.editor-column {
+  flex: 1 1 calc(50% - 12px) !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 최상위 컨테이너(portfolio max-w-[980px] div) 기준 ~743px 이하: columns 세로 정렬 */
+.portfolio-content-container {
+  container-type: inline-size;
+  container-name: portfolio-content;
+}
+@container portfolio-content (max-width: 743px) {
+  .ProseMirror div[data-type="columns"],
+  .prose div[data-type="columns"],
+  div[data-type="columns"],
+  .editor-columns {
+    flex-direction: column !important;
+    flex-wrap: wrap !important;
+  }
+
+  .ProseMirror div[data-type="column"],
+  .prose div[data-type="column"],
+  div[data-type="column"],
+  .editor-column {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+  }
+}
+
+/* Editor table - 표 스타일 */
+.ProseMirror .editor-table,
+.prose .editor-table,
+.prose-lg .editor-table,
+.editor-table {
+  display: block !important;
+  width: 100% !important;
+  margin: 16px 0 !important;
+}
+
+/* 포트폴리오 상세 페이지: tbody가 최상위 부모 div(prose 컨테이너) 꽉 채우기 */
+.prose .editor-table tbody,
+.prose-lg .editor-table tbody,
+.editor-table tbody {
+  display: block !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ProseMirror .editor-table tr,
+.prose .editor-table tr,
+.prose-lg .editor-table tr,
+.editor-table tr {
+  display: flex !important;
+  align-items: stretch !important; /* 같은 행 셀 높이를 가장 높은 셀에 맞춤 */
+  gap: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important; /* tbody/컨테이너 꽉 채우기 (상세 페이지) */
+  box-sizing: border-box !important;
+}
+
+/* table head style - 셀 높이는 텍스트 감싸는 만큼, 같은 행은 가장 높은 셀에 맞춤 */
+.ProseMirror .editor-table th,
+.ProseMirror .editor-table .editor-table-head-cell,
+.prose .editor-table th,
+.prose-lg .editor-table th,
+.editor-table-head-cell {
+  display: flex !important;
+  padding: 8px !important;
+  align-items: flex-start !important;
+  gap: 16px !important;
+  flex: 1 0 0 !important;
+  border: 1px solid var(--GreyScale-500, #46474A) !important;
+  background: var(--fillWhite-10, rgba(255, 255, 255, 0.10)) !important;
+  font-size: 16px !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  min-height: 1.5em !important;
+  box-sizing: border-box !important;
+}
+
+/* table body style */
+.ProseMirror .editor-table td,
+.ProseMirror .editor-table .editor-table-body-cell,
+.prose .editor-table td,
+.prose-lg .editor-table td,
+.editor-table-body-cell {
+  display: flex !important;
+  padding: 8px !important;
+  align-items: flex-start !important;
+  gap: 16px !important;
+  border: 1px solid var(--GreyScale-500, #46474A) !important;
+  font-size: 16px !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  min-height: 1.5em !important;
+  flex: 1 0 0 !important;
+  box-sizing: border-box !important;
+}
+
+.editor-table th p,
+.editor-table td p,
+.editor-table-head-cell p,
+.editor-table-body-cell p,
+.ProseMirror .editor-table p,
+.prose .editor-table p,
+.prose-lg .editor-table p {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 1.5em !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+/* 셀 내부 블록이 클릭/입력 가능하도록 */
+.ProseMirror .editor-table td,
+.ProseMirror .editor-table th,
+.ProseMirror .editor-table-head-cell,
+.ProseMirror .editor-table-body-cell {
+  cursor: text !important;
+}
+
+.ProseMirror .editor-table td > *,
+.ProseMirror .editor-table th > *,
+.ProseMirror .editor-table-head-cell > *,
+.ProseMirror .editor-table-body-cell > * {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  outline: none !important;
+}
+
+/* 포트폴리오 상세 페이지: 모바일에서 테이블 고정폭 + 가로 스크롤 */
+.table-scroll-wrapper {
+  display: block;
+  width: 100%;
+  margin: 16px 0;
+}
+/* 최상위 컨테이너(portfolio max-w-[980px] div) ~743px 이하: 테이블 고정폭 + 가로 스크롤 */
+@container portfolio-content (max-width: 743px) {
+  .table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-scroll-wrapper .editor-table {
+    min-width: max-content;
+    width: max-content !important;
+  }
+}
+
+/* TipTap HTML 렌더링 스타일 (프로젝트 상세 페이지용) - 디자인 시스템 적용 */
+.prose {
+  font-family: 'Pretendard Variable', sans-serif;
+  color: var(--body-primary);
+}
+
+/* Tailwind Typography 기본 스타일 리셋 - 모든 기본 스타일 제거 */
+/* 주의: p, h1-h6 등은 아래에서 개별적으로 스타일 정의 */
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6,
+.prose-lg h1,
+.prose-lg h2,
+.prose-lg h3,
+.prose-lg h4,
+.prose-lg h5,
+.prose-lg h6 {
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  font-style: normal !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  list-style: none !important;
+  quotes: none !important;
+  outline: none !important;
+}
+
+/* 프로젝트 상세 페이지용 h 태그 스타일 - 최고 우선순위 */
+div.prose.prose-lg h1,
+div.prose.prose-lg h1 *,
+.prose.prose-lg h1,
+.prose.prose-lg h1 *,
+.prose h1,
+.prose h1 * {
+  font-family: 'Noto Serif KR', serif !important;
+  font-size: 38px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 40px !important;
+  color: var(--greyscale-900) !important;
+}
+
+div.prose.prose-lg h2,
+div.prose.prose-lg h2 *,
+.prose.prose-lg h2,
+.prose.prose-lg h2 *,
+.prose h2,
+.prose h2 * {
+  font-family: 'Noto Serif KR', serif !important;
+  font-size: 48px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 40px !important;
+  color: var(--greyscale-white) !important;
+}
+
+div.prose.prose-lg h3,
+div.prose.prose-lg h3 *,
+.prose.prose-lg h3,
+.prose.prose-lg h3 *,
+.prose h3,
+.prose h3 * {
+  font-family: 'Noto Serif KR', serif !important;
+  font-size: 38px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 40px !important;
+  color: var(--greyscale-white) !important;
+}
+
+div.prose.prose-lg h4,
+div.prose.prose-lg h4 *,
+.prose.prose-lg h4,
+.prose.prose-lg h4 *,
+.prose h4,
+.prose h4 * {
+  font-family: 'Noto Serif KR', serif !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 40px!important;
+  color: var(--greyscale-white) !important;
+}
+
+div.prose.prose-lg h5,
+div.prose.prose-lg h5 *,
+.prose.prose-lg h5,
+.prose.prose-lg h5 *,
+.prose h5,
+.prose h5 * {
+  font-family: 'Noto Serif KR', serif !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 24px !important;
+  color: var(--greyscale-white) !important;
+}
+
+div.prose.prose-lg h6,
+div.prose.prose-lg h6 *,
+.prose.prose-lg h6,
+.prose.prose-lg h6 *,
+.prose h6,
+.prose h6 * {
+  font-family: 'Noto Serif KR', serif !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  line-height: 140% !important;
+  letter-spacing: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+  color: var(--GreyScale-white, #FFF) !important;
+}
+
+
+/* Prose 텍스트 wrap 설정 - 모든 텍스트가 화면 밖으로 넘어가지 않도록 */
+.prose,
+.prose-lg,
+.prose *,
+.prose-lg * {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+}
+
+.prose p,
+.prose-lg p {
+  font-family: 'Pretendard Variable', sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin: 0 !important;
+  color: var(--greyscale-white) !important;
+}
+
+/* 줄바꿈 (br) 스타일 - 프로젝트 상세 페이지에서 제대로 렌더링되도록 */
+.prose br,
+.prose-lg br,
+.prose p br,
+.prose-lg p br {
+  display: block !important;
+  content: "" !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.6 !important;
+  height: 0 !important;
+  width: 100% !important;
+}
+
+/* ProseMirror separator와 trailingBreak 숨기기 */
+.prose .ProseMirror-separator,
+.prose-lg .ProseMirror-separator,
+.prose .ProseMirror-trailingBreak,
+.prose-lg .ProseMirror-trailingBreak {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+}
+
+/* 이미지만 있는 p 태그 - 불필요한 공간 제거 */
+.prose p:has(> img:only-child),
+.prose-lg p:has(> img:only-child),
+.prose p:has(> img:first-child:last-child),
+.prose-lg p:has(> img:first-child:last-child) {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin: 0 !important;
+  line-height: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  text-align: center !important;
+}
+
+/* p 태그 안의 react-renderer node-image 가운데 정렬 */
+.prose p .react-renderer.node-image,
+.prose-lg p .react-renderer.node-image,
+.ProseMirror p .react-renderer.node-image {
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: center !important;
+}
+
+/* image-resize-wrapper 가운데 정렬 */
+.prose p .image-resize-wrapper,
+.prose-lg p .image-resize-wrapper,
+.ProseMirror p .image-resize-wrapper,
+.prose p .react-renderer.node-image .image-resize-wrapper,
+.prose-lg p .react-renderer.node-image .image-resize-wrapper,
+.ProseMirror p .react-renderer.node-image .image-resize-wrapper {
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: center !important;
+  width: fit-content !important;
+}
+
+/* 리사이즈 핸들 스타일 */
+.image-resize-wrapper .resize-handle {
+  position: absolute !important;
+  width: 12px !important;
+  height: 12px !important;
+  background-color: #3b82f6 !important;
+  border: 2px solid white !important;
+  border-radius: 50% !important;
+  z-index: 10000 !important; /* column 내부에서도 보이도록 매우 높은 z-index */
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  touch-action: none !important; /* 모바일 터치 이벤트 방지 */
+}
+
+/* column 내부의 이미지 리사이즈 핸들도 보이도록 */
+.editor-column .image-resize-wrapper .resize-handle,
+div[data-type="column"] .image-resize-wrapper .resize-handle {
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+}
+
+.image-resize-wrapper .resize-handle-se {
+  right: -4px !important;
+  bottom: -4px !important;
+  cursor: nwse-resize !important;
+}
+
+.image-resize-wrapper .resize-handle-sw {
+  left: -4px !important;
+  bottom: -4px !important;
+  cursor: nesw-resize !important;
+}
+
+.image-resize-wrapper .resize-handle-ne {
+  right: -4px !important;
+  top: -4px !important;
+  cursor: nesw-resize !important;
+}
+
+.image-resize-wrapper .resize-handle-nw {
+  left: -4px !important;
+  top: -4px !important;
+  cursor: nwse-resize !important;
+}
+
+/* 이미지만 있는 p 태그 내부의 이미지 - padding 제거 */
+.prose p:has(> img:only-child) > img,
+.prose-lg p:has(> img:only-child) > img,
+.prose p:has(> img:first-child:last-child) > img,
+.prose-lg p:has(> img:first-child:last-child) > img {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 이미지와 separator만 있는 p 태그 */
+.prose p:has(> img) .ProseMirror-separator,
+.prose-lg p:has(> img) .ProseMirror-separator,
+.prose p:has(> img) .ProseMirror-trailingBreak,
+.prose-lg p:has(> img) .ProseMirror-trailingBreak {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+}
+
+/* blockquote 내부의 p는 Noto Serif KR 사용 */
+.prose blockquote p,
+.prose-lg blockquote p,
+.ProseMirror.prose blockquote p,
+.ProseMirror.prose-lg blockquote p,
+div[contenteditable="true"].prose blockquote p,
+div[contenteditable="true"].prose-lg blockquote p {
+  font-family: 'Noto Serif KR', serif !important;
+}
+
+/* Spacing은 padding 제외 */
+.prose p.editor-spacing {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.prose p:first-child {
+  padding-top: 0;
+}
+
+.prose p:last-child {
+  padding-bottom: 0;
+}
+
+.prose strong,
+.prose-lg strong {
+  font-family: 'Pretendard Variable', sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0 !important;
+  color: var(--greyscale-white) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.prose em,
+.prose-lg em {
+  font-style: italic !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.prose ul,
+.prose-lg ul,
+.prose ol,
+.prose-lg ol {
+  font-family: 'Pretendard Variable', sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  line-height: 160% !important; /* 25.6px */
+  letter-spacing: 0 !important;
+  padding-top: 1em !important;
+  padding-bottom: 8px !important;
+  padding-left: 16px !important;
+  padding-right: 0 !important;
+  margin: 0 !important;
+  color: var(--greyscale-white, #FFF) !important;
+  list-style: none !important;
+}
+
+.prose ul,
+.prose-lg ul {
+  list-style-type: disc !important;
+}
+
+.prose ol,
+.prose-lg ol {
+  list-style-type: decimal !important;
+}
+
+/* ordered list 숫자(마커) 색상 - 흰색 */
+.prose ol li::marker,
+.prose-lg ol li::marker,
+.ProseMirror ol li::marker {
+  color: var(--GreyScale-white, #FFF) !important;
+}
+
+.prose li,
+.prose-lg li {
+  font-family: 'Pretendard Variable', sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  line-height: 160% !important; /* 25.6px */
+  font-style: normal !important;
+  letter-spacing: 0 !important;
+  color: var(--GreyScale-white, #FFF) !important;
+  margin: 0 !important;
+  padding: 8px 0px !important;
+}
+
+/* li 안에 p 태그가 있으면 패딩 제거 */
+.prose li:has(> p),
+.prose-lg li:has(> p),
+.ProseMirror li:has(> p) {
+  padding: 0 !important;
+}
+
+/* ordered list li - bold 처리했을 때 */
+.prose ol li strong,
+.prose-lg ol li strong,
+.prose ol li[style*="font-weight: bold"],
+.prose ol li[style*="font-weight:bold"],
+.prose-lg ol li[style*="font-weight: bold"],
+.prose-lg ol li[style*="font-weight:bold"],
+.prose ol li b,
+.prose-lg ol li b {
+  font-weight: 700 !important;
+}
+
+/* ordered list li - bold 처리 안했을 때 (기본값) */
+.prose ol li,
+.prose-lg ol li {
+  font-weight: 400 !important;
+}
+
+.prose li p,
+.prose-lg li p {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+
+.prose blockquote,
+.prose-lg blockquote,
+.ProseMirror.prose blockquote,
+.ProseMirror.prose-lg blockquote,
+div[contenteditable="true"].prose blockquote,
+div[contenteditable="true"].prose-lg blockquote {
+  font-family: 'Noto Serif KR', serif !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  font-style: italic !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0 !important;
+  color: var(--greyscale-white) !important;
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-left: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  quotes: none !important;
+}
+
+.prose blockquote *,
+.prose-lg blockquote *,
+.ProseMirror.prose blockquote *,
+.ProseMirror.prose-lg blockquote *,
+div[contenteditable="true"].prose blockquote *,
+div[contenteditable="true"].prose-lg blockquote * {
+  font-family: 'Noto Serif KR', serif !important;
+}
+
+.prose blockquote p,
+.prose-lg blockquote p,
+.ProseMirror.prose blockquote p,
+.ProseMirror.prose-lg blockquote p,
+div[contenteditable="true"].prose blockquote p,
+div[contenteditable="true"].prose-lg blockquote p {
+  font-family: 'Noto Serif KR', serif !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin: 0 !important;
+}
+
+.prose code {
+  font-family: 'galmuri', monospace !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0 !important;
+  color: var(--greyscale-900) !important;
+  background-color: var(--greyscale-100) !important;
+  padding: 0.125em 0.375em !important;
+  border-radius: 4px !important;
+  margin: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.prose pre {
+  font-family: 'galmuri', monospace !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0 !important;
+  color: var(--greyscale-900) !important;
+  background-color: var(--greyscale-100) !important;
+  overflow-x: auto !important;
+  padding: 1em !important;
+  border-radius: 8px !important;
+  margin: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.prose pre code {
+  background-color: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  color: inherit !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.prose hr {
+  border: none !important;
+  border-top: 1px solid var(--fill-white-10) !important;
+  margin: 32px 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.prose img,
+.prose-lg img {
+  margin-top: 0em !important;
+  margin-bottom: 0em !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  max-width: 100% !important;
+  height: auto !important;
+  border: none !important;
+  background: none !important;
+  cursor: pointer !important;
+  display: block !important;
+}
+
+/* figure 밖의 이미지/동영상도 padding-y 적용 */
+.prose p > img,
+.prose-lg p > img,
+.prose p > video,
+.prose-lg p > video {
+  padding: 16px 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: block !important;
+}
+
+/* thumbnail 컨테이너 내부의 이미지는 포인터 제거 */
+.project-thumbnail-container img {
+  cursor: default !important;
+}
+
+/* 동영상 스타일 */
+.prose video,
+.prose-lg video {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 16px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  /* 모바일에서 인라인 재생 강제 */
+  object-fit: contain !important;
+  -webkit-playsinline: true !important;
+  playsinline: true !important;
+}
+
+/* Figure 및 Figcaption 스타일 */
+.prose figure,
+.prose-lg figure {
+  margin: 0 !important;
+  padding: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+/* 이미지 다음에 오는 figure (캡션만 있는 경우) */
+.prose p + figure,
+.prose-lg p + figure {
+  margin-top: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+}
+
+/* 이미지가 있는 p 태그의 margin-bottom 제거 */
+.prose p:has(img),
+.prose-lg p:has(img) {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* 이미지가 있는 p 태그 다음의 figure 간격 조정 (정확히 8px) */
+.prose p:has(img) + figure,
+.prose-lg p:has(img) + figure {
+  margin-top: -8px !important; /* 이미지의 padding-bottom(16px)을 상쇄하고 8px 간격 확보 */
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+}
+
+/* 이미지가 있는 p 태그 내부 이미지의 padding-bottom 제거 (figure가 다음에 오는 경우) */
+.prose p:has(img):has(+ figure) > img,
+.prose-lg p:has(img):has(+ figure) > img {
+  padding-bottom: 0 !important;
+}
+
+.prose figure img,
+.prose-lg figure img,
+.prose figure video,
+.prose-lg figure video {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 16px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 0 !important;
+  display: block !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  cursor: pointer !important;
+}
+
+/* 동영상 caption 스타일 - 절대 건드리지 말 것 */
+.prose figure:has(video) figcaption,
+.prose-lg figure:has(video) figcaption {
+  font-family: 'Pretendard Variable', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+  color: var(--greyscale-600) !important;
+  margin-top: 8px !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  text-align: center !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  color: var(--greyscale-100) !important;
+}
+
+/* 이미지 caption 스타일 - 동영상 caption과 동일하게 */
+.prose figure:has(img) figcaption,
+.prose-lg figure:has(img) figcaption,
+.prose figcaption,
+.prose-lg figcaption {
+  font-family: 'Pretendard Variable', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+  color: var(--greyscale-600) !important;
+  margin-top: 8px !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  text-align: center !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  color: var(--greyscale-100) !important;
+}
+
+/* 프로젝트 상세 페이지 링크 스타일 - 텍스트 에디터와 동일하게 */
+.prose a,
+.prose-lg a {
+  color: var(--GreyScale-white, #FFF) !important;
+  font-family: "Pretendard Variable" !important;
+  font-size: 14px !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  line-height: 160% !important; /* 22.4px */
+  text-decoration-line: underline !important;
+  text-decoration-style: dotted !important;
+  text-decoration-skip-ink: auto !important;
+  text-decoration-color: var(--orange-400, #DB6930) !important;
+  text-decoration-thickness: auto !important;
+  text-underline-offset: auto !important;
+  text-underline-position: from-font !important;
+  padding-top: 8px !important;
+  padding-bottom: 16px !important;
+  margin: 0 !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+/* Project Summary 반응형 레이아웃 */
+.project-summary-container {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.project-summary-item {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.project-summary-label {
+  width: auto !important;
+  flex-shrink: 0 !important;
+  margin-bottom: 4px !important;
+}
+
+.project-summary-content {
+  flex: 1 !important;
+}
+
+/* 744px 이상일 때 row 정렬 */
+@media (min-width: 744px) {
+  .project-summary-item {
+    flex-direction: row !important;
+  }
+  
+  .project-summary-label {
+    width: 192px !important; /* w-48 = 12rem = 192px */
+    margin-bottom: 0 !important;
+  }
+}
+
+/* Shimmer animation for thinking loader - 텍스트 내부 그라데이션 */
+@keyframes shimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+.animate-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    currentColor 0%,
+    currentColor 40%,
+    rgba(255, 255, 255, 0.6) 50%,
+    currentColor 60%,
+    currentColor 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s infinite; /* 2s -> 3s로 느리게 */
+}
+
+/* Circle loader animation */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   챗봇 전용 타이포그래피 스타일
+   ============================================ */
+
+/* 챗봇 Paragraph 스타일 */
+.chatbot-prose p {
+  padding-bottom: 16px;
+  color: var(--text-primary, #FFF);
+  font-family: "Pretendard Variable", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 180%; /* 22.4px */
+  margin: 0;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.chatbot-prose p:last-child {
+  padding-bottom: 16px;
+}
+
+/* 챗봇 Ordered List 스타일 */
+.chatbot-prose ol {
+  padding-bottom: 40px;
+  color: var(--text-primary, #FFF);
+  font-family: "Pretendard Variable", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 860%; /* 22.4px */
+  margin: 0;
+  padding-top: 0;
+  padding-left: 1.5em;
+  padding-right: 0;
+  list-style-type: decimal;
+}
+
+/* 챗봇 Unordered List 스타일 */
+.chatbot-prose ul {
+  padding-bottom: 40px;
+  color: var(--text-primary, #FFF);
+  font-family: "Pretendard Variable", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 180%; /* 22.4px */
+  margin: 0;
+  padding-top: 0;
+  padding-left: 1.5em;
+  padding-right: 0;
+  list-style-type: disc;
+}
+
+.chatbot-prose li {
+  padding-bottom: 0;
+  color: var(--text-primary, #FFF);
+  font-family: "Pretendard Variable", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 180%; /* 22.4px */
+  margin: 0;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Send button icon color follows text color */
+.send-icons svg [stroke] {
+  stroke: currentColor !important;
+}
+
+.send-icons svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.chatbot-prose li p {
+  padding-bottom: 0;
+  margin: 0;
+}
+
+/* 챗봇 h1 스타일 */
+.chatbot-prose h1 {
+  padding-bottom: 16px;
+  color: var(--text-primary, #FFF);
+  font-family: "Noto Serif KR", serif;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 160%; /* 38.4px */
+  margin: 0;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.chatbot-prose h1:first-child {
+  padding-top: 0;
+}
+
+/* 챗봇 h2 스타일 */
+.chatbot-prose h2 {
+  padding-bottom: 16px;
+  color: var(--text-primary, #FFF);
+  font-family: "Noto Serif KR", serif;
+  font-size: 22px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 160%; /* 35.2px */
+  margin: 0;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.chatbot-prose h2:first-child {
+  padding-top: 0;
+}
+
+/* 챗봇 h3 스타일 */
+.chatbot-prose h3 {
+  padding-bottom: 16px;
+  color: var(--text-primary, #FFF);
+  font-family: "Noto Serif KR", serif;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 160%; /* 32px */
+  margin: 0;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.chatbot-prose h3:first-child {
+  padding-top: 0;
+}
+
+/* 챗봇 h4 스타일 */
+.chatbot-prose h4 {
+  padding-bottom: 16px;
+  color: var(--text-primary, #FFF);
+  font-family: "Noto Serif KR", serif;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 160%; /* 28.8px */
+  margin: 0;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.chatbot-prose h4:first-child {
+  padding-top: 0;
+}
+
+/* 챗봇 h5 스타일 */
+.chatbot-prose h5 {
+  padding-bottom: 16px;
+  color: var(--text-primary, #FFF);
+  font-family: "Noto Serif KR", serif;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 160%; /* 25.6px */
+  margin: 0;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.chatbot-prose h5:first-child {
+  padding-top: 0;
+}
+
+/* 챗봇 h6 스타일 */
+.chatbot-prose h6 {
+  padding-bottom: 16px;
+  color: var(--text-primary, #FFF);
+  font-family: "Noto Serif KR", serif;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 160%; /* 25.6px */
+  margin: 0;
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.chatbot-prose h6:first-child {
+  padding-top: 0;
+}
+
+/* 챗봇 hr 스타일 */
+.chatbot-prose hr {
+  margin: 32px 0;
+  border: none;
+  border-bottom: 1px solid var(--fillWhite-10, rgba(255, 255, 255, 0.10));
+  background: none;
+  box-shadow: none;
+  height: 0;
+  width: 100%;
+}
+
+/* 챗봇 strong, em, code 등 기타 요소 */
+.chatbot-prose strong {
+  font-family: "Pretendard Variable", sans-serif;
+  font-weight: 700;
+  color: inherit;
+}
+
+.chatbot-prose em {
+  font-style: italic;
+  color: inherit;
+}
+
+.chatbot-prose a {
+  color: var(--text-primary, #FFF);
+  font-family: "Pretendard Variable";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 160%; /* 22.4px */
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-skip-ink: auto;
+  text-decoration-color: var(--orange-400, #DB6930);
+  text-decoration-thickness: auto;
+  text-underline-offset: auto;
+  text-underline-position: from-font;
+}
+
+/* 챗봇 링크 chip 스타일 */
+.chatbot-prose .chatbot-link-chip,
+.chatbot-link-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 24px;
+  border: none;
+  background: var(--fillWhite-4, rgba(255, 255, 255, 0.04));
+  backdrop-filter: blur(10px);
+  color: var(--text-primary, #FFF);
+  font-family: "GalmuriMono9", monospace;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 160%;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin: 0 2px;
+}
+
+.chatbot-prose .chatbot-link-chip:hover,
+.chatbot-link-chip:hover {
+  background: var(--fillWhite-8, rgba(255, 255, 255, 0.08));
+  border-color: var(--orange-400, #DB6930);
+}
+
+.chatbot-prose code {
+  font-family: "Pretendard Variable", sans-serif;
+  font-size: 14px;
+  color: inherit;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.chatbot-prose pre {
+  font-family: "Pretendard Variable", sans-serif;
+  font-size: 14px;
+  color: var(--text-primary, #FFF);
+  background: transparent;
+  padding-bottom: 24px;
+  margin: 0;
+  border-radius: 0;
+}
+
+.chatbot-prose pre code {
+  background: transparent;
+}
+
+/* Projects page title - no underline on hover */
+.projects-page h1.projects-page-title,
+.projects-page h1.projects-page-title:hover,
+.projects-page h1.projects-page-title:focus,
+.projects-page h1.projects-page-title:active,
+.projects-page h1.projects-page-title:visited,
+.projects-page a:hover h1.projects-page-title,
+.projects-page a h1.projects-page-title,
+.projects-page-title,
+.projects-page-title:hover,
+.projects-page-title:focus,
+.projects-page-title:active,
+.projects-page-title:visited,
+h1.projects-page-title,
+h1.projects-page-title:hover,
+h1.projects-page-title:focus,
+h1.projects-page-title:active,
+h1.projects-page-title:visited,
+a:hover .projects-page-title,
+a .projects-page-title,
+a:hover h1.projects-page-title,
+a h1.projects-page-title {
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+  text-decoration-style: none !important;
+  text-decoration-color: transparent !important;
+  border-bottom: none !important;
+  border-top: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* ChapterStatus 컴포넌트: 743px 이하에서 숨김 */
+@media (max-width: 743px) {
+  .chapter-status-container {
+    display: none !important;
+  }
+}
+

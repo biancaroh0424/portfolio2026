@@ -1,0 +1,460 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import ProjectCard from '@/components/ProjectCard'
+import ProjectChatInput from '@/components/ProjectChatInput'
+import { useLanguage } from '@/contexts/LanguageContext'
+
+// 현재 언어의 translation을 가져오는 헬퍼 함수
+const getProjectTranslation = (project: any, language: 'en' | 'ko' | 'it') => {
+  // 해당 언어의 translation이 있으면 반환
+  if (project.translations?.[language]) {
+    return {
+      title: project.translations[language].title || '',
+      content: project.translations[language].content || '',
+      fields: project.translations[language].fields || [],
+      tags: project.translations[language].tags || []
+    }
+  }
+  // 하위 호환성: 기존 프로젝트는 title, content, fields를 사용 (영어로만 저장된 경우)
+  // 단, 현재 언어가 영어일 때만 하위 호환성 적용
+  if (language === 'en' && (project.title || project.content || project.fields)) {
+    return {
+      title: project.title || '',
+      content: project.content || '',
+      fields: project.fields || [],
+      tags: project.tags || [] // 하위 호환성: 기존 tags 필드 사용
+    }
+  }
+  // 해당 언어의 translation이 없으면 빈값 반환
+  return {
+    title: '',
+    content: '',
+    fields: [],
+    tags: []
+  }
+}
+
+export default function ProjectsPage() {
+  const router = useRouter()
+  const { language } = useLanguage()
+  const [projects, setProjects] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  const loadProjects = useCallback(async () => {
+    try {
+      // API를 통해 최신 프로젝트 데이터 가져오기 (캐시 없이, 타임스탬프 추가)
+      const timestamp = Date.now()
+      const response = await fetch(`/api/admin/projects?t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setProjects(data)
+      } else {
+        console.error('Failed to load projects')
+      }
+    } catch (error) {
+      console.error('Error loading projects:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // 초기 로드 및 언어 변경 시 로드
+  useEffect(() => {
+    loadProjects()
+  }, [language, loadProjects])
+
+  // 주기적으로 프로젝트 데이터 업데이트 확인 (1분마다, 페이지가 보일 때만)
+  useEffect(() => {
+    // 페이지가 숨겨져 있으면 폴링하지 않음
+    if (document.hidden) return
+    
+    const interval = setInterval(() => {
+      // 페이지가 보이는 상태일 때만 업데이트
+      if (!document.hidden) {
+        loadProjects()
+      }
+    }, 60000) // 1분마다 확인 (서버 부하 감소)
+
+    return () => clearInterval(interval)
+  }, [loadProjects])
+
+  // 페이지 포커스/가시성 변경 시 프로젝트 데이터 다시 로드 (폴링보다 우선)
+  useEffect(() => {
+    let visibilityTimeout: NodeJS.Timeout | null = null
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // 페이지가 다시 보일 때 약간의 지연 후 업데이트 (너무 빈번한 업데이트 방지)
+        if (visibilityTimeout) {
+          clearTimeout(visibilityTimeout)
+        }
+        visibilityTimeout = setTimeout(() => {
+          loadProjects()
+        }, 1000) // 1초 지연
+      }
+    }
+
+    const handleFocus = () => {
+      // 포커스 시에도 약간의 지연 후 업데이트
+      if (visibilityTimeout) {
+        clearTimeout(visibilityTimeout)
+      }
+      visibilityTimeout = setTimeout(() => {
+        loadProjects()
+      }, 1000) // 1초 지연
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      if (visibilityTimeout) {
+        clearTimeout(visibilityTimeout)
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [loadProjects])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen projects-page">
+        {/* Main container - padding: 200px 0, flex-direction: column, align-items: center */}
+        <div style={{ 
+          display: 'flex',
+          padding: '200px 0',
+          flexDirection: 'column',
+          alignItems: 'center',
+          alignSelf: 'stretch'
+        }}>
+          {/* Title layout - max-width: 1160px, flex-direction: column, gap: 16px */}
+          <div style={{
+            display: 'flex',
+            padding: '0 16px',
+            flexDirection: 'column',
+            justifyContent: 'flex-start',
+            alignItems: 'flex-start',
+            gap: '16px',
+            alignSelf: 'stretch',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            width: '100%',
+          }}>
+            <div style={{
+              display: 'flex',
+              maxWidth: '1160px',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '16px',
+              alignSelf: 'stretch',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              width: '100%',
+            }}>
+              {/* Title skeleton */}
+              <div 
+                className="animate-pulse"
+                style={{
+                  height: '67.2px', // 48px * 1.4 (line-height)
+                  width: '200px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '4px',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Lists layout - padding-top: 49px, flex-direction: column */}
+          <div style={{
+            display: 'flex',
+            paddingTop: '49px',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            alignSelf: 'stretch',
+          }}>
+            {/* ProjectCard skeletons */}
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="animate-pulse"
+                style={{
+                  display: 'flex',
+                  padding: '0 16px',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '16px',
+                  alignSelf: 'stretch',
+                  position: 'relative',
+                  width: '100%',
+                }}
+              >
+                {/* Top gradient border */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '1px',
+                    background: 'linear-gradient(to right, var(--greyscale-700, #222424), var(--greyscale-200, #b3b3b3), var(--greyscale-700, #222424))'
+                  }}
+                />
+                {/* Bottom gradient border */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '1px',
+                    background: 'linear-gradient(to right, var(--greyscale-700, #222424), var(--greyscale-200, #b3b3b3), var(--greyscale-700, #222424))'
+                  }}
+                />
+                {/* Product Details skeleton */}
+                <div
+                  style={{
+                    display: 'flex',
+                    maxWidth: '1160px',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    alignContent: 'center',
+                    rowGap: '16px',
+                    flex: '1 0 0',
+                    flexWrap: 'wrap',
+                    borderRight: '1px solid #46474A',
+                    borderLeft: '1px solid #46474A',
+                    gap: '24px',
+                  }}
+                >
+                  {/* Title + content skeleton */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      minWidth: '356px',
+                      padding: '24px 16px 16px 16px',
+                      flexDirection: 'column',
+                      gap: '24px',
+                      flex: '1 0 0'
+                    }}
+                  >
+                    {/* Duration skeleton */}
+                    <div
+                      style={{
+                        width: '100px',
+                        height: '14px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        borderRadius: '4px',
+                      }}
+                    />
+                    {/* Title skeleton */}
+                    <div
+                      style={{
+                        width: '80%',
+                        height: '33.6px', // 24px * 1.4
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        borderRadius: '4px',
+                      }}
+                    />
+                    {/* Summary skeleton */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '20px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          borderRadius: '4px',
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: '90%',
+                          height: '20px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          borderRadius: '4px',
+                        }}
+                      />
+                    </div>
+                    {/* Tags skeleton */}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <div
+                        style={{
+                          width: '60px',
+                          height: '24px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          borderRadius: '4px',
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: '80px',
+                          height: '24px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          borderRadius: '4px',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {/* Thumbnail skeleton */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      width: '412px',
+                      height: '260px',
+                      padding: '16px',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        borderRadius: '0px',
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen projects-page">
+      {/* Main container - padding: 200px 0, flex-direction: column, align-items: center */}
+      <div style={{ 
+        display: 'flex',
+        padding: '200px 0',
+        flexDirection: 'column',
+        alignItems: 'center',
+        alignSelf: 'stretch'
+      }}>
+        {/* Title layout - max-width: 1160px, flex-direction: column, gap: 16px */}
+        <div style={{
+          display: 'flex',
+          padding: '0 16px',
+          flexDirection: 'column',
+          justifyContent: 'flex-start',
+          alignItems: 'flex-start',
+          gap: '16px',
+          alignSelf: 'stretch',
+          marginLeft: 'auto',
+          marginRight: 'auto',
+          width: '100%',
+        }}>
+          <div style={{
+            display: 'flex',
+            maxWidth: '1160px',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            gap: '16px',
+            alignSelf: 'stretch',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            width: '100%',
+          }}>
+            <h1 
+              className="projects-page-title"
+              style={{
+                color: '#FFF',
+                fontFamily: '"Noto Serif KR", serif',
+                fontSize: '48px',
+                fontStyle: 'normal',
+                fontWeight: 700,
+                lineHeight: '140%',
+                margin: 0,
+                width: '100%',
+                cursor: 'default'
+              }}
+            >
+              Portfolio
+            </h1>
+          </div>
+        </div>
+
+        {/* Lists layout - padding-top: 49px, flex-direction: column */}
+        <div style={{
+          display: 'flex',
+          paddingTop: '49px',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+          alignSelf: 'stretch'
+        }}>
+          {projects
+            .filter((project) => {
+              // 해당 언어의 제목이 있는 프로젝트만 표시
+              const translation = getProjectTranslation(project, language)
+              return translation.title && translation.title.trim() !== ''
+            })
+            .map((project) => {
+              const translation = getProjectTranslation(project, language)
+              const keyResult = translation.fields?.find(f => 
+                f.label?.toLowerCase().includes('key result') || 
+                f.label?.toLowerCase().includes('주요 결과') ||
+                f.label?.toLowerCase().includes('keyresult')
+              )?.value || ''
+              
+              // Duration 필드 찾기 (type이 'duration'인 필드)
+              const durationField = translation.fields?.find(f => 
+                f.type === 'duration' || 
+                (f.type === 'default' && f.label?.toLowerCase().includes('duration'))
+              )
+              const duration = durationField?.value?.trim() || ''
+              
+              // Summary 필드 찾기 (type이 'summary'인 필드)
+              const summaryField = translation.fields?.find(f => f.type === 'summary')
+              const summary = summaryField?.value?.trim() || ''
+              
+              return (
+                <ProjectCard
+                  key={project.id}
+                  project={{
+                    ...project,
+                    title: translation.title,
+                    period: translation.fields?.find(f => 
+                      f.label?.toLowerCase().includes('period') || 
+                      f.label?.toLowerCase().includes('기간') ||
+                      (f.label?.toLowerCase().includes('duration') && f.type !== 'duration')
+                    )?.value || '',
+                    duration: duration,
+                    summary: summary,
+                    keyResult: keyResult,
+                    tags: Array.isArray(translation.tags) ? translation.tags : []
+                  }}
+                  onClick={() => router.push(`/portfolio/${project.id}`)}
+                />
+              )
+            })}
+          {projects.length === 0 && (
+            <div className="text-center py-12 text-gray-500" style={{ alignSelf: 'stretch' }}>
+              프로젝트가 없습니다.
+            </div>
+          )}
+        </div>
+      </div>
+      <ProjectChatInput />
+    </div>
+  )
+}
+
