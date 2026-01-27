@@ -1,6 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // api/embed, api/chat 번들에서 대형 의존성 제외 (Gemini 임베딩 사용, onnx/transformers 미사용)
+  experimental: {
+    outputFileTracingExcludes: {
+      '/api/embed': [
+        'node_modules/onnxruntime-node/**',
+        'node_modules/@huggingface/transformers/**',
+        'node_modules/@img/sharp-libvips-linuxmusl-x64/**',
+        'node_modules/@img/sharp-libvips-linux-x64/**',
+      ],
+      '/api/chat': [
+        'node_modules/onnxruntime-node/**',
+        'node_modules/@huggingface/transformers/**',
+        'node_modules/@img/sharp-libvips-linuxmusl-x64/**',
+        'node_modules/@img/sharp-libvips-linux-x64/**',
+      ],
+    },
+  },
   webpack: (config, { isServer }) => {
     // Chroma는 서버 사이드에서만 사용되므로 클라이언트 번들에서 제외
     if (!isServer) {
@@ -17,12 +34,7 @@ const nextConfig = {
     
     // 서버 사이드에서도 네이티브 모듈을 externals로 처리하여 webpack이 번들링하지 않도록 함
     if (isServer) {
-      // 서버 사이드에서 .node 파일과 관련 패키지를 externals로 처리
-      config.externals.push({
-        'onnxruntime-node': 'commonjs onnxruntime-node',
-        '@huggingface/transformers': 'commonjs @huggingface/transformers',
-        '@chroma-core/default-embed': 'commonjs @chroma-core/default-embed',
-      })
+      // 서버 사이드에서 .node 파일을 externals로 처리 (onnx/transformers 제거됨 — Gemini 임베딩 사용)
       
       // .node 파일을 externals로 처리
       config.externals.push(({ request }, callback) => {
@@ -32,12 +44,9 @@ const nextConfig = {
         callback()
       })
     } else {
-      // 클라이언트에서는 모든 Chroma 관련 패키지 제외
+      // 클라이언트에서는 Chroma 관련 패키지 제외
       config.externals.push({
         'chromadb': 'commonjs chromadb',
-        '@chroma-core/default-embed': 'commonjs @chroma-core/default-embed',
-        'onnxruntime-node': 'commonjs onnxruntime-node',
-        '@huggingface/transformers': 'commonjs @huggingface/transformers',
       })
     }
     
