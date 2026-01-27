@@ -20,10 +20,10 @@ export const Columns = Node.create({
 
   addCommands() {
     return {
-      setColumns: () => ({ commands, state }) => {
+      setColumns: () => ({ commands, state }: { commands: { insertContentAt: (pos: number, node: unknown) => boolean; insertContent: (content: string) => boolean }; state: { selection: { from: number }; schema: { nodes: { columns: { create: (a: object, c: unknown[]) => unknown }; column: { create: (a: object, c: unknown[]) => unknown }; paragraph: { create: () => unknown } } } } }) => {
         const { selection } = state
         const { from } = selection
-        
+
         try {
           // 현재 위치에 columns 노드 삽입
           const columnsNode = state.schema.nodes.columns.create({}, [
@@ -34,7 +34,7 @@ export const Columns = Node.create({
               state.schema.nodes.paragraph.create()
             ])
           ])
-          
+
           return commands.insertContentAt(from, columnsNode)
         } catch (error) {
           console.error('Error creating columns:', error)
@@ -43,7 +43,9 @@ export const Columns = Node.create({
           return commands.insertContent(columnsHTML)
         }
       },
-    }
+    // TipTap RawCommands에 없는 커스텀 setColumns 명령 — 반환 타입 단언
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any
   },
 })
 
