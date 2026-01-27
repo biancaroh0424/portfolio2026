@@ -224,7 +224,7 @@ export const Table = Node.create({
           if (dispatch) dispatch(state.tr.replaceWith(tableStart, tableEnd, newTable))
           return true
         },
-    }
+    } as any
   },
 })
 
