@@ -31,6 +31,7 @@ export interface ProjectTranslation {
   title: string
   content?: string // HTML 형식의 전체 콘텐츠
   fields?: ProjectField[] // 동적 필드 배열
+  tags?: string[] // 언어별 태그 배열
 }
 
 export interface Project {
