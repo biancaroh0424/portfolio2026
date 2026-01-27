@@ -298,7 +298,7 @@ export default function AdminPage() {
       })
       
       // updatedAt 기준으로 최신순 정렬 (최신이 위에)
-      const sortedProjects = projectsWithTranslations.sort((a, b) => {
+      const sortedProjects = projectsWithTranslations.sort((a: { updatedAt?: string }, b: { updatedAt?: string }) => {
         const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
         const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
         return timeB - timeA // 내림차순 (최신이 위)
