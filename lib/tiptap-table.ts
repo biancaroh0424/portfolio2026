@@ -48,23 +48,24 @@ declare module '@tiptap/core' {
   }
 }
 
+type TableNodeLike = { childCount: number; child: (i: number) => TableNodeLike; nodeSize: number; type?: { name: string } }
 /** 현재 선택 기준으로 셀의 row/col 인덱스와 테이블 정보 반환 */
-function getCellContext($from: { depth: number; node: (d: number) => { type: { name: string }; childCount: number; child: (i: number) => { nodeSize: number }; nodeSize: number }; start: (d: number) => number; pos: number }) {
+function getCellContext($from: { depth: number; node: (d: number) => TableNodeLike; start: (d: number) => number; pos: number }): { rowIdx: number; colIdx: number; tableNode: TableNodeLike; tableStart: number; tableEnd: number; rowCount: number; colCount: number } | null {
   let rowIdx = -1
   let colIdx = -1
   let tableDepth = -1
   let tableStart = 0
-  let rowNode = null as { childCount: number; child: (i: number) => { nodeSize: number }; nodeSize: number } | null
+  let rowNode: TableNodeLike | null = null
   for (let d = $from.depth; d > 0; d--) {
     const node = $from.node(d)
-    if (node.type.name === 'tableRow') {
+    if (node.type?.name === 'tableRow') {
       rowNode = node
       tableDepth = d - 1
       tableStart = $from.start(tableDepth)
       const rowStart = $from.start(d)
       let pos = rowStart + 1
       for (let c = 0; c < node.childCount; c++) {
-        const cell = node.child(c)
+        const cell = node.child(c) as { nodeSize: number }
         if ($from.pos >= pos && $from.pos < pos + cell.nodeSize) {
           colIdx = c
           break
@@ -74,7 +75,7 @@ function getCellContext($from: { depth: number; node: (d: number) => { type: { n
       const tableNode = $from.node(tableDepth)
       let run = tableStart + 1
       for (let r = 0; r < tableNode.childCount; r++) {
-        const row = tableNode.child(r)
+        const row = tableNode.child(r) as { nodeSize: number }
         if (run === rowStart) {
           rowIdx = r
           break
@@ -111,7 +112,7 @@ export const Table = Node.create({
     return {
       insertTable:
         (options?: { rows?: number; cols?: number }) =>
-        ({ commands, state }) => {
+        ({ commands, state }: { commands: { insertContentAt: (pos: number, node: unknown) => boolean }; state: { selection: { from: number }; schema: { nodes: Record<string, { create: (a?: object, c?: unknown) => unknown }> } } }) => {
           const rows = Math.max(2, options?.rows ?? 2)
           const cols = Math.max(2, options?.cols ?? 2)
           const { from } = state.selection
@@ -137,7 +138,7 @@ export const Table = Node.create({
         },
       addTableRowAfter:
         () =>
-        ({ state, dispatch }) => {
+        ({ state, dispatch }: { state: any; dispatch?: any }) => {
           const ctx = getCellContext(state.selection.$from)
           if (!ctx) return false
           const { tableNode, tableStart, tableEnd, colCount } = ctx
@@ -158,13 +159,13 @@ export const Table = Node.create({
         },
       addTableRowBefore:
         () =>
-        ({ state, dispatch }) => {
+        ({ state, dispatch }: { state: any; dispatch?: any }) => {
           const ctx = getCellContext(state.selection.$from)
           if (!ctx) return false
           const { tableNode, tableStart, tableEnd, rowIdx, colCount } = ctx
           const { table, tableRow, tableCell, tableHeaderCell, paragraph } = state.schema.nodes
           const firstRow = tableNode.child(0)
-          const isHeader = firstRow.child(0).type.name === 'tableHeaderCell'
+          const isHeader = firstRow.child(0).type?.name === 'tableHeaderCell'
           const CellType = rowIdx === 0 ? tableHeaderCell : tableCell
           const newCells = Array.from({ length: colCount }, () =>
             CellType.create({}, [paragraph.create()])
@@ -180,7 +181,7 @@ export const Table = Node.create({
         },
       addTableColumnAfter:
         () =>
-        ({ state, dispatch }) => {
+        ({ state, dispatch }: { state: any; dispatch?: any }) => {
           const ctx = getCellContext(state.selection.$from)
           if (!ctx) return false
           const { tableNode, tableStart, tableEnd } = ctx
@@ -202,7 +203,7 @@ export const Table = Node.create({
         },
       addTableColumnBefore:
         () =>
-        ({ state, dispatch }) => {
+        ({ state, dispatch }: { state: any; dispatch?: any }) => {
           const ctx = getCellContext(state.selection.$from)
           if (!ctx) return false
           const { tableNode, tableStart, tableEnd, colIdx } = ctx
