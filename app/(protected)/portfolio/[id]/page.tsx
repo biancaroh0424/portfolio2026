@@ -160,7 +160,7 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     if (!currentTranslation?.content) return
 
-    const handleMediaClick = (e: MouseEvent) => {
+    const handleMediaClick = (e: Event) => {
       const target = e.target as HTMLElement
       const img = target.closest('img')
       const video = target.closest('video')
