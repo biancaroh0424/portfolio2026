@@ -371,7 +371,7 @@ export default function ProjectDetailPage() {
   }
   
   // 제목과 콘텐츠가 모두 없으면 빈 페이지 표시
-  if (!currentTranslation.title && !currentTranslation.content) {
+  if (!currentTranslation || (!currentTranslation.title && !currentTranslation.content)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center text-gray-400">
