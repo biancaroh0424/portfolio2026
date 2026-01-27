@@ -84,10 +84,11 @@ export async function getProjects(): Promise<Project[]> {
   // 실제로는 API 호출이나 파일 읽기
   // thumbnail과 image가 null인 경우 undefined로 변환
   const projectsData = await loadProjectsData()
-  return projectsData.map(project => ({
+  type SectionShape = { id: string; title: string; content: string | string[]; image?: string | null }
+  return projectsData.map((project: Record<string, unknown>) => ({
     ...project,
     thumbnail: project.thumbnail === null ? undefined : project.thumbnail,
-    sections: project.sections?.map(section => ({
+    sections: (project.sections as SectionShape[] | undefined)?.map((section: SectionShape) => ({
       ...section,
       image: 'image' in section && section.image === null ? undefined : ('image' in section ? section.image : undefined)
     }))
