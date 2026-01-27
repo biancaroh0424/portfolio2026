@@ -6,6 +6,8 @@ import ProjectCard from '@/components/ProjectCard'
 import ProjectChatInput from '@/components/ProjectChatInput'
 import { useLanguage } from '@/contexts/LanguageContext'
 
+type ProjectField = { label?: string; value?: string; type?: string }
+
 // 현재 언어의 translation을 가져오는 헬퍼 함수
 const getProjectTranslation = (project: any, language: 'en' | 'ko' | 'it') => {
   // 해당 언어의 translation이 있으면 반환
@@ -409,21 +411,21 @@ export default function ProjectsPage() {
             })
             .map((project) => {
               const translation = getProjectTranslation(project, language)
-              const keyResult = translation.fields?.find(f => 
+              const keyResult = translation.fields?.find((f: ProjectField) => 
                 f.label?.toLowerCase().includes('key result') || 
                 f.label?.toLowerCase().includes('주요 결과') ||
                 f.label?.toLowerCase().includes('keyresult')
               )?.value || ''
               
               // Duration 필드 찾기 (type이 'duration'인 필드)
-              const durationField = translation.fields?.find(f => 
+              const durationField = translation.fields?.find((f: ProjectField) => 
                 f.type === 'duration' || 
                 (f.type === 'default' && f.label?.toLowerCase().includes('duration'))
               )
               const duration = durationField?.value?.trim() || ''
               
               // Summary 필드 찾기 (type이 'summary'인 필드)
-              const summaryField = translation.fields?.find(f => f.type === 'summary')
+              const summaryField = translation.fields?.find((f: ProjectField) => f.type === 'summary')
               const summary = summaryField?.value?.trim() || ''
               
               return (
@@ -432,7 +434,7 @@ export default function ProjectsPage() {
                   project={{
                     ...project,
                     title: translation.title,
-                    period: translation.fields?.find(f => 
+                    period: translation.fields?.find((f: ProjectField) => 
                       f.label?.toLowerCase().includes('period') || 
                       f.label?.toLowerCase().includes('기간') ||
                       (f.label?.toLowerCase().includes('duration') && f.type !== 'duration')
