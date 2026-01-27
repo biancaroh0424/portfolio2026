@@ -30,7 +30,7 @@ export async function searchVectorStore(
   queryEmbedding: number[],
   limit?: number,
   filter?: { projectId?: string; language?: 'en' | 'ko' | 'it' }
-): Promise<Array<{ id: string; content: { id: string; title: string; content: string; projectId?: string; language?: 'en' | 'ko' | 'it'; type: string }; score: number }>> {
+): Promise<Array<{ id: string; content: { id: string; title: string; content: string; projectId?: string; language?: 'en' | 'ko' | 'it'; type: 'project' | 'about' | 'general' | 'resume' }; score: number }>> {
   const m = await getImpl()
   return m.searchVectorStore(queryEmbedding, limit, filter)
 }

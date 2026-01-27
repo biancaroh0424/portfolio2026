@@ -59,11 +59,11 @@ export async function searchRelevantContent(
       })
     }
     
-    // SearchResult 형식으로 변환
+    // SearchResult 형식으로 변환 (content.type은 'project'|'about'|'general'|'resume')
     return filteredResults.map(result => ({
       content: result.content,
       score: result.score
-    }))
+    })) as SearchResult[]
   } catch (error) {
     console.error('[RAG] Error searching:', error)
     return []
