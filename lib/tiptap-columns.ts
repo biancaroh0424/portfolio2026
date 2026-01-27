@@ -44,7 +44,6 @@ export const Columns = Node.create({
         }
       },
     // TipTap RawCommands에 없는 커스텀 setColumns 명령 — 반환 타입 단언
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any
   },
 })
