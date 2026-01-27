@@ -277,3 +277,21 @@ export async function searchVectorStore(
     return searchOptimized(queryEmbedding, limit, filter)
   }
 }
+
+/** 벡터 저장소에 저장된 문서 목록 반환 (embed GET 등 상태 확인용) */
+export async function listVectorStoreDocuments(): Promise<Array<{ id: string; content: { title: string } }>> {
+  try {
+    const client = getChromaClient()
+    if (!client) return []
+    const collection = await getOrCreateCollection()
+    const result = await collection.peek({ limit: 500 })
+    const ids = result.ids ?? []
+    const metadatas = result.metadatas ?? []
+    return ids.map((id, i) => ({
+      id: String(id),
+      content: { title: (metadatas[i]?.title as string) ?? '' }
+    }))
+  } catch {
+    return []
+  }
+}

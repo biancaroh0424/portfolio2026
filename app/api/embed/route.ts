@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
 // 벡터 저장소 상태 확인
 export async function GET() {
   try {
-    const { loadVectorStore } = await import('@/lib/vector-store')
-    const documents = await loadVectorStore()
-    
+    const { listVectorStoreDocuments } = await import('@/lib/vector-store')
+    const documents = await listVectorStoreDocuments()
+
     return NextResponse.json({
       documentCount: documents.length,
       documents: documents.map(doc => ({
