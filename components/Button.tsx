@@ -14,6 +14,7 @@ type ButtonProps = {
   loaderPosition?: LoaderPosition
   className?: string
   children?: ReactNode
+  disabled?: boolean
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type' | 'disabled'>
 
 const spinner = (
@@ -105,10 +106,11 @@ export default function Button({
   loaderPosition = 'left',
   className,
   children,
+  disabled: disabledProp,
   onClick,
   ...rest
 }: ButtonProps) {
-  const disabled = status === 'disabled' || rest.disabled
+  const disabled = status === 'disabled' || disabledProp
   const resolvedStatus = disabled ? 'disabled' : status
   const hasIcon = Boolean(icon)
   const hasLoader = isLoading
