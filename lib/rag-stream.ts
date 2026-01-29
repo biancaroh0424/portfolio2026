@@ -9,7 +9,8 @@ export async function* generateAIResponseStream(
   userLanguage: string = 'en',
   greeting?: string,
   isProjectListPage?: boolean,
-  projectsOnPage?: { id: string; title: string }[]
+  projectsOnPage?: { id: string; title: string }[],
+  fallbackProjectContent?: string
 ): AsyncGenerator<{
   type: 'content' | 'done' | 'error'
   content?: string
@@ -58,7 +59,10 @@ export async function* generateAIResponseStream(
       contextText = built.trim()
     } else {
       // 검색 0건일 때
-      if (projectsOnPage && projectsOnPage.length > 0) {
+      if (fallbackProjectContent && fallbackProjectContent.length > 0 && currentProject) {
+        // /portfolio/[id] 페이지: RAG 결과 없으면 현재 프로젝트 본문을 [Portfolio Content]로 사용
+        contextText = `[Current project page content — "${currentProject.title}" (id: ${currentProject.id}). Use this as the only source. Do NOT say content was not loaded.]\n\n${fallbackProjectContent}`
+      } else if (projectsOnPage && projectsOnPage.length > 0) {
         // /portfolio 페이지이고 프로젝트 목록이 있으면: 이 목록을 반드시 언급하라고 명시
         const names = projectsOnPage.map((p) => p.title).join(', ')
         contextText = `(No detailed references were retrieved. However, the user is on /portfolio and this page shows these projects: ${names}.\nYou MUST list or mention these project names in your answer. Say e.g. "This page shows: [list]. Click a project for details or ask me about a specific one." Do NOT say you have no project information — you have the list above. Do NOT invent any other project name.)`

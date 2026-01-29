@@ -175,8 +175,8 @@ export async function POST(request: NextRequest) {
           // 2) 그 다음 컨텍스트 fetch (임베딩·벡터 검색 등)
           logAI('컨텍스트 fetch 시작 (프로젝트·벡터검색·리스트)')
           const contextStart = Date.now()
-          const [currentProject, relevantContent, allProjects] = await Promise.all([
-            (async () => {
+          const [fullProjectOrFallback, relevantContent, allProjects] = await Promise.all([
+            (async (): Promise<{ id: string; title: string; content?: string } | undefined> => {
               if (!projectId) return undefined
               try {
                 const project = await getProject(projectId)
@@ -186,9 +186,12 @@ export async function POST(request: NextRequest) {
                                             projectListLanguage === 'ko' ? translations.ko :
                                             projectListLanguage === 'it' ? translations.it : undefined)
                   const title = currentTranslation?.title || project.title || project.id
-                  return { id: project.id, title }
+                  const rawContent = currentTranslation?.content || project.content || ''
+                  const contentForFallback = typeof rawContent === 'string'
+                    ? rawContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 12_000)
+                    : ''
+                  return { id: project.id, title, content: contentForFallback }
                 }
-                // getProject 실패 시에도 URL의 projectId만으로 현재 페이지 알림 (프로덕션에서 데이터 미로드 대비)
                 return { id: projectId, title: projectId }
               } catch (error) {
                 console.error('[Chat API] Error fetching project:', error)
@@ -222,9 +225,20 @@ export async function POST(request: NextRequest) {
           ])
 
           const finalContent = relevantContent
+          const currentProject = fullProjectOrFallback
+            ? { id: fullProjectOrFallback.id, title: fullProjectOrFallback.title }
+            : undefined
+          const fallbackProjectContent =
+            fullProjectOrFallback?.content &&
+            finalContent.length === 0 &&
+            projectId
+              ? fullProjectOrFallback.content
+              : undefined
+
           logAI('컨텍스트 fetch 완료', {
             chunks: finalContent.length,
             hasProject: !!currentProject,
+            hasFallback: !!fallbackProjectContent,
             fetchMs: Date.now() - contextStart,
             elapsed: `${Date.now() - t0}ms`
           })
@@ -245,7 +259,8 @@ export async function POST(request: NextRequest) {
             detectedLanguage,
             greeting,
             isProjectListPage,
-            projectsOnPage
+            projectsOnPage,
+            fallbackProjectContent
           )
           
           let chunkCount = 0
