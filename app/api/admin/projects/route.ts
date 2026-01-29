@@ -1,8 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs/promises'
 import path from 'path'
+import { put, list } from '@vercel/blob'
 
 const PROJECTS_FILE = path.join(process.cwd(), 'data', 'projects.json')
+const BLOB_PROJECTS_PATH = 'data/projects.json'
+
+function useBlob(): boolean {
+  return typeof process.env.BLOB_READ_WRITE_TOKEN === 'string' && process.env.BLOB_READ_WRITE_TOKEN.length > 0
+}
+
+/** Vercel Blob에서 projects.json 내용 읽기 (없으면 null) */
+async function readProjectsFromBlob(): Promise<any[] | null> {
+  try {
+    const { blobs } = await list({ prefix: 'data/', limit: 10 })
+    const blob = blobs.find((b) => b.pathname === BLOB_PROJECTS_PATH)
+    if (!blob?.url) return null
+    const res = await fetch(blob.url)
+    if (!res.ok) return null
+    const json = await res.json()
+    return Array.isArray(json) ? json : null
+  } catch {
+    return null
+  }
+}
+
+/** 로컬 fs에서 projects 읽기 */
+async function readProjectsFromFs(): Promise<any[]> {
+  try {
+    const data = await fs.readFile(PROJECTS_FILE, 'utf-8')
+    const parsed = JSON.parse(data)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+/** Blob에 projects 저장 (Vercel 프로덕션용) */
+async function writeProjectsToBlob(projects: any[]): Promise<void> {
+  const body = JSON.stringify(projects, null, 2)
+  await put(BLOB_PROJECTS_PATH, body, {
+    access: 'public',
+    contentType: 'application/json',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  })
+}
 
 // Vercel에서 GET+PUT 동시 사용 시 405 방지: 동적 라우트로 처리
 export const dynamic = 'force-dynamic'
@@ -10,8 +53,14 @@ export const dynamic = 'force-dynamic'
 // 프로젝트 목록 조회
 export async function GET() {
   try {
-    const data = await fs.readFile(PROJECTS_FILE, 'utf-8')
-    const projects = JSON.parse(data)
+    let projects: any[] = []
+    if (useBlob()) {
+      const fromBlob = await readProjectsFromBlob()
+      if (fromBlob !== null) projects = fromBlob
+      else projects = await readProjectsFromFs()
+    } else {
+      projects = await readProjectsFromFs()
+    }
     return NextResponse.json(projects, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -32,11 +81,17 @@ async function saveProject(request: NextRequest) {
   const project = await request.json()
 
   let projects: any[] = []
-  try {
-    const data = await fs.readFile(PROJECTS_FILE, 'utf-8')
-    projects = JSON.parse(data)
-  } catch {
-    projects = []
+  if (useBlob()) {
+    const fromBlob = await readProjectsFromBlob()
+    if (fromBlob !== null) projects = fromBlob
+    else projects = await readProjectsFromFs()
+  } else {
+    try {
+      const data = await fs.readFile(PROJECTS_FILE, 'utf-8')
+      projects = JSON.parse(data)
+    } catch {
+      projects = []
+    }
   }
 
   const existingIndex = projects.findIndex((p: any) => p.id === project.id)
@@ -46,9 +101,13 @@ async function saveProject(request: NextRequest) {
     projects.push(project)
   }
 
-  const dir = path.dirname(PROJECTS_FILE)
-  await fs.mkdir(dir, { recursive: true })
-  await fs.writeFile(PROJECTS_FILE, JSON.stringify(projects, null, 2))
+  if (useBlob()) {
+    await writeProjectsToBlob(projects)
+  } else {
+    const dir = path.dirname(PROJECTS_FILE)
+    await fs.mkdir(dir, { recursive: true })
+    await fs.writeFile(PROJECTS_FILE, JSON.stringify(projects, null, 2))
+  }
   return NextResponse.json({ success: true, project })
 }
 

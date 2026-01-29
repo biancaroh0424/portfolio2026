@@ -17,10 +17,11 @@ const nextConfig = {
         'node_modules/@img/sharp-libvips-linux-x64/**',
       ],
     },
-    // api/chat·embed에서 getProjects() 등이 data/*.json 읽을 수 있도록 번들에 포함
+    // api/chat·embed·admin/projects에서 data/*.json 읽을 수 있도록 번들에 포함
     outputFileTracingIncludes: {
       '/api/chat': ['data/projects.json', 'data/embeddings.json'],
       '/api/embed': ['data/projects.json', 'data/embeddings.json'],
+      '/api/admin/projects': ['data/projects.json'],
     },
   },
   webpack: (config, { isServer }) => {
