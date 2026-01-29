@@ -6,7 +6,7 @@ import { put, list } from '@vercel/blob'
 const PROJECTS_FILE = path.join(process.cwd(), 'data', 'projects.json')
 const BLOB_PROJECTS_PATH = 'data/projects.json'
 
-function useBlob(): boolean {
+function isBlobStorageEnabled(): boolean {
   return typeof process.env.BLOB_READ_WRITE_TOKEN === 'string' && process.env.BLOB_READ_WRITE_TOKEN.length > 0
 }
 
@@ -54,7 +54,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     let projects: any[] = []
-    if (useBlob()) {
+    if (isBlobStorageEnabled()) {
       const fromBlob = await readProjectsFromBlob()
       if (fromBlob !== null) projects = fromBlob
       else projects = await readProjectsFromFs()
@@ -81,7 +81,7 @@ async function saveProject(request: NextRequest) {
   const project = await request.json()
 
   let projects: any[] = []
-  if (useBlob()) {
+  if (isBlobStorageEnabled()) {
     const fromBlob = await readProjectsFromBlob()
     if (fromBlob !== null) projects = fromBlob
     else projects = await readProjectsFromFs()
@@ -101,7 +101,7 @@ async function saveProject(request: NextRequest) {
     projects.push(project)
   }
 
-  if (useBlob()) {
+  if (isBlobStorageEnabled()) {
     await writeProjectsToBlob(projects)
   } else {
     const dir = path.dirname(PROJECTS_FILE)
