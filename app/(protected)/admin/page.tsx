@@ -551,31 +551,18 @@ export default function AdminPage() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Command+S (Mac) 또는 Ctrl+S (Windows/Linux)
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        // input, textarea, contenteditable에 포커스가 있으면 기본 동작 허용 (브라우저 기본 저장 다이얼로그)
+        if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
         const target = e.target as HTMLElement
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-          // RichTextEditor 내부에서는 기본 동작을 막고 저장
-          if (target.closest('.ProseMirror')) {
-            e.preventDefault()
-            if (editingProject && !isSaving && !isInitializing) {
-              handleSave()
-            } else if (activeTab === 'resume' && !isSaving) {
-              handleSaveResume()
-            }
-          }
-          // 다른 input/textarea에서는 기본 동작 허용
-          return
-        }
-        
-        // 프로젝트 편집 모드일 때 저장
+        // RichTextEditor(ProseMirror) 안에서는 에디터가 Cmd+S로 직접 저장하므로 여기서는 막기만
+        if (target.closest('.ProseMirror')) return
+
+        // 프로젝트 편집 모드: 제목/필드 등에 포커스 있을 때 저장
         if (editingProject && !isSaving && !isInitializing) {
-          e.preventDefault()
           handleSave()
         }
         // Resume 편집 모드일 때 저장
         else if (activeTab === 'resume' && !isSaving) {
-          e.preventDefault()
           handleSaveResume()
         }
       }

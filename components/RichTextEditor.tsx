@@ -48,6 +48,7 @@ export default function RichTextEditor({
   const videoInputRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<HTMLDivElement>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const handleManualSaveRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const [tableHoverRect, setTableHoverRect] = useState<{ top: number; left: number; width: number } | null>(null)
   const tableHoverElRef = useRef<HTMLElement | null>(null)
 
@@ -372,10 +373,10 @@ export default function RichTextEditor({
       handleKeyDown: (view, event) => {
         if (!editor) return false
         
-        // Command+S / Ctrl+S 감지
+        // Command+S / Ctrl+S → 즉시 저장 (다이얼로그 없이)
         if ((event.metaKey || event.ctrlKey) && event.key === 's') {
           event.preventDefault()
-          setShowSaveConfirm(true)
+          handleManualSaveRef.current()
           return true
         }
         
@@ -542,6 +543,8 @@ export default function RichTextEditor({
       setShowSaveConfirm(false)
     }
   }, [editor, onChange, onSave, isManualSaving])
+
+  handleManualSaveRef.current = handleManualSave
 
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
@@ -755,6 +758,8 @@ export default function RichTextEditor({
       }
     }
 
+    // 삽입 직후 부모에 즉시 반영 (저장 버튼 눌렀을 때 최신 미디어 포함되도록)
+    onChange(editor.getHTML())
     // 모달 닫기 및 상태 초기화
     setShowCaptionModal(false)
     setCaptionInput('')

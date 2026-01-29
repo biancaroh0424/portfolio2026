@@ -30,7 +30,7 @@ export async function* generateAIResponseStream(
     // ✅ [요청 반영] 모델을 'gemini-3-pro-preview'로 유지! (지능형 모델)
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-3-pro-preview',
-      generationConfig: {
+        generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 4096, // 답 잘림 방지 (이전 2048에서 증가)
       }
@@ -47,7 +47,7 @@ export async function* generateAIResponseStream(
         const block = `\n### Reference ${idx + 1}: ${doc.content.title}\n${doc.content.content}\n\n`
         if (built.length + block.length <= CONTEXT_MAX_CHARS) {
           built += block
-        } else {
+          } else {
           const remain = CONTEXT_MAX_CHARS - built.length - 80
           built += remain > 0
             ? `\n### Reference ${idx + 1}: ${doc.content.title}\n${doc.content.content.slice(0, remain)}...[truncated]\n\n`
@@ -167,7 +167,7 @@ ${contextText}`;
         } else if (thinkingClosed && !thinkingDone && thinkingContent.length > 0) {
           // thinking이 닫혔지만 내용이 증가하지 않은 경우 (이미 완료)
           thinkingDone = true
-          yield { 
+              yield {
             type: 'content', 
             thinking: thinkingContent, 
             thinkingDone: true
@@ -281,7 +281,7 @@ ${contextText}`;
 
     // 최종 done 메시지 - thinking과 content 모두 포함
     const finalThinking = thinkingContent.trim()
-    yield {
+    yield { 
       type: 'done',
       content: finalAnswer || rawContent.replace(/<[^>]*>/g, '').trim(), // 태그 제거한 전체 내용
       thinking: finalThinking || undefined, // 빈 문자열이면 undefined
@@ -296,7 +296,7 @@ ${contextText}`;
 
   } catch (error: any) {
     console.error('[Stream Error]', error)
-    yield {
+    yield { 
       type: 'error',
       content: 'AI가 깊게 생각하다가 길을 잃었어요 🤯 잠시 후 다시 질문해 주세요.'
     }
