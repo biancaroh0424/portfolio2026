@@ -188,10 +188,12 @@ export async function POST(request: NextRequest) {
                   const title = currentTranslation?.title || project.title || project.id
                   return { id: project.id, title }
                 }
+                // getProject 실패 시에도 URL의 projectId만으로 현재 페이지 알림 (프로덕션에서 데이터 미로드 대비)
+                return { id: projectId, title: projectId }
               } catch (error) {
                 console.error('[Chat API] Error fetching project:', error)
+                return { id: projectId, title: projectId }
               }
-              return undefined
             })(),
             (async () => {
               try {

@@ -287,6 +287,7 @@ export default function ChapterStatus({ content, title, onToggle }: ChapterStatu
           paddingTop: '0',
           paddingLeft: '16px',
           paddingRight: '16px',
+          paddingBottom: '56px',
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
           maxHeight: 'calc(100vh - 80px)',
           overflowY: 'auto'

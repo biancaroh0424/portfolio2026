@@ -76,15 +76,24 @@ export async function* generateAIResponseStream(
         ? `\n[Current page — Projects on this portfolio list]\nThe user is on /portfolio. This page shows exactly ${projectsOnPage.length} project(s): ${projectsOnPage.map((p) => `"${p.title}"`).join(', ')}.\nYou MUST only recommend or mention these projects by name. When the user asks what is on this page or what projects exist, LIST these names. Do NOT invent or assume any other project name.\n`
         : ''
 
+    // /portfolio/[id] 상세 페이지일 때: 사용자가 지금 보고 있는 프로젝트 명시 (AI가 반드시 인지하도록)
+    const currentProjectBlock =
+      currentProject && currentProject.title
+        ? `\n[Current page — Project detail]\nThe user is NOW VIEWING the project detail page: **"${currentProject.title}"** (id: ${currentProject.id}). They are reading this project's content. You MUST assume their questions refer to THIS project unless they explicitly ask about another. When relevant, acknowledge which project they are viewing (e.g. "In this project [${currentProject.title}]..."). Do NOT say you don't know which project they mean — they are on /portfolio/${currentProject.id}.\n`
+        : currentProject && currentProject.id
+          ? `\n[Current page — Project detail]\nThe user is on a project detail page: /portfolio/${currentProject.id}. Assume their questions refer to THIS project. Do NOT say you don't know which project they are viewing.\n`
+          : ''
+
     const systemPrompt = `You are YJ Assistant for Youngjoo Roh's Portfolio.
 
 CRITICAL LANGUAGE RULE: You MUST answer ONLY in ${langName}. The user asked in ${langName}. Do NOT switch to any other language, even if you see content in other languages. Always respond in ${langName}.
+${currentProjectBlock}
 ${pageProjectsBlock}
 [Instructions]
 1. ALWAYS use <thinking> tag first — keep it very brief (1–2 sentences only). Then use <answer> tag immediately.
 2. Use <answer> tag for your full response. Never truncate: give a complete answer.
 3. Use ONLY [Portfolio Content] below. If the user asks about a term (e.g. 게이미피케이션, gamification), look in ALL references — it may appear in related sections (해결, Solution, 온보딩, 결과 등). Do not say "not found" unless you have searched every block.
-4. CRITICAL — NO HALLUCINATION: Only mention project names, titles, metrics, and facts that EXPLICITLY appear in [Portfolio Content] or in [Current page — Projects on this portfolio list] above. Do NOT invent or assume any other project name or detail.
+4. CRITICAL — NO HALLUCINATION: Only mention project names, titles, metrics, and facts that EXPLICITLY appear in [Portfolio Content], in [Current page — Project detail], or in [Current page — Projects on this portfolio list] above. Do NOT invent or assume any other project name or detail. When the user is on a project detail page, you MUST assume they are asking about THAT project.
 5. Be professional and friendly - respond naturally to light jokes, but maintain appropriate formality.
 6. CRITICAL: Answer language must match the user's question language (${langName}). Never answer in a different language.
 
