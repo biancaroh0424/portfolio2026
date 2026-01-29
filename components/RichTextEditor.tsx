@@ -599,10 +599,16 @@ export default function RichTextEditor({
       }
 
       const data = await response.json()
-      const imageUrl = data.url
+      // API는 Blob 전체 URL을 반환. 상대 경로(/uploads/...)면 프로덕션에서 404 나므로 절대 URL만 사용
+      const imageUrl =
+        typeof data?.url === 'string' && data.url.startsWith('http')
+          ? data.url
+          : typeof data?.url === 'string' && data.url.startsWith('/')
+            ? `${typeof window !== 'undefined' ? window.location.origin : ''}${data.url}`
+            : data?.url
 
       // caption 입력 모달 표시
-      setPendingMediaUrl(imageUrl)
+      setPendingMediaUrl(imageUrl || null)
       setPendingMediaType('image')
       setCaptionInput('')
       setShowCaptionModal(true)
@@ -634,10 +640,15 @@ export default function RichTextEditor({
       }
 
       const data = await response.json()
-      const videoUrl = data.url
+      const videoUrl =
+        typeof data?.url === 'string' && data.url.startsWith('http')
+          ? data.url
+          : typeof data?.url === 'string' && data.url.startsWith('/')
+            ? `${typeof window !== 'undefined' ? window.location.origin : ''}${data.url}`
+            : data?.url
 
       // caption 입력 모달 표시
-      setPendingMediaUrl(videoUrl)
+      setPendingMediaUrl(videoUrl || null)
       setPendingMediaType('video')
       setCaptionInput('')
       setShowCaptionModal(true)

@@ -897,7 +897,16 @@ export default function AdminPage() {
       <div className="min-h-screen p-8" style={{ paddingTop: '80px' }}>
         <div className="max-w-7xl mx-auto">
           <div className="rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
+            {/* 상단: 프로젝트 편집 + 취소/저장 — 스크롤 시 상단에 고정 */}
+            <div
+              className="sticky top-[72px] z-10 flex items-center justify-between mb-6 -mx-6 px-6 py-4 -mt-6 rounded-lg transition-shadow"
+              style={{
+                background: 'var(--nav-backgroundFill, rgba(18, 19, 19, 0.95))',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.06)',
+              }}
+            >
               <h1 className="text-2xl font-bold text-white">프로젝트 편집</h1>
               <div className="flex gap-2">
                 <button

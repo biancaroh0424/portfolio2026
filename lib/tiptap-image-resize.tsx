@@ -106,7 +106,13 @@ const ResizableImageComponent = ({ node, updateAttributes, selected, getPos, edi
         }
 
         const data = await response.json()
-        const newImageUrl = data.url
+        const raw = data?.url
+        const newImageUrl =
+          typeof raw === 'string' && raw.startsWith('http')
+            ? raw
+            : typeof raw === 'string' && raw.startsWith('/')
+              ? `${typeof window !== 'undefined' ? window.location.origin : ''}${raw}`
+              : raw
 
         // 이미지 src 업데이트
         const pos = getPos()

@@ -20,6 +20,25 @@ export default function Navigation() {
   // Hydration 에러 방지: 초기값은 항상 false로 설정
   const [isMobile, setIsMobile] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [navVisible, setNavVisible] = useState(true)
+  const lastScrollY = useRef(0)
+
+  // 스크롤 시 nav 숨김: 아래로 스크롤하면 숨기고, 위로 스크롤하면 표시
+  useEffect(() => {
+    const handleScroll = () => {
+      const y = window.scrollY
+      if (y <= 60) {
+        setNavVisible(true)
+      } else if (y > lastScrollY.current) {
+        setNavVisible(false)
+      } else {
+        setNavVisible(true)
+      }
+      lastScrollY.current = y
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // 모바일: ~879px까지, 데스크톱: 880px부터
   useEffect(() => {
@@ -103,13 +122,14 @@ export default function Navigation() {
 
   return (
     <nav 
-      className="fixed top-0 left-0 bg-transparent transition-all duration-10 ease-out" 
+      className="fixed top-0 left-0 bg-transparent transition-transform duration-300 ease-out" 
       style={{ 
         background: 'var(--nav-backgroundFill, rgba(18, 19, 19, 0.20))',
         position: 'fixed',
         right: isOpen && !isMainPage ? `${validWidth}px` : '0',
         width: isOpen && !isMainPage ? `calc(100% - ${validWidth}px)` : '100%',
-        zIndex: 2000
+        zIndex: 2000,
+        transform: navVisible ? 'translateY(0)' : 'translateY(-100%)',
       }}
     >
       {/* Progressive blur overlay - 상단 blur(20px)에서 하단 blur(0px)로 그라데이션 */}
