@@ -17,6 +17,11 @@ const nextConfig = {
         'node_modules/@img/sharp-libvips-linux-x64/**',
       ],
     },
+    // api/chat·embed에서 getProjects() 등이 data/*.json 읽을 수 있도록 번들에 포함
+    outputFileTracingIncludes: {
+      '/api/chat': ['data/projects.json', 'data/embeddings.json'],
+      '/api/embed': ['data/projects.json', 'data/embeddings.json'],
+    },
   },
   webpack: (config, { isServer }) => {
     // Chroma는 서버 사이드에서만 사용되므로 클라이언트 번들에서 제외

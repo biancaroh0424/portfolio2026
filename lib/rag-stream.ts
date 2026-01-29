@@ -57,8 +57,14 @@ export async function* generateAIResponseStream(
       }
       contextText = built.trim()
     } else {
-      // 검색 0건일 때: 참고 내용이 없다고 명시하고, 프로젝트 이름을 지어서 말하지 말라고 함
-      contextText = '(No references were retrieved. Do NOT invent or recommend any project names. Say that they can browse the portfolio list on this page to see available projects, or ask again after a moment.)'
+      // 검색 0건일 때
+      if (projectsOnPage && projectsOnPage.length > 0) {
+        // /portfolio 페이지이고 프로젝트 목록이 있으면: 이 목록을 반드시 언급하라고 명시
+        const names = projectsOnPage.map((p) => p.title).join(', ')
+        contextText = `(No detailed references were retrieved. However, the user is on /portfolio and this page shows these projects: ${names}.\nYou MUST list or mention these project names in your answer. Say e.g. "This page shows: [list]. Click a project for details or ask me about a specific one." Do NOT say you have no project information — you have the list above. Do NOT invent any other project name.)`
+      } else {
+        contextText = '(No references were retrieved. Do NOT invent or recommend any project names. Say that they can browse the portfolio list on this page to see available projects, or ask again after a moment.)'
+      }
     }
 
     // 언어 설정 - 간단하고 명확하게
@@ -67,7 +73,7 @@ export async function* generateAIResponseStream(
     // /portfolio 리스트 페이지일 때: 이 페이지에 보이는 프로젝트 이름만 쓸 수 있다고 명시
     const pageProjectsBlock =
       projectsOnPage && projectsOnPage.length > 0
-        ? `\n[Current page — Projects on this portfolio list]\nThe user is on /portfolio. This page shows exactly ${projectsOnPage.length} project(s): ${projectsOnPage.map((p) => `"${p.title}"`).join(', ')}.\nYou MUST only recommend or mention these projects by name. Do NOT invent or assume any other project name.\n`
+        ? `\n[Current page — Projects on this portfolio list]\nThe user is on /portfolio. This page shows exactly ${projectsOnPage.length} project(s): ${projectsOnPage.map((p) => `"${p.title}"`).join(', ')}.\nYou MUST only recommend or mention these projects by name. When the user asks what is on this page or what projects exist, LIST these names. Do NOT invent or assume any other project name.\n`
         : ''
 
     const systemPrompt = `You are YJ Assistant for Youngjoo Roh's Portfolio.

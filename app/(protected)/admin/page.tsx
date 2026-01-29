@@ -418,7 +418,7 @@ export default function AdminPage() {
       }
       
       const response = await fetch('/api/admin/projects', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
