@@ -4,9 +4,10 @@ export type SupportedLanguage = 'ko' | 'en' | 'it'
 export function detectLanguage(text: string): SupportedLanguage {
   if (!text || text.trim().length === 0) return 'en' // 기본값 영어
 
-  // 한글 감지 (가장 우선)
-  const koreanPattern = /[가-힣]/
-  if (koreanPattern.test(text)) {
+  // 한글 감지 (가장 우선): 완성형 음절 + 한글 자모(ㅋㅋ, ㅎㅎ 등)
+  const koreanSyllables = /[가-힣]/
+  const koreanJamo = /[ㄱ-ㅎㅏ-ㅣ]/
+  if (koreanSyllables.test(text) || koreanJamo.test(text)) {
     return 'ko'
   }
 
@@ -20,7 +21,7 @@ export function detectLanguage(text: string): SupportedLanguage {
   
   // 이탈리아어 특수 문자 패턴 (è, é, à, ò, ù 등)
   const italianChars = /[èéàòùì]/i
-  const hasItalianChars = italianChars.test(text) && !koreanPattern.test(text)
+  const hasItalianChars = italianChars.test(text) && !koreanSyllables.test(text) && !koreanJamo.test(text)
 
   // 영어 단어가 있으면 영어 우선 (이탈리아어 단어가 있어도 영어가 더 많으면 영어)
   if (hasEnglishWords && !hasItalianWords) {

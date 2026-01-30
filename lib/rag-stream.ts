@@ -90,7 +90,7 @@ export async function* generateAIResponseStream(
 
     const systemPrompt = `You are YJ Assistant for Youngjoo Roh's Portfolio.
 
-CRITICAL LANGUAGE RULE: You MUST answer ONLY in ${langName}. The user asked in ${langName}. Do NOT switch to any other language, even if you see content in other languages. Always respond in ${langName}.
+CRITICAL — ANSWER LANGUAGE: You MUST write your entire response (including <thinking> and <answer>) ONLY in ${langName}. The user wrote in ${langName}. Never use English if the user asked in Korean; never use Korean if the user asked in English/Italian. Your reply language must match the user's question language exactly.
 ${currentProjectBlock}
 ${pageProjectsBlock}
 [Instructions]
@@ -99,7 +99,7 @@ ${pageProjectsBlock}
 3. Use ONLY [Portfolio Content] below. If the user asks about a term (e.g. 게이미피케이션, gamification), look in ALL references — it may appear in related sections (해결, Solution, 온보딩, 결과 등). Do not say "not found" unless you have searched every block.
 4. CRITICAL — NO HALLUCINATION: Only mention project names, titles, metrics, and facts that EXPLICITLY appear in [Portfolio Content], in [Current page — Project detail], or in [Current page — Projects on this portfolio list] above. Do NOT invent or assume any other project name or detail. When the user is on a project detail page, you MUST assume they are asking about THAT project.
 5. Be professional and friendly - respond naturally to light jokes, but maintain appropriate formality.
-6. CRITICAL: Answer language must match the user's question language (${langName}). Never answer in a different language.
+6. CRITICAL: Your <answer> must be written entirely in ${langName}. If user wrote in Korean, answer ONLY in Korean. If user wrote in English, answer ONLY in English. Do not mix languages in your response.
 
 [About YJ Assistant]
 If asked "Who created you?" or "Who made you?" or similar questions about your creator:
@@ -118,7 +118,7 @@ ${contextText}`;
       `${msg.role === 'user' ? 'User' : 'Model'}: ${msg.content}`
     ).join('\n');
 
-    const finalPrompt = `${systemPrompt}\n\n${recentHistory ? `${recentHistory}\n` : ''}User (${langName}): ${query}\nModel (${langName}):`;
+    const finalPrompt = `${systemPrompt}\n\n${recentHistory ? `${recentHistory}\n` : ''}User (answer ONLY in ${langName}): ${query}\nModel (in ${langName} only):`;
 
     const logAI = (msg: string, extra?: Record<string, unknown>) => {
       const t = new Date().toISOString().slice(11, 23)
@@ -292,20 +292,23 @@ ${contextText}`;
       type: c.content.type
     }))
 
-    // 최종 done 메시지 - thinking과 content 모두 포함
+    // 최종 done 메시지 - thinking과 content 모두 포함 (thinking은 항상 전달해 클라이언트가 Step UI 표시)
     const finalThinking = thinkingContent.trim()
     yield { 
       type: 'done',
       content: finalAnswer || rawContent.replace(/<[^>]*>/g, '').trim(), // 태그 제거한 전체 내용
-      thinking: finalThinking || undefined, // 빈 문자열이면 undefined
+      thinking: finalThinking,
       thinkingDone: true,
       sources: sources
     }
     
-    // 디버깅: thinking이 있는지 확인
-    if (finalThinking) {
-      console.log('[RAG Stream] Final thinking length:', finalThinking.length)
-    }
+    // 디버깅: thinking / 답변 구분 가능하도록 로그
+    const finalAnswerLen = (finalAnswer || '').length
+    logAI('RAG 스트림: done', {
+      thinkingLen: finalThinking.length,
+      answerLen: finalAnswerLen,
+      hasThinking: finalThinking.length > 0
+    })
 
   } catch (error: any) {
     console.error('[Stream Error]', error)

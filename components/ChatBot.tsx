@@ -140,9 +140,54 @@ function ChipTextContent({ selectedTextChip, onRemove }: { selectedTextChip: str
 }
 
 // Thinking Process 표시 컴포넌트
-function ThinkingAccordion({ thinking, isActive, thinkingDone }: { thinking: string; isActive: boolean; thinkingDone: boolean }) {
-  const [expanded, setExpanded] = useState(true)
-  
+function ThinkingAccordion({ thinking, isActive, thinkingDone, contentPending }: { thinking: string; isActive: boolean; thinkingDone: boolean; contentPending?: boolean }) {
+  // 답변이 들어오기 전(thinkingDone이어도 content 빈 구간)까지 로더·step 유지 → 깜빡임 방지
+  const showActiveUI = isActive || contentPending === true
+  // 스텝 작성 중: thinking 텍스트가 들어오는 대로 차례대로 보이도록 (한 번에 덩어리 X)
+  const [displayedLength, setDisplayedLength] = useState(0)
+  const targetLengthRef = useRef(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    targetLengthRef.current = thinking.length
+    if (thinking.length < displayedLength) {
+      // 새 메시지 등 thinking 리셋 시 표시 길이도 리셋
+      setDisplayedLength(thinking.length)
+    }
+    if (thinkingDone || !isActive) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      setDisplayedLength(thinking.length)
+      return
+    }
+    if (thinking.length <= displayedLength) return
+    const step = 2
+    const ms = 28
+    intervalRef.current = setInterval(() => {
+      setDisplayedLength((prev) => {
+        const target = targetLengthRef.current
+        const next = Math.min(prev + step, target)
+        if (next >= target && intervalRef.current) {
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
+        }
+        return next
+      })
+    }, ms)
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+    // displayedLength 의존 시 매 틱마다 effect 재실행되어 스트리밍 깨짐 → 제외
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thinking, thinkingDone, isActive])
+
+  const displayedThinking = thinking.slice(0, displayedLength)
+
   // Thinking을 단계별로 파싱 (간단한 형식)
   const parseThinking = (thinkingText: string, isComplete: boolean): ThinkingStep[] => {
     // 깨진 문자열이나 암호화된 데이터 필터링
@@ -254,9 +299,9 @@ function ThinkingAccordion({ thinking, isActive, thinkingDone }: { thinking: str
       paddingTop: '16px',
       paddingBottom: '12px'
     }}>
-      {/* 진행 중일 때: steps 없으면 로더 + 실시간 thinking 텍스트, steps 있으면 Step 작성 중 UI */}
-      {isActive && !thinkingDone && steps.length === 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {/* 1) 스텝 작성되는 동안 + 답변 대기 중(contentPending): 로더 + shimmer 유지 */}
+      {((showActiveUI && !thinkingDone) || contentPending) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div
               style={{
@@ -269,10 +314,10 @@ function ThinkingAccordion({ thinking, isActive, thinkingDone }: { thinking: str
                 flexShrink: 0
               }}
             />
-            <span 
+            <span
               className="animate-shimmer-text"
-              style={{ 
-                fontSize: '11px', 
+              style={{
+                fontSize: '11px',
                 color: 'var(--text-tertiary, #E6E6E6)',
                 fontFamily: '"Pretendard Variable", sans-serif'
               }}
@@ -280,47 +325,108 @@ function ThinkingAccordion({ thinking, isActive, thinkingDone }: { thinking: str
               Thinking
             </span>
           </div>
-          {thinking.trim().length > 0 && (
-            <div style={{ 
-              fontSize: '12px', 
-              color: 'var(--text-tertiary, #E6E6E6)',
-              fontFamily: '"Pretendard Variable", sans-serif',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              lineHeight: '1.6'
-            }}>
-              {thinking.trim()}
-            </div>
-          )}
         </div>
       )}
 
-      {/* Step 작성 중 UI */}
-      {isActive && !thinkingDone && currentStep?.description && (
+      {/* 2) steps 없을 때: 한 블록으로 유지 → 완료 전에 사라졌다 나타나는 현상 방지 (아이콘만 circle ↔ checkmark) */}
+      {steps.length === 0 && thinking.trim().length > 0 && (
+        <>
+          {thinkingDone && !contentPending && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '12px', width: '100%' }}>
+              <div style={{ width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 1.5C11.5899 1.5 14.5 4.41015 14.5 8C14.5 11.5899 11.5899 14.5 8 14.5C4.41015 14.5 1.5 11.5899 1.5 8C1.5 4.41015 4.41015 1.5 8 1.5Z" stroke="#72C1DB"/>
+                  <path d="M11 6L6.875 10L5 8.18182" stroke="#72C1DB" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: '12px', color: 'var(--text-tertiary, #E6E6E6)', fontFamily: '"Pretendard Variable", sans-serif', lineHeight: '160%' }}>
+                1 step completed
+              </span>
+            </div>
+          )}
+          <div
+            style={{
+              display: 'flex',
+              width: '100%',
+              minHeight: '27px',
+              padding: '0 8px 8px 8px',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '6px',
+              borderLeft: '0.6px solid var(--fillWhite-20, rgba(255, 255, 255, 0.20))'
+            }}
+          >
+            <div style={{ display: 'flex', width: '16px', height: '16px', padding: '2px', justifyContent: (thinkingDone && !contentPending) ? 'space-between' : 'center', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+              {(thinkingDone && !contentPending) ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M11.25 2.25L4.03125 9.75L0.75 6.34091" stroke="#72C1DB" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M6 1.25C8.62335 1.25 10.75 3.37665 10.75 6C10.75 8.62335 8.62335 10.75 6 10.75C3.37665 10.75 1.25 8.62335 1.25 6C1.25 3.37665 3.37665 1.25 6 1.25Z" stroke="#B3B3B3" />
+                </svg>
+              )}
+            </div>
+            <span
+              style={{
+                fontSize: '12px',
+                color: 'var(--text-tertiary, #E6E6E6)',
+                fontFamily: '"Pretendard Variable", sans-serif',
+                width: '100%',
+                minWidth: 0,
+                flex: 1,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                lineHeight: 1.6
+              }}
+            >
+              {(thinkingDone && !contentPending) ? thinking.trim() : displayedThinking.trim()}
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* 3) Step 작성 중/답변 대기 중: Figma — 파싱된 step이 있으면 해당 행 */}
+      {((showActiveUI && !thinkingDone) || contentPending) && currentStep?.description && (
         <div
           style={{
-            display: 'inline-flex',
+            display: 'flex',
+            width: '100%',
+            minHeight: '27px',
+            padding: '0 8px 8px 8px',
+            justifyContent: 'center',
             alignItems: 'center',
             gap: '6px',
-            color: 'var(--text-tertiary, #E6E6E6)',
-            fontSize: '12px',
-            fontFamily: '"Pretendard Variable", sans-serif',
-            maxWidth: '100%',
-            flexWrap: 'wrap'
+            borderLeft: '0.6px solid var(--fillWhite-20, rgba(255, 255, 255, 0.20))'
           }}
         >
-          {/* 진행 중 아이콘 */}
-          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', width: '16px', animation: 'pulse 2s infinite'}}>
+          <div
+            style={{
+              display: 'flex',
+              width: '16px',
+              height: '16px',
+              padding: '2px',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px',
+              flexShrink: 0
+            }}
+          >
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M6 1.25C8.62335 1.25 10.75 3.37665 10.75 6C10.75 8.62335 8.62335 10.75 6 10.75C3.37665 10.75 1.25 8.62335 1.25 6C1.25 3.37665 3.37665 1.25 6 1.25Z" stroke="#B3B3B3"/>
+              <path d="M6 1.25C8.62335 1.25 10.75 3.37665 10.75 6C10.75 8.62335 8.62335 10.75 6 10.75C3.37665 10.75 1.25 8.62335 1.25 6C1.25 3.37665 3.37665 1.25 6 1.25Z" stroke="#B3B3B3" />
             </svg>
           </div>
           <span
             style={{
+              fontSize: '12px',
               color: 'var(--text-tertiary, #E6E6E6)',
+              fontFamily: '"Pretendard Variable", sans-serif',
+              width: '100%',
               minWidth: 0,
+              flex: 1,
               whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word'
+              wordBreak: 'break-word',
+              lineHeight: 1.6
             }}
           >
             {currentStep.description}
@@ -328,73 +434,16 @@ function ThinkingAccordion({ thinking, isActive, thinkingDone }: { thinking: str
         </div>
       )}
 
-      {/* Steps가 없으면 thinking을 아코디언 스타일로 표시 (완료 후에도 "thinking process" UI 유지) */}
-      {steps.length === 0 && thinking.trim().length > 0 && !isActive && (
+      {/* Steps 표시 (일반 div, 펼침/접힘 없음) */}
+      {steps.length > 0 && !contentPending && (
         <div style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '0' }}>
-          <button
-            type="button"
-            onClick={() => setExpanded((e) => !e)}
+          <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               paddingBottom: '12px',
-              width: '100%',
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              textAlign: 'left'
-            }}
-          >
-            <div style={{ width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M8 1.5C11.5899 1.5 14.5 4.41015 14.5 8C14.5 11.5899 11.5899 14.5 8 14.5C4.41015 14.5 1.5 11.5899 1.5 8C1.5 4.41015 4.41015 1.5 8 1.5Z" stroke="#72C1DB"/>
-                <path d="M11 6L6.875 10L5 8.18182" stroke="#72C1DB" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <span style={{ 
-              fontSize: '12px', 
-              color: 'var(--text-tertiary, #E6E6E6)',
-              fontFamily: '"Pretendard Variable", sans-serif',
-              lineHeight: '160%'
-            }}>
-              1 step completed
-            </span>
-            <span style={{ marginLeft: 'auto', flexShrink: 0 }}>
-              {expanded ? '▲' : '▼'}
-            </span>
-          </button>
-          {expanded && (
-            <div style={{ 
-              fontSize: '12px', 
-              color: 'var(--text-tertiary, #E6E6E6)',
-              fontFamily: '"Pretendard Variable", sans-serif',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              lineHeight: '1.6'
-            }}>
-              {thinking.trim()}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Steps 표시 (아코디언) */}
-      {steps.length > 0 && (
-        <div style={{ marginTop: '0', display: 'flex', flexDirection: 'column', gap: '0' }}>
-          <button
-            type="button"
-            onClick={() => setExpanded((e) => !e)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              paddingBottom: '12px',
-              width: '100%',
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              textAlign: 'left'
+              width: '100%'
             }}
           >
             <div style={{ width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -412,50 +461,73 @@ function ThinkingAccordion({ thinking, isActive, thinkingDone }: { thinking: str
             }}>
               {completedSteps} steps completed
             </span>
-            <div style={{ width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--text-tertiary, #E6E6E6)' }}>
-              {expanded ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-                  <path d="M4 10l4-4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-                  <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )}
-            </div>
-          </button>
-          {expanded && steps
+          </div>
+          {steps
             .filter(step => step.description && step.description.trim().length > 0 && step.description.trim() !== '...')
             .map((step, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '0 8px 8px', minWidth: 0, width: '100%', borderLeft: '0.6px solid var(--fillWhite-20, rgba(255, 255, 255, 0.20))'}}>
-              {step.status === '완료' && (
-                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', width: '16px', animation: 'pulse 2s infinite'}}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
-<path d="M11.25 2.25L4.03125 9.75L0.75 6.34091" stroke="#72C1DB" strokeLinecap="round" strokeLinejoin="round"/>
-</svg>
-                </div>
-              )}
-              {step.status === '진행 중' && (
-                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', width: '16px', animation: 'pulse 2s infinite'}}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M6 1.25C8.62335 1.25 10.75 3.37665 10.75 6C10.75 8.62335 8.62335 10.75 6 10.75C3.37665 10.75 1.25 8.62335 1.25 6C1.25 3.37665 3.37665 1.25 6 1.25Z" stroke="#B3B3B3"/>
-                </svg>
-                {/* <span style={{ fontSize: '12px', color: '#3b82f6', animation: 'pulse 2s infinite' }}>●</span> */}
-                </div>
-              )}
-              <span style={{ 
-                fontSize: '12px', 
-                color: 'var(--text-tertiary, #E6E6E6)', 
-                flex: 1,
-                minWidth: 0,
-                fontFamily: '"Pretendard Variable", sans-serif',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word'
-              }}>
-                {step.description}
-              </span>
-            </div>
-          ))}
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  width: '100%',
+                  minHeight: '27px',
+                  padding: '0 8px 8px 8px',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '6px',
+                  borderLeft: '0.6px solid var(--fillWhite-20, rgba(255, 255, 255, 0.20))'
+                }}
+              >
+                {step.status === '완료' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      width: '16px',
+                      height: '16px',
+                      padding: '2px',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M11.25 2.25L4.03125 9.75L0.75 6.34091" stroke="#72C1DB" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                )}
+                {step.status === '진행 중' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      width: '16px',
+                      height: '16px',
+                      padding: '2px',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flexShrink: 0
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M6 1.25C8.62335 1.25 10.75 3.37665 10.75 6C10.75 8.62335 8.62335 10.75 6 10.75C3.37665 10.75 1.25 8.62335 1.25 6C1.25 3.37665 3.37665 1.25 6 1.25Z" stroke="#B3B3B3" />
+                    </svg>
+                  </div>
+                )}
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: 'var(--text-tertiary, #E6E6E6)',
+                    flex: 1,
+                    minWidth: 0,
+                    fontFamily: '"Pretendard Variable", sans-serif',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word'
+                  }}
+                >
+                  {step.description}
+                </span>
+              </div>
+            ))}
         </div>
       )}
     </div>
@@ -1274,30 +1346,19 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                 // thinking이 있으면 즉시 메시지에 업데이트 (큐 시스템 무시)
                 if (parsed.thinking !== undefined && parsed.thinking !== null) {
                   const thinkingText = typeof parsed.thinking === 'string' ? parsed.thinking : String(parsed.thinking)
-                  if (thinkingText && thinkingText.trim().length > 0) {
-                    const THROTTLE_MS = 120
-                    const now = Date.now()
-                    const done = parsed.thinkingDone === true
-                    pendingThinkingRef.current = { id: streamingMessageId, text: thinkingText, thinkingDone: done }
-                    const flushThinking = () => {
-                      const p = pendingThinkingRef.current
-                      if (!p) return
-                      lastThinkingFlushAtRef.current = Date.now()
-                      setMessages(prev => prev.map(msg => msg.id === p.id ? { ...msg, thinking: p.text, thinkingDone: p.thinkingDone } : msg))
-                    }
-                    if (done || now - lastThinkingFlushAtRef.current >= THROTTLE_MS) {
-                      if (thinkingFlushTimerRef.current) {
-                        clearTimeout(thinkingFlushTimerRef.current)
-                        thinkingFlushTimerRef.current = null
-                      }
-                      flushThinking()
-                    } else if (!thinkingFlushTimerRef.current) {
-                      thinkingFlushTimerRef.current = setTimeout(() => {
-                        thinkingFlushTimerRef.current = null
-                        flushThinking()
-                      }, THROTTLE_MS - (now - lastThinkingFlushAtRef.current))
-                    }
+                  const done = parsed.thinkingDone === true
+                  pendingThinkingRef.current = { id: streamingMessageId, text: thinkingText, thinkingDone: done }
+                  const flushThinking = () => {
+                    const p = pendingThinkingRef.current
+                    if (!p) return
+                    lastThinkingFlushAtRef.current = Date.now()
+                    setMessages(prev => prev.map(msg => msg.id === p.id ? { ...msg, thinking: p.text, thinkingDone: p.thinkingDone } : msg))
                   }
+                  if (thinkingFlushTimerRef.current) {
+                    clearTimeout(thinkingFlushTimerRef.current)
+                    thinkingFlushTimerRef.current = null
+                  }
+                  flushThinking()
                 }
                 
                 // content가 있으면 즉시 업데이트 (큐 시스템 무시)
@@ -1343,6 +1404,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                   clearTimeout(thinkingFlushTimerRef.current)
                   thinkingFlushTimerRef.current = null
                 }
+                pendingThinkingRef.current = null
                 // 큐 정리
                 const queue = streamQueuesRef.current.get(streamingMessageId)
                 if (queue) {
@@ -1357,23 +1419,26 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                   }
                 }
                 
-                // 최종 메시지 업데이트 - 모든 정보를 즉시 반영 (큐 시스템 무시)
                 const finalContent = parsed.content || ''
-                const finalThinking = parsed.thinking || ''
+                const finalThinking =
+                  typeof parsed.thinking === 'string'
+                    ? parsed.thinking
+                    : parsed.thinking != null
+                      ? String(parsed.thinking)
+                      : ''
+                const finalSources = parsed.sources || []
                 
                 setMessages(prev => prev.map(msg => {
                   if (msg.id !== streamingMessageId) return msg
-                  
                   return {
                     ...msg,
-                    content: finalContent || msg.content || '',
-                    sources: parsed.sources || msg.sources || [],
                     thinking: finalThinking || msg.thinking || '',
-                    thinkingDone: true
+                    thinkingDone: true,
+                    sources: finalSources,
+                    content: finalContent || msg.content || ''
                   }
                 }))
                 
-                // 큐 정리
                 streamQueuesRef.current.delete(streamingMessageId)
                 
                 // 최종 답변 저장 (분석용)
@@ -1696,26 +1761,29 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
               {(() => {
                 if (message.role !== 'assistant') return null
                 
-                // thinking이 실제로 있을 때만 표시
-                const thinkingValue = message.thinking
-                const hasThinking = thinkingValue 
-                  && typeof thinkingValue === 'string' 
-                  && thinkingValue.trim().length > 0
+                const isLastMessage = message.id === messages[messages.length - 1]?.id
+                const isStreamingThis = isLoading && isLastMessage
+                const rawThinking = typeof message.thinking === 'string' ? message.thinking : ''
+                const isPlaceholderOnly = rawThinking.trim() === '' || /^\.+$/.test(rawThinking.trim()) || rawThinking.trim() === '...'
+                const hasThinkingContent = rawThinking.length > 0 && !isPlaceholderOnly
+                // 로더/쉬머는 실제 스트리밍 중일 때만. New Chat 후 greeting에는 표시 안 함.
+                const hasThinking = hasThinkingContent || (isStreamingThis && !message.thinkingDone)
                 
-                // thinking이 없으면 아코디언을 표시하지 않음
                 if (!hasThinking) return null
                 
-                // 활성 메시지: 로딩 중이거나 마지막 메시지
                 const isActiveMessage = Boolean(
-                  (isLoading && message.id === messages[messages.length - 1]?.id) ||
-                  (!message.thinkingDone && message.id === messages[messages.length - 1]?.id)
+                  isStreamingThis ||
+                  (!message.thinkingDone && isLastMessage)
                 )
+                const thinkingValue = isPlaceholderOnly ? '' : rawThinking
+                const contentPending = isLastMessage && (message.thinkingDone || false) && (message.content === '' || message.content === undefined)
                 
                 return (
                   <ThinkingAccordion
-                    thinking={thinkingValue || ''}
+                    thinking={typeof thinkingValue === 'string' ? thinkingValue : ''}
                     isActive={isActiveMessage}
                     thinkingDone={message.thinkingDone || false}
+                    contentPending={contentPending}
                   />
                 )
               })()}
@@ -2002,7 +2070,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
               )}
 
               {/* Assistant Message Content 표시 - 마크다운 렌더링 및 출처를 인라인 링크로 변환 */}
-              {message.role === 'assistant' && message.content && (!message.thinking || message.thinkingDone) && (
+              {message.role === 'assistant' && message.content && message.thinkingDone && (
                 <div 
                   style={{
                     marginTop: message.thinking ? '12px' : '0',

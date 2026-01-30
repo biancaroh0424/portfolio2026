@@ -63,8 +63,8 @@ const nextConfig = {
     const isDev = process.env.NODE_ENV === 'development'
     
     const cspValue = isDev
-      ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.googleapis.com https://*.google.com; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.google.com;"
-      : "script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.google.com; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.google.com;"
+      ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.googleapis.com https://*.google.com; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src 'self' https://*.googleapis.com https://*.google.com;"
+      : "script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.google.com; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src 'self' https://*.googleapis.com https://*.google.com;"
     
     return [
       {

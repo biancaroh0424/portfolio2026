@@ -161,12 +161,11 @@ export async function POST(request: NextRequest) {
         }
         
         try {
-          // 1) 즉시 thinking 플레이스홀더 전송 — 사용자는 바로 로더/쉬머를 봄
+          // 1) 즉시 전송 — 클라이언트가 로더+shimmer 및 steps UI 표시
           const thinkingPlaceholder = JSON.stringify({
             type: 'content',
             content: '',
-            thinking: '...',
-            deltaThinking: '...',
+            thinking: '',
             thinkingDone: false
           })
           safeEnqueue(new TextEncoder().encode(`data: ${thinkingPlaceholder}\n\n`))
