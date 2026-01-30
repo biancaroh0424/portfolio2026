@@ -107,7 +107,7 @@ export default function AdminPage() {
   const editorGetContentRef = useRef<(() => string) | null>(null)
   /** 저장 직후 loadProjects로 effect가 돌 때, 같은 프로젝트면 언어/에디터 상태 덮어쓰지 않음 */
   const preserveEditStateAfterSaveRef = useRef<string | null>(null)
-  /** 현재 언어의 title/fields 등 최신값 (저장 시 클로저보다 이걸 우선 사용) */
+  /** 현재 언어의 title/fields 등 최신값 (필드 삭제 후 저장 시 클로저보다 이걸 우선 사용) */
   const currentTranslationRef = useRef<ProjectTranslation | null>(null)
 
   // 페이지 로드 시 로그인 상태 확인
@@ -129,14 +129,14 @@ export default function AdminPage() {
     }
   }, [isAuthenticated])
 
-  // 프로젝트/언어 전환 시에만 ref 동기화. 같은 프로젝트 내에서 필드 수정 시에는 ref를 덮어쓰지 않음 (handleFieldChange 등에서만 갱신)
+  // 프로젝트/언어 전환 시에만 ref 동기화. 필드 수정/삭제 시에는 ref를 덮어쓰지 않음
   useEffect(() => {
     if (editingProject) {
       currentTranslationRef.current = getCurrentTranslation(editingProject, currentEditLanguage)
     } else {
       currentTranslationRef.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- editingProject 제외 시, 필드 수정 시 ref가 state로 덮어써져 Summary 등이 이전 값으로 저장됨
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- editingProject 전체 의존 시 필드 삭제 후 저장해도 이전 fields가 저장됨
   }, [editingProject?.id, currentEditLanguage])
 
   const loadResume = async () => {
@@ -418,13 +418,13 @@ export default function AdminPage() {
         editorContentRef.current ??
         getCurrentTranslation(projectWithTags, currentEditLanguage).content ??
         ''
-      // ref에 반영된 최신 title/fields 사용 (직전에 한 번 더 읽어 Summary 등 확실히 반영)
       const baseTranslation = getCurrentTranslation(projectWithTags, currentEditLanguage)
       const fromRef = currentTranslationRef.current
+      // fromRef 있으면 fields/title/tags는 ref 기준 (필드 삭제 후 저장 시 반영)
       const updatedTranslation: ProjectTranslation = {
         title: fromRef?.title ?? baseTranslation.title,
         content: latestContent || baseTranslation.content,
-        fields: fromRef?.fields ?? baseTranslation.fields ?? [],
+        fields: fromRef ? (fromRef.fields ?? []) : (baseTranslation.fields ?? []),
         tags: Array.isArray(fromRef?.tags) ? fromRef.tags : (baseTranslation.tags ?? [])
       }
       
@@ -1209,6 +1209,9 @@ export default function AdminPage() {
                     </p>
                   )}
                 </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Summary 필드를 삭제했는데 포트폴리오에 같은 글이 보이면, 아래 &quot;프로젝트 내용&quot; 본문에도 있을 수 있습니다. 본문에서 해당 문단을 삭제한 뒤 저장해 주세요.
+                </p>
               </div>
 
               <div>
