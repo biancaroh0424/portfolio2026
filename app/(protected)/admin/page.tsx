@@ -129,14 +129,15 @@ export default function AdminPage() {
     }
   }, [isAuthenticated])
 
-  // 현재 편집 언어의 번역을 ref에 동기화 (저장 시 최신 title/fields 반영)
+  // 프로젝트/언어 전환 시에만 ref 동기화. 같은 프로젝트 내에서 필드 수정 시에는 ref를 덮어쓰지 않음 (handleFieldChange 등에서만 갱신)
   useEffect(() => {
     if (editingProject) {
       currentTranslationRef.current = getCurrentTranslation(editingProject, currentEditLanguage)
     } else {
       currentTranslationRef.current = null
     }
-  }, [editingProject, currentEditLanguage])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- editingProject 제외 시, 필드 수정 시 ref가 state로 덮어써져 Summary 등이 이전 값으로 저장됨
+  }, [editingProject?.id, currentEditLanguage])
 
   const loadResume = async () => {
     setIsLoadingResume(true)
@@ -417,9 +418,9 @@ export default function AdminPage() {
         editorContentRef.current ??
         getCurrentTranslation(projectWithTags, currentEditLanguage).content ??
         ''
-      // ref에 반영된 최신 title/fields 사용 (클로저보다 최신)
-      const fromRef = currentTranslationRef.current
+      // ref에 반영된 최신 title/fields 사용 (직전에 한 번 더 읽어 Summary 등 확실히 반영)
       const baseTranslation = getCurrentTranslation(projectWithTags, currentEditLanguage)
+      const fromRef = currentTranslationRef.current
       const updatedTranslation: ProjectTranslation = {
         title: fromRef?.title ?? baseTranslation.title,
         content: latestContent || baseTranslation.content,
