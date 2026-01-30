@@ -17,39 +17,48 @@ function isBlobStorageEnabled(): boolean {
   )
 }
 
-/** Vercel Blob에서 projects.json 읽기 (없거나 실패 시 null) */
+/** Vercel Blob에서 projects.json 읽기 (프로덕션 전용 — pathname 변형 모두 허용) */
 async function readProjectsFromBlob(): Promise<any[] | null> {
   try {
     const { blobs } = await list({ prefix: 'data/', limit: 20 })
+    const pathnames = blobs.map((b) => (b as { pathname?: string }).pathname ?? '').filter(Boolean)
+    if (process.env.VERCEL === '1') console.log('[data] production Blob list:', blobs.length, 'blob(s), pathnames:', pathnames.slice(0, 5).join(', ') || '(none)')
     const blob =
-      blobs.find((b) => b.pathname === BLOB_PROJECTS_PATH) ??
-      blobs.find((b) => (b.pathname && String(b.pathname).endsWith('projects.json'))) ??
-      blobs.find((b) => (b.pathname && String(b.pathname).includes('projects.json')))
+      blobs.find((b) => (b as { pathname?: string }).pathname === BLOB_PROJECTS_PATH) ??
+      blobs.find((b) => (b as { pathname?: string }).pathname === `/${BLOB_PROJECTS_PATH}`) ??
+      blobs.find((b) => (b as { pathname?: string }).pathname?.endsWith?.('projects.json')) ??
+      blobs.find((b) => (b as { pathname?: string }).pathname?.includes?.('projects.json'))
     if (!blob?.url) {
-      if (process.env.VERCEL === '1') console.warn('[data] readProjectsFromBlob: no blob found for data/projects.json')
+      if (process.env.VERCEL === '1') console.warn('[data] production: no projects.json blob in data/. Save a project from Admin first so Blob has data/projects.json.')
       return null
     }
-    const url = blob.url + (blob.url.includes('?') ? '&' : '?') + '_=' + Date.now()
+    const url = (blob.url as string) + ((blob.url as string).includes('?') ? '&' : '?') + '_=' + Date.now()
     const res = await fetch(url)
     if (!res.ok) {
-      if (process.env.VERCEL === '1') console.warn('[data] readProjectsFromBlob: fetch not ok', res.status)
+      if (process.env.VERCEL === '1') console.warn('[data] production Blob fetch not ok:', res.status)
       return null
     }
     const json = await res.json()
     return Array.isArray(json) ? json : null
   } catch (e) {
-    if (process.env.VERCEL === '1') console.warn('[data] readProjectsFromBlob error:', e instanceof Error ? e.message : String(e))
+    if (process.env.VERCEL === '1') console.warn('[data] production readProjectsFromBlob error:', e instanceof Error ? e.message : String(e))
     return null
   }
 }
 
-/** 프로덕션에서 프로젝트 API로 목록 가져오기 (관리자와 동일한 Blob 데이터) */
+/** 프로덕션에서만 사용: 같은 앱의 GET /api/admin/projects 호출 (Blob 실패 시 fallback) */
 async function readProjectsFromApi(): Promise<any[] | null> {
+  // 프로덕션에서는 VERCEL_URL만 사용 (localhost 제외)
   const base =
-    (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}`) ||
-    process.env.NEXT_PUBLIC_VERCEL_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    'http://localhost:3000'
+    process.env.VERCEL === '1'
+      ? (process.env.VERCEL_URL && `https://${String(process.env.VERCEL_URL).replace(/^https?:\/\//, '')}`) ||
+        process.env.NEXT_PUBLIC_VERCEL_URL ||
+        process.env.NEXT_PUBLIC_APP_URL
+      : process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'
+  if (!base) {
+    if (process.env.VERCEL === '1') console.warn('[data] production: no base URL for API (VERCEL_URL / NEXT_PUBLIC_VERCEL_URL)')
+    return null
+  }
   const url = `${base.replace(/\/$/, '')}/api/admin/projects`
   try {
     const controller = new AbortController()
@@ -61,13 +70,13 @@ async function readProjectsFromApi(): Promise<any[] | null> {
     })
     clearTimeout(timeout)
     if (!res.ok) {
-      console.warn('[data] readProjectsFromApi failed:', res.status, res.statusText, url)
+      if (process.env.VERCEL === '1') console.warn('[data] production readProjectsFromApi failed:', res.status, url)
       return null
     }
     const json = await res.json()
     return Array.isArray(json) ? json : null
   } catch (e) {
-    console.warn('[data] readProjectsFromApi error:', e instanceof Error ? e.message : String(e), url)
+    if (process.env.VERCEL === '1') console.warn('[data] production readProjectsFromApi error:', e instanceof Error ? e.message : String(e), url)
     return null
   }
 }
@@ -81,9 +90,11 @@ async function loadProjectsData(): Promise<any[]> {
       if (process.env.VERCEL === '1') console.log('[data] loadProjectsData: loaded', data.length, 'projects (Blob or API)')
       return data
     }
-    console.error(
-      '[data] CRITICAL: Blob and API both failed. Chroma will have no project data. Check BLOB_READ_WRITE_TOKEN, Blob list("data/"), and GET /api/admin/projects.'
-    )
+    if (process.env.VERCEL === '1') {
+      console.error(
+        '[data] CRITICAL (production): Blob and API both failed. Set BLOB_READ_WRITE_TOKEN in Vercel env, then save at least one project from Admin so data/projects.json exists in Blob.'
+      )
+    }
     return []
   }
 

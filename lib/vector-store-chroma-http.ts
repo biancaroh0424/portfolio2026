@@ -72,11 +72,18 @@ export function ensureVectorStoreInitialized(): void {
   })
 }
 
-export async function initializeVectorStore(force?: boolean): Promise<void> {
+export interface VectorStoreInitResult {
+  configured: boolean
+  contentsCount?: number
+  chunksCount?: number
+  error?: string
+}
+
+export async function initializeVectorStore(force?: boolean): Promise<VectorStoreInitResult> {
   const cfg = getConfig()
   if (!cfg) {
-    console.warn('[Vector Store] Chroma Cloud not configured. Skipping init.')
-    return
+    console.warn('[Vector Store] Chroma Cloud not configured. Set CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE.')
+    return { configured: false, error: 'Chroma not configured (CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE)' }
   }
   try {
     console.log('[Vector Store] Checking initialization status...', force ? '(force refresh)' : '')
@@ -84,12 +91,13 @@ export async function initializeVectorStore(force?: boolean): Promise<void> {
     const allContent = await getAllContent()
     if (allContent.length === 0) {
       console.warn('[Vector Store] getAllContent() returned 0 items. Check loadProjectsData (Blob/API) and projects.json in Blob.')
+      return { configured: true, contentsCount: 0, chunksCount: 0, error: 'No project data (Blob/API or projects.json empty)' }
     }
     const count = await chroma.chromaCount(cfg.apiKey, cfg.tenant, cfg.database, cid)
 
     if (!force && count >= allContent.length) {
       console.log(`[Vector Store] Already initialized (${count} chunks). Skipping...`)
-      return
+      return { configured: true, contentsCount: allContent.length, chunksCount: count }
     }
     if (force) console.log('[Vector Store] Force refresh: clearing and re-initializing.')
 
@@ -141,8 +149,11 @@ export async function initializeVectorStore(force?: boolean): Promise<void> {
       }
     }
     console.log(`[Vector Store] Initialization complete. Chunks: ${totalChunks} (from ${allContent.length} contents)`)
+    return { configured: true, contentsCount: allContent.length, chunksCount: totalChunks }
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[Vector Store] Init Error:', error)
+    return { configured: true, error: msg }
   }
 }
 

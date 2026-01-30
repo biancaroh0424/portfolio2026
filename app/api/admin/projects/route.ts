@@ -15,11 +15,15 @@ function isBlobStorageEnabled(): boolean {
   return onVercel && hasToken
 }
 
-/** Vercel Blob에서 projects.json 내용 읽기 (없으면 null) */
+/** Vercel Blob에서 projects.json 읽기 (프로덕션 — pathname 변형 허용) */
 async function readProjectsFromBlob(): Promise<any[] | null> {
   try {
-    const { blobs } = await list({ prefix: 'data/', limit: 10 })
-    const blob = blobs.find((b) => b.pathname === BLOB_PROJECTS_PATH)
+    const { blobs } = await list({ prefix: 'data/', limit: 20 })
+    const blob =
+      blobs.find((b) => b.pathname === BLOB_PROJECTS_PATH) ??
+      blobs.find((b) => b.pathname === `/${BLOB_PROJECTS_PATH}`) ??
+      blobs.find((b) => b.pathname?.endsWith?.('projects.json')) ??
+      blobs.find((b) => b.pathname?.includes?.('projects.json'))
     if (!blob?.url) return null
     const url = blob.url + (blob.url.includes('?') ? '&' : '?') + '_=' + Date.now()
     const res = await fetch(url)

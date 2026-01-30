@@ -4,24 +4,53 @@ import { initializeVectorStore } from '@/lib/vector-store'
 export const runtime = 'nodejs'
 
 // 벡터 저장소 초기화 API (Admin 저장 등 CMS 데이터 변경 시 호출 — 항상 전체 재구성)
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
-    await initializeVectorStore(true) // force: Admin 저장 시 Chroma 전부 갱신
-    
+    const result = await initializeVectorStore(true) // force: Admin 저장 시 Chroma 전부 갱신
+
+    if (!result.configured) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error || 'Chroma not configured',
+          hint: 'Set CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE in Vercel Environment Variables (or run local Chroma with CHROMA_API_KEY unset)',
+          ...result,
+        },
+        { status: 400 }
+      )
+    }
+    if (result.error && (result.contentsCount === 0 || result.chunksCount === 0)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error,
+          hint: 'Check BLOB_READ_WRITE_TOKEN and that projects exist in Blob (save a project from Admin first).',
+          ...result,
+        },
+        { status: 400 }
+      )
+    }
+    if (result.error) {
+      return NextResponse.json(
+        { success: false, error: result.error, ...result },
+        { status: 500 }
+      )
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Vector store initialized successfully'
+      message: 'Vector store initialized successfully',
+      contentsCount: result.contentsCount,
+      chunksCount: result.chunksCount,
     })
   } catch (error) {
     console.error('Error initializing vector store:', error)
     const errorMessage = error instanceof Error ? error.message : String(error)
-    const errorStack = error instanceof Error ? error.stack : undefined
-    console.error('Error details:', { message: errorMessage, stack: errorStack })
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to initialize vector store',
-        details: errorMessage
+        details: errorMessage,
       },
       { status: 500 }
     )

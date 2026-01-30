@@ -21,7 +21,9 @@ export function ensureVectorStoreInitialized(): void {
   getImpl().then((m) => m.ensureVectorStoreInitialized()).catch((e) => console.error('[Vector Store] ensureVectorStoreInitialized failed:', e))
 }
 
-export async function initializeVectorStore(force?: boolean): Promise<void> {
+export type { VectorStoreInitResult } from './vector-store-chroma-http'
+
+export async function initializeVectorStore(force?: boolean): Promise<import('./vector-store-chroma-http').VectorStoreInitResult> {
   const m = await getImpl()
   return m.initializeVectorStore(force)
 }

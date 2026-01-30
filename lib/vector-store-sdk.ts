@@ -94,16 +94,25 @@ export function ensureVectorStoreInitialized(): void {
   })
 }
 
-export async function initializeVectorStore(force?: boolean): Promise<void> {
+export interface VectorStoreInitResult {
+  configured: boolean
+  contentsCount?: number
+  chunksCount?: number
+  error?: string
+}
+
+export async function initializeVectorStore(force?: boolean): Promise<VectorStoreInitResult> {
   try {
     const client = getChromaClient()
-    if (!client) return
+    if (!client) {
+      return { configured: false, error: 'Chroma client not available (local Chroma or CHROMA_* not set)' }
+    }
     const collection = await getOrCreateCollection()
     const allContent = await getAllContent()
     const count = await collection.count()
     if (!force && count >= allContent.length) {
       collectionCache = collection
-      return
+      return { configured: true, contentsCount: allContent.length, chunksCount: count }
     }
     if (count > 0) await collection.delete({ where: {} })
     const batchSize = 5
@@ -140,8 +149,11 @@ export async function initializeVectorStore(force?: boolean): Promise<void> {
       if (ids.length > 0) await collection.add({ ids, embeddings, metadatas, documents })
     }
     collectionCache = collection
+    return { configured: true, contentsCount: allContent.length, chunksCount: totalChunks }
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[Vector Store] Init Error:', error)
+    return { configured: true, error: msg }
   }
 }
 

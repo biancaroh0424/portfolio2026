@@ -158,37 +158,34 @@ export default function AdminPage() {
     }
   }
 
-  // 벡터 저장소 재초기화 헬퍼 함수 (재시도 로직 포함)
-  const initializeVectorStoreWithRetry = async (maxRetries = 3): Promise<boolean> => {
+  // 벡터 저장소 재초기화 헬퍼 (재시도 포함). 실패 시 API의 error/hint 반환.
+  const initializeVectorStoreWithRetry = async (maxRetries = 3): Promise<{ success: boolean; errorMessage?: string; contentsCount?: number; chunksCount?: number }> => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         setIsInitializing(true)
-        const embedResponse = await fetch('/api/embed', {
-          method: 'POST',
-        })
-        
-        if (embedResponse.ok) {
-          const result = await embedResponse.json()
-          if (result.success) {
-            return true
-          }
+        const embedResponse = await fetch('/api/embed', { method: 'POST' })
+        const result = await embedResponse.json().catch(() => ({}))
+        if (embedResponse.ok && result.success) {
+          return { success: true, contentsCount: result.contentsCount, chunksCount: result.chunksCount }
         }
-        
-        // 실패 시 재시도
+        const msg = [result.error, result.hint].filter(Boolean).join(' — ')
+        if (msg && attempt === maxRetries) return { success: false, errorMessage: msg }
         if (attempt < maxRetries) {
-          console.log(`Vector store initialization failed, retrying... (${attempt}/${maxRetries})`)
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)) // 지수 백오프
+          console.log(`Vector store init failed, retrying... (${attempt}/${maxRetries})`, result.error || result.details)
+          await new Promise((r) => setTimeout(r, 1000 * attempt))
+        } else {
+          return { success: false, errorMessage: msg || result.details || '벡터 저장소 업데이트 실패' }
         }
       } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error)
         console.error(`Error initializing vector store (attempt ${attempt}):`, error)
-        if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
-        }
+        if (attempt === maxRetries) return { success: false, errorMessage: errMsg }
+        await new Promise((r) => setTimeout(r, 1000 * attempt))
       } finally {
         setIsInitializing(false)
       }
     }
-    return false
+    return { success: false, errorMessage: '벡터 저장소 업데이트 실패' }
   }
 
   const handleSaveResume = async () => {
@@ -470,11 +467,12 @@ export default function AdminPage() {
       await loadProjects()
 
       // 벡터 저장소 재생성 (재시도 포함)
-      const success = await initializeVectorStoreWithRetry()
-      if (success) {
-        setMessage('✅ 프로젝트가 저장되고 벡터 저장소가 업데이트되었습니다!')
+      const embedResult = await initializeVectorStoreWithRetry()
+      if (embedResult.success) {
+        const detail = embedResult.chunksCount != null ? ` (${embedResult.contentsCount ?? 0}개 콘텐츠, ${embedResult.chunksCount}개 청크)` : ''
+        setMessage(`✅ 프로젝트가 저장되고 벡터 저장소가 업데이트되었습니다!${detail}`)
       } else {
-        setMessage('⚠️ 프로젝트는 저장되었지만 벡터 저장소 업데이트에 실패했습니다. 나중에 다시 시도해주세요.')
+        setMessage(embedResult.errorMessage ?? '⚠️ 프로젝트는 저장되었지만 벡터 저장소 업데이트에 실패했습니다.')
       }
     } catch (error) {
       console.error('Error saving project:', error)
@@ -750,12 +748,12 @@ export default function AdminPage() {
       setMessage('프로젝트가 삭제되었습니다. 벡터 저장소를 업데이트하는 중...')
       await loadProjects()
 
-      // 벡터 저장소 재생성 (재시도 포함)
-      const success = await initializeVectorStoreWithRetry()
-      if (success) {
-        setMessage('✅ 프로젝트가 삭제되고 벡터 저장소가 업데이트되었습니다!')
+      const embedResult = await initializeVectorStoreWithRetry()
+      if (embedResult.success) {
+        const detail = embedResult.chunksCount != null ? ` (${embedResult.contentsCount ?? 0}개 콘텐츠, ${embedResult.chunksCount}개 청크)` : ''
+        setMessage(`✅ 프로젝트가 삭제되고 벡터 저장소가 업데이트되었습니다!${detail}`)
       } else {
-        setMessage('⚠️ 프로젝트는 삭제되었지만 벡터 저장소 업데이트에 실패했습니다. 나중에 다시 시도해주세요.')
+        setMessage(embedResult.errorMessage ?? '⚠️ 프로젝트는 삭제되었지만 벡터 저장소 업데이트에 실패했습니다.')
       }
     } catch (error) {
       console.error('Error deleting project:', error)
