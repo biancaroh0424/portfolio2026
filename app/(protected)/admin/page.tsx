@@ -105,6 +105,8 @@ export default function AdminPage() {
   const [tagInput, setTagInput] = useState<string>('')
   const editorContentRef = useRef<string | null>(null)
   const editorGetContentRef = useRef<(() => string) | null>(null)
+  /** 저장 직후 loadProjects로 effect가 돌 때, 같은 프로젝트면 언어/에디터 상태 덮어쓰지 않음 */
+  const preserveEditStateAfterSaveRef = useRef<string | null>(null)
 
   // 페이지 로드 시 로그인 상태 확인
   useEffect(() => {
@@ -451,6 +453,7 @@ export default function AdminPage() {
       // 즉시 UI에 반영 (저장한 데이터 그대로 유지)
       setEditingProject(finalProject)
       editorContentRef.current = latestContent || ''
+      preserveEditStateAfterSaveRef.current = finalProject.id
 
       // 목록만 새로고침 (Blob eventual consistency로 GET이 아직 이전 버전을 줄 수 있으므로 editingProject는 덮어쓰지 않음)
       await loadProjects()
@@ -643,11 +646,17 @@ export default function AdminPage() {
           }
           return projectToEdit
         })
-        setCurrentEditLanguage(defaultLanguage)
-        setTagInput('') // 태그 입력 필드 초기화
-        // 현재 언어의 콘텐츠를 에디터에 로드 (없으면 빈값)
-        const currentTranslation = getCurrentTranslation(projectToEdit, defaultLanguage)
-        editorContentRef.current = currentTranslation.content || ''
+        // 저장 직후 목록만 갱신된 경우: 언어·스크롤 유지 (영어 탭 그대로)
+        const preserving = preserveEditStateAfterSaveRef.current === projectId
+        if (preserving) {
+          preserveEditStateAfterSaveRef.current = null
+        }
+        if (!preserving) {
+          setCurrentEditLanguage(defaultLanguage)
+          setTagInput('') // 태그 입력 필드 초기화
+          const currentTranslation = getCurrentTranslation(projectToEdit, defaultLanguage)
+          editorContentRef.current = currentTranslation.content || ''
+        }
       } else if (projectId) {
         // projects 배열에 없으면 API에서 직접 가져오기
         const loadProject = async () => {
@@ -705,10 +714,14 @@ export default function AdminPage() {
                   }
                   return projectToEdit
                 })
-                setCurrentEditLanguage(defaultLanguage)
-                setTagInput('')
-                const currentTranslation = getCurrentTranslation(projectToEdit, defaultLanguage)
-                editorContentRef.current = currentTranslation.content || ''
+                const preserving = preserveEditStateAfterSaveRef.current === projectId
+                if (preserving) preserveEditStateAfterSaveRef.current = null
+                if (!preserving) {
+                  setCurrentEditLanguage(defaultLanguage)
+                  setTagInput('')
+                  const currentTranslation = getCurrentTranslation(projectToEdit, defaultLanguage)
+                  editorContentRef.current = currentTranslation.content || ''
+                }
               }
             }
           } catch (error) {

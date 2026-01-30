@@ -390,6 +390,7 @@ export default function ProjectDetailPage() {
             content={currentTranslation.content || ''} 
             title={currentTranslation.title}
             onToggle={setIsChapterOpen}
+            contentContainerRef={contentRef}
           />
         )}
         

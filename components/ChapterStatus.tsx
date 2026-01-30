@@ -12,9 +12,11 @@ interface ChapterStatusProps {
   content: string
   title?: string
   onToggle?: (isOpen: boolean) => void
+  /** 본문 DOM 컨테이너 ref. 넘기면 이 안에서만 헤딩을 찾아 렌더가 안정적임 */
+  contentContainerRef?: React.RefObject<HTMLElement | null>
 }
 
-export default function ChapterStatus({ content, title, onToggle }: ChapterStatusProps) {
+export default function ChapterStatus({ content, title, onToggle, contentContainerRef }: ChapterStatusProps) {
   const [chapters, setChapters] = useState<Chapter[]>([])
   const [activeChapter, setActiveChapter] = useState<string | null>(null)
   const [hoveredChapter, setHoveredChapter] = useState<string | null>(null)
@@ -26,9 +28,10 @@ export default function ChapterStatus({ content, title, onToggle }: ChapterStatu
   useEffect(() => {
     if (!content) return
 
-    const timer = setTimeout(() => {
-      // h2~h5만 추출 (h1, h6 제외)
-      const headings = document.querySelectorAll('.prose h2, .prose h3, .prose h4, .prose h5, .prose-lg h2, .prose-lg h3, .prose-lg h4, .prose-lg h5')
+    const run = () => {
+      const root = contentContainerRef?.current ?? document
+      const selector = 'h2, h3, h4, h5'
+      const headings = root.querySelectorAll(selector)
       const chaptersList: Chapter[] = []
 
       headings.forEach((heading) => {
@@ -45,10 +48,17 @@ export default function ChapterStatus({ content, title, onToggle }: ChapterStatu
       })
 
       setChapters(chaptersList)
-    }, 600) // 프로젝트 상세 페이지의 ID 생성(100ms) 이후에 실행되도록 충분히 지연
+    }
 
-    return () => clearTimeout(timer)
-  }, [content])
+    const t1 = setTimeout(run, 400)
+    const t2 = setTimeout(run, 900)
+    const t3 = setTimeout(run, 1400)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+    }
+  }, [content, contentContainerRef])
 
   // 스크롤 위치에 따라 활성 챕터 업데이트
   useEffect(() => {
