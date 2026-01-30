@@ -168,7 +168,7 @@ export default function AdminPage() {
         if (embedResponse.ok && result.success) {
           return { success: true, contentsCount: result.contentsCount, chunksCount: result.chunksCount }
         }
-        const msg = [result.error, result.hint].filter(Boolean).join(' — ')
+        const msg = [result.error, result.hint, result.details].filter(Boolean).join(' — ')
         if (msg && attempt === maxRetries) return { success: false, errorMessage: msg }
         if (attempt < maxRetries) {
           console.log(`Vector store init failed, retrying... (${attempt}/${maxRetries})`, result.error || result.details)
