@@ -60,7 +60,7 @@ async function getOrCreateCollectionId(): Promise<string> {
   return collectionIdCache
 }
 
-let initPromise: Promise<void> | null = null
+let initPromise: Promise<unknown> | null = null
 
 export function ensureVectorStoreInitialized(): void {
   const cfg = getConfig()
