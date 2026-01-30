@@ -103,7 +103,16 @@ export async function initializeVectorStore(force?: boolean): Promise<VectorStor
 
     console.log('[Vector Store] Initializing / Updating Vector Store...')
     if (count > 0) {
-      await chroma.chromaDelete(cfg.apiKey, cfg.tenant, cfg.database, cid, {})
+      // Chroma Cloud rejects empty where {}; delete by ids in batches
+      const batchLimit = 500
+      let deleted = 0
+      while (true) {
+        const { ids } = await chroma.chromaGet(cfg.apiKey, cfg.tenant, cfg.database, cid, batchLimit)
+        if (ids.length === 0) break
+        await chroma.chromaDelete(cfg.apiKey, cfg.tenant, cfg.database, cid, { ids })
+        deleted += ids.length
+      }
+      if (deleted > 0) console.log('[Vector Store] Deleted', deleted, 'chunks before re-add.')
     }
 
     const batchSize = 5

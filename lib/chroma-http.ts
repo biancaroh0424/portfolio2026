@@ -123,16 +123,20 @@ export async function chromaGet(
   return { ids: data.ids ?? [], metadatas: data.metadatas }
 }
 
-/** Delete records by where. */
+/** Delete records by ids and/or where. Chroma Cloud rejects empty where {}; use ids to delete all. */
 export async function chromaDelete(
   apiKey: string,
   tenant: string,
   database: string,
   collectionId: string,
-  where: unknown
+  opts: { ids?: string[]; where?: unknown }
 ): Promise<void> {
   const url = `${base(tenant, database)}/collections/${collectionId}/delete`
-  const res = await chromaFetch(apiKey, url, { method: 'POST', body: { where } })
+  const body: { ids?: string[]; where?: unknown } = {}
+  if (opts.ids != null && opts.ids.length > 0) body.ids = opts.ids
+  if (opts.where != null && typeof opts.where === 'object' && Object.keys(opts.where as object).length > 0) body.where = opts.where
+  if (Object.keys(body).length === 0) return
+  const res = await chromaFetch(apiKey, url, { method: 'POST', body })
   if (!res.ok) {
     const t = await res.text()
     throw new Error(`Chroma delete failed: ${res.status} ${t}`)
