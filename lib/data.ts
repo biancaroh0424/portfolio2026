@@ -329,7 +329,7 @@ export async function getAllContent(): Promise<Content[]> {
     languages.forEach(lang => {
       const translation = translations[lang]
       let contentToProcess: string | null =
-        (translation?.content && translation.content.trim()) ? translation.content : (lang === 'en' ? project.content : null)
+        ((translation?.content && translation.content.trim()) ? translation.content : (lang === 'en' ? project.content : null)) ?? null
       if (lang === 'en' && contentToProcess) {
         const plain = contentToProcess.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
         if (plain.length < MIN_SUBSTANTIAL_LENGTH) {
