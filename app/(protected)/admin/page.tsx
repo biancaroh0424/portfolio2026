@@ -104,6 +104,7 @@ export default function AdminPage() {
   const [uploadingResume, setUploadingResume] = useState<{ en: boolean; ko: boolean; it: boolean }>({ en: false, ko: false, it: false })
   const [tagInput, setTagInput] = useState<string>('')
   const editorContentRef = useRef<string | null>(null)
+  const editorGetContentRef = useRef<(() => string) | null>(null)
 
   // 페이지 로드 시 로그인 상태 확인
   useEffect(() => {
@@ -397,9 +398,12 @@ export default function AdminPage() {
     }
 
     try {
-      // RichTextEditor의 최신 content를 가져와서 현재 언어의 translation에 반영
-      const latestContent = editorContentRef.current
-      
+      // 에디터에서 직전에 읽기 (저장 버튼 클릭 시 디바운스 전이라도 최신 반영)
+      const latestContent =
+        editorGetContentRef.current?.() ??
+        editorContentRef.current ??
+        getCurrentTranslation(projectWithTags, currentEditLanguage).content ??
+        ''
       // 현재 언어의 translation 가져오기
       const currentTranslation = getCurrentTranslation(projectWithTags, currentEditLanguage)
       
@@ -426,7 +430,9 @@ export default function AdminPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to save project')
+        const errBody = await response.json().catch(() => ({}))
+        const msg = errBody?.message || errBody?.error || `HTTP ${response.status}`
+        throw new Error(msg)
       }
 
       // API 응답에서 저장된 프로젝트 데이터 가져오기
@@ -442,30 +448,12 @@ export default function AdminPage() {
         currentLanguage: currentEditLanguage // 현재 편집 중인 언어 유지
       }
       
-      // 즉시 UI에 반영 (저장 중에도 태그가 표시되도록)
+      // 즉시 UI에 반영 (저장한 데이터 그대로 유지)
       setEditingProject(finalProject)
       editorContentRef.current = latestContent || ''
-      
-      // 프로젝트 목록 새로고침 후에도 저장한 데이터를 사용
-      const updatedProjects = await loadProjects()
-      if (updatedProjects && finalProject.id) {
-        const latestProject = updatedProjects.find((p: Project) => p.id === finalProject.id)
-        if (latestProject) {
-          // 최신 프로젝트 데이터로 editingProject 업데이트 (언어별 태그 포함, 현재 편집 언어 유지)
-          setEditingProject({
-            ...latestProject,
-            currentLanguage: currentEditLanguage // 현재 편집 중인 언어 유지
-          })
-        } else {
-          // 프로젝트를 찾지 못한 경우에도 finalProject로 유지
-          setEditingProject(finalProject)
-        }
-      } else {
-        // loadProjects 실패 시에도 finalProject로 유지
-        setEditingProject(finalProject)
-      }
-      
-      // 편집 페이지에 그대로 머물기 위해 setEditingProject(null)과 router.push 제거
+
+      // 목록만 새로고침 (Blob eventual consistency로 GET이 아직 이전 버전을 줄 수 있으므로 editingProject는 덮어쓰지 않음)
+      await loadProjects()
 
       // 벡터 저장소 재생성 (재시도 포함)
       const success = await initializeVectorStoreWithRetry()
@@ -476,7 +464,8 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error('Error saving project:', error)
-      setMessage('❌ 저장 중 오류가 발생했습니다.')
+      const msg = error instanceof Error ? error.message : '저장 중 오류가 발생했습니다.'
+      setMessage('❌ ' + msg)
     } finally {
       setIsSaving(false)
     }
@@ -1301,6 +1290,7 @@ export default function AdminPage() {
                 <RichTextEditor
                   key={`editor-${editingProject.id}-${currentEditLanguage}`}
                   value={getCurrentTranslation(editingProject, currentEditLanguage).content || ''}
+                  getContentRef={editorGetContentRef}
                   onChange={(value) => {
                     editorContentRef.current = value
                     const currentTranslation = getCurrentTranslation(editingProject, currentEditLanguage)

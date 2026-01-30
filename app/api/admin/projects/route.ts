@@ -6,8 +6,13 @@ import { put, list } from '@vercel/blob'
 const PROJECTS_FILE = path.join(process.cwd(), 'data', 'projects.json')
 const BLOB_PROJECTS_PATH = 'data/projects.json'
 
+/** Vercel 배포 환경에서만 Blob 사용. 로컬(localhost)에서는 fs 사용 → 토큰 없이 저장 가능 */
 function isBlobStorageEnabled(): boolean {
-  return typeof process.env.BLOB_READ_WRITE_TOKEN === 'string' && process.env.BLOB_READ_WRITE_TOKEN.length > 0
+  const onVercel = process.env.VERCEL === '1'
+  const hasToken =
+    typeof process.env.BLOB_READ_WRITE_TOKEN === 'string' &&
+    process.env.BLOB_READ_WRITE_TOKEN.length > 0
+  return onVercel && hasToken
 }
 
 /** Vercel Blob에서 projects.json 내용 읽기 (없으면 null) */
@@ -16,7 +21,8 @@ async function readProjectsFromBlob(): Promise<any[] | null> {
     const { blobs } = await list({ prefix: 'data/', limit: 10 })
     const blob = blobs.find((b) => b.pathname === BLOB_PROJECTS_PATH)
     if (!blob?.url) return null
-    const res = await fetch(blob.url)
+    const url = blob.url + (blob.url.includes('?') ? '&' : '?') + '_=' + Date.now()
+    const res = await fetch(url)
     if (!res.ok) return null
     const json = await res.json()
     return Array.isArray(json) ? json : null
@@ -116,9 +122,15 @@ export async function POST(request: NextRequest) {
   try {
     return await saveProject(request)
   } catch (error) {
-    console.error('Error saving project:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    const detail = error instanceof Error ? error.stack : String(error)
+    console.error('Error saving project:', detail)
     return NextResponse.json(
-      { error: 'Failed to save project' },
+      {
+        error: 'Failed to save project',
+        message,
+        ...(process.env.NODE_ENV === 'development' && { detail }),
+      },
       { status: 500 }
     )
   }

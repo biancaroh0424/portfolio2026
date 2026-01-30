@@ -22,6 +22,8 @@ interface RichTextEditorProps {
   onChange: (value: string) => void
   placeholder?: string
   onSave?: (content: string) => void | Promise<void>
+  /** 부모에서 저장 시 에디터 최신 HTML을 읽을 수 있도록 (저장 버튼 클릭 시 ref.current() 호출) */
+  getContentRef?: React.MutableRefObject<(() => string) | null>
 }
 
 export default function RichTextEditor({
@@ -29,6 +31,7 @@ export default function RichTextEditor({
   onChange,
   placeholder = '내용을 입력하세요...',
   onSave,
+  getContentRef,
 }: RichTextEditorProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
@@ -581,6 +584,19 @@ export default function RichTextEditor({
       editor.off('update', handleUpdate)
     }
   }, [editor, showSlashMenu])
+
+  // 부모에서 저장 버튼 클릭 시 에디터 최신 HTML을 읽을 수 있도록
+  useEffect(() => {
+    if (!getContentRef) return
+    if (editor) {
+      getContentRef.current = () => editor.getHTML()
+    } else {
+      getContentRef.current = null
+    }
+    return () => {
+      getContentRef!.current = null
+    }
+  }, [editor, getContentRef])
 
   const handleImageUpload = async (file: File) => {
     try {
