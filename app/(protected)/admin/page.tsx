@@ -107,6 +107,8 @@ export default function AdminPage() {
   const editorGetContentRef = useRef<(() => string) | null>(null)
   /** 저장 직후 loadProjects로 effect가 돌 때, 같은 프로젝트면 언어/에디터 상태 덮어쓰지 않음 */
   const preserveEditStateAfterSaveRef = useRef<string | null>(null)
+  /** 현재 언어의 title/fields 등 최신값 (저장 시 클로저보다 이걸 우선 사용) */
+  const currentTranslationRef = useRef<ProjectTranslation | null>(null)
 
   // 페이지 로드 시 로그인 상태 확인
   useEffect(() => {
@@ -126,6 +128,15 @@ export default function AdminPage() {
       loadResume()
     }
   }, [isAuthenticated])
+
+  // 현재 편집 언어의 번역을 ref에 동기화 (저장 시 최신 title/fields 반영)
+  useEffect(() => {
+    if (editingProject) {
+      currentTranslationRef.current = getCurrentTranslation(editingProject, currentEditLanguage)
+    } else {
+      currentTranslationRef.current = null
+    }
+  }, [editingProject, currentEditLanguage])
 
   const loadResume = async () => {
     setIsLoadingResume(true)
@@ -406,15 +417,14 @@ export default function AdminPage() {
         editorContentRef.current ??
         getCurrentTranslation(projectWithTags, currentEditLanguage).content ??
         ''
-      // 현재 언어의 translation 가져오기
-      const currentTranslation = getCurrentTranslation(projectWithTags, currentEditLanguage)
-      
-      // 현재 언어의 translation 업데이트 (태그 포함)
+      // ref에 반영된 최신 title/fields 사용 (클로저보다 최신)
+      const fromRef = currentTranslationRef.current
+      const baseTranslation = getCurrentTranslation(projectWithTags, currentEditLanguage)
       const updatedTranslation: ProjectTranslation = {
-        title: currentTranslation.title,
-        content: latestContent || currentTranslation.content,
-        fields: currentTranslation.fields || [],
-        tags: Array.isArray(currentTranslation.tags) ? currentTranslation.tags : [] // 언어별 태그 보존
+        title: fromRef?.title ?? baseTranslation.title,
+        content: latestContent || baseTranslation.content,
+        fields: fromRef?.fields ?? baseTranslation.fields ?? [],
+        tags: Array.isArray(fromRef?.tags) ? fromRef.tags : (baseTranslation.tags ?? [])
       }
       
       // 프로젝트에 현재 언어의 translation만 업데이트하고 다른 언어는 유지
@@ -748,6 +758,7 @@ export default function AdminPage() {
       ...currentTranslation,
       fields: updatedFields
     }
+    currentTranslationRef.current = updatedTranslation
     setEditingProject(setCurrentTranslation(editingProject, currentEditLanguage, updatedTranslation))
   }
 
@@ -759,6 +770,7 @@ export default function AdminPage() {
       ...currentTranslation,
       fields: updatedFields
     }
+    currentTranslationRef.current = updatedTranslation
     setEditingProject(setCurrentTranslation(editingProject, currentEditLanguage, updatedTranslation))
   }
 
@@ -781,6 +793,7 @@ export default function AdminPage() {
       ...currentTranslation,
       fields: updatedFields
     }
+    currentTranslationRef.current = updatedTranslation
     setEditingProject(setCurrentTranslation(editingProject, currentEditLanguage, updatedTranslation))
   }
 
@@ -1098,6 +1111,7 @@ export default function AdminPage() {
                       ...currentTranslation,
                       title: e.target.value
                     }
+                    currentTranslationRef.current = updatedTranslation
                     setEditingProject(setCurrentTranslation(editingProject, currentEditLanguage, updatedTranslation))
                   }}
                   className="w-full px-4 py-2 border rounded-lg bg-transparent text-white"
@@ -1311,6 +1325,7 @@ export default function AdminPage() {
                       ...currentTranslation,
                       content: value
                     }
+                    currentTranslationRef.current = updatedTranslation
                     setEditingProject(setCurrentTranslation(editingProject, currentEditLanguage, updatedTranslation))
                   }}
                   onSave={async (content) => {
