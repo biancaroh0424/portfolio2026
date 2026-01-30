@@ -602,74 +602,9 @@ export default function AdminPage() {
       setCurrentEditLanguage('en')
       setTagInput('') // 태그 입력 필드 초기화
     } else if (pathname?.startsWith('/admin/edit/')) {
-      // 편집 페이지
-      const projectId = pathname.replace('/admin/edit/', '')
-      
-      // 이미 같은 프로젝트를 편집 중이면 업데이트하지 않음 (저장 후 상태 유지)
-      // editingProject를 직접 참조하지 않고 함수 내부에서 확인
-      setEditingProject(prev => {
-        if (prev && prev.id === projectId) {
-          return prev // 같은 프로젝트를 편집 중이면 상태 유지
-        }
-        return prev // 일단 이전 상태 유지, 아래에서 업데이트
-      })
-      
-      const project = projects.find(p => p.id === projectId)
-      if (project) {
-        const defaultLanguage = project.currentLanguage || project.language || 'en'
-        
-        // 하위 호환성: 기존 tags 필드가 있고 translations에 태그가 없으면 영어 translation에 추가
-        let projectToEdit = { ...project }
-        if (Array.isArray(project.tags) && project.tags.length > 0) {
-          // 영어 translation이 있고 태그가 없으면 기존 tags를 추가
-          if (projectToEdit.translations?.en && !projectToEdit.translations.en.tags) {
-            projectToEdit = {
-              ...projectToEdit,
-              translations: {
-                ...projectToEdit.translations,
-                en: {
-                  ...projectToEdit.translations.en,
-                  tags: project.tags
-                }
-              }
-            }
-          } else if (!projectToEdit.translations?.en) {
-            // 영어 translation이 없으면 생성하고 태그 추가
-            projectToEdit = {
-              ...projectToEdit,
-              translations: {
-                ...projectToEdit.translations,
-                en: {
-                  title: project.title || '',
-                  content: project.content || '',
-                  fields: project.fields || [],
-                  tags: project.tags
-                }
-              }
-            }
-          }
-        }
-        
-        // editingProject가 이미 같은 프로젝트면 업데이트하지 않음
-        setEditingProject(prev => {
-          if (prev && prev.id === projectId) {
-            return prev // 저장 후 상태 유지
-          }
-          return projectToEdit
-        })
-        // 저장 직후 목록만 갱신된 경우: 언어·스크롤 유지 (영어 탭 그대로)
-        const preserving = preserveEditStateAfterSaveRef.current === projectId
-        if (preserving) {
-          preserveEditStateAfterSaveRef.current = null
-        }
-        if (!preserving) {
-          setCurrentEditLanguage(defaultLanguage)
-          setTagInput('') // 태그 입력 필드 초기화
-          const currentTranslation = getCurrentTranslation(projectToEdit, defaultLanguage)
-          editorContentRef.current = currentTranslation.content || ''
-        }
-      } else if (projectId) {
-        // projects 배열에 없으면 API에서 직접 가져오기
+      // 편집 페이지: 항상 API에서 최신 프로젝트 로드 (목록이 스테일이면 Summary 삭제 후 필드 추가 시 이전 내용이 섞이는 문제 방지)
+      const projectId = pathname.replace('/admin/edit/', '').replace(/\/$/, '')
+      if (projectId) {
         const loadProject = async () => {
           try {
             const timestamp = Date.now()
@@ -732,6 +667,7 @@ export default function AdminPage() {
                   setTagInput('')
                   const currentTranslation = getCurrentTranslation(projectToEdit, defaultLanguage)
                   editorContentRef.current = currentTranslation.content || ''
+                  currentTranslationRef.current = currentTranslation
                 }
               }
             }
