@@ -21,7 +21,9 @@ function isBlobStorageEnabled(): boolean {
 async function readProjectsFromBlob(): Promise<any[] | null> {
   try {
     const { blobs } = await list({ prefix: 'data/', limit: 10 })
-    const blob = blobs.find((b) => b.pathname === BLOB_PROJECTS_PATH)
+    const blob =
+      blobs.find((b) => b.pathname === BLOB_PROJECTS_PATH) ??
+      blobs.find((b) => b.pathname.endsWith('projects.json'))
     if (!blob?.url) return null
     const url = blob.url + (blob.url.includes('?') ? '&' : '?') + '_=' + Date.now()
     const res = await fetch(url)
@@ -33,10 +35,32 @@ async function readProjectsFromBlob(): Promise<any[] | null> {
   }
 }
 
+/** 프로덕션에서 프로젝트 API로 목록 가져오기 (Blob 직접 읽기 실패 시 fallback) */
+async function readProjectsFromApi(): Promise<any[] | null> {
+  try {
+    const base = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const res = await fetch(`${base}/api/admin/projects`, {
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    })
+    if (!res.ok) return null
+    const json = await res.json()
+    return Array.isArray(json) ? json : null
+  } catch {
+    return null
+  }
+}
+
 async function loadProjectsData(): Promise<any[]> {
   if (isBlobStorageEnabled()) {
-    const fromBlob = await readProjectsFromBlob()
+    let fromBlob = await readProjectsFromBlob()
+    if (fromBlob === null) {
+      fromBlob = await readProjectsFromApi()
+    }
     if (fromBlob !== null) return fromBlob
+    console.warn('[data] Blob and API fallback both returned null; using file if available.')
   }
 
   if (cachedProjects) {
@@ -238,12 +262,12 @@ export async function getAllContent(): Promise<Content[]> {
       const MIN_SUBSTANTIAL_LENGTH = 400 // 플레이스홀더와 구분
       let projectContent = ''
       let rawContent: string | undefined = translation.content || (lang === 'en' ? project.content : undefined)
-      if (lang === 'en' && rawContent) {
-        const plain = (typeof rawContent === 'string' ? rawContent : '')
+      if (lang === 'en') {
+        const plain = (rawContent && typeof rawContent === 'string' ? rawContent : '')
           .replace(/<[^>]*>/g, ' ')
           .replace(/\s+/g, ' ')
           .trim()
-        if (plain.length < MIN_SUBSTANTIAL_LENGTH) {
+        if (!plain || plain.length < MIN_SUBSTANTIAL_LENGTH) {
           const fallback = (translations.ko?.content || translations.it?.content) as string | undefined
           if (fallback && typeof fallback === 'string') rawContent = fallback
         }
@@ -330,12 +354,13 @@ export async function getAllContent(): Promise<Content[]> {
       const translation = translations[lang]
       let contentToProcess: string | null =
         ((translation?.content && translation.content.trim()) ? translation.content : (lang === 'en' ? project.content : null)) ?? null
-      if (lang === 'en' && contentToProcess) {
-        const plain = contentToProcess.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-        if (plain.length < MIN_SUBSTANTIAL_LENGTH) {
-          const fallback = (translations.ko?.content || translations.it?.content) as string | undefined
-          if (fallback && typeof fallback === 'string') contentToProcess = fallback
-        }
+      if (lang === 'en') {
+        const fallback = (translations.ko?.content || translations.it?.content) as string | undefined
+        const useFallback =
+          !contentToProcess ||
+          !contentToProcess.trim() ||
+          contentToProcess.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().length < MIN_SUBSTANTIAL_LENGTH
+        if (useFallback && fallback && typeof fallback === 'string') contentToProcess = fallback
       }
       if (!contentToProcess || !contentToProcess.trim()) return
       
