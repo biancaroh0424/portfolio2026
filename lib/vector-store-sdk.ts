@@ -83,7 +83,7 @@ async function getOrCreateCollection(): Promise<Collection> {
   return collection
 }
 
-let initPromise: Promise<void> | null = null
+let initPromise: Promise<unknown> | null = null
 
 export function ensureVectorStoreInitialized(): void {
   if (!process.env.CHROMA_API_KEY || !process.env.CHROMA_TENANT || !process.env.CHROMA_DATABASE) return
