@@ -103,8 +103,8 @@ export async function initializeVectorStore(force?: boolean): Promise<VectorStor
 
     console.log('[Vector Store] Initializing / Updating Vector Store...')
     if (count > 0) {
-      // Chroma Cloud rejects empty where {}; delete by ids in batches
-      const batchLimit = 500
+      // Chroma Cloud rejects empty where {}; delete by ids. Get quota is often 300 per request.
+      const batchLimit = 300
       let deleted = 0
       while (true) {
         const { ids } = await chroma.chromaGet(cfg.apiKey, cfg.tenant, cfg.database, cid, batchLimit)
@@ -249,7 +249,7 @@ export async function listVectorStoreDocuments(): Promise<Array<{ id: string; co
   if (!cfg) return []
   try {
     const cid = await getOrCreateCollectionId()
-    const { ids, metadatas } = await chroma.chromaGet(cfg.apiKey, cfg.tenant, cfg.database, cid, 500)
+    const { ids, metadatas } = await chroma.chromaGet(cfg.apiKey, cfg.tenant, cfg.database, cid, 300)
     return (ids ?? []).map((id, i) => ({
       id: String(id),
       content: { title: ((metadatas ?? [])[i] as Record<string, unknown>)?.title as string ?? '' },
