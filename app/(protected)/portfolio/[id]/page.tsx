@@ -112,7 +112,7 @@ export default function ProjectDetailPage() {
 
     const getContentHeadings = () => {
       const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current ?? document.querySelector('.portfolio-content-container .prose.prose-lg')
-      return container ? container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6') : document.querySelectorAll('h1, h2, h3, h4, h5, h6')
+      return container ? container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6') : document.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
     }
 
     const tryScrollToHash = () => {
@@ -178,7 +178,7 @@ export default function ProjectDetailPage() {
 
     const getContentHeadings = () => {
       const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current ?? document.querySelector('.portfolio-content-container .prose.prose-lg')
-      return container ? container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6') : document.querySelectorAll('h1, h2, h3, h4, h5, h6')
+      return container ? container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6') : document.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
     }
 
     const assignHeadingIds = () => {
