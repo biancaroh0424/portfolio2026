@@ -116,7 +116,7 @@ export async function initializeVectorStore(force?: boolean): Promise<void> {
             metadatas.push({
               title: content.title || '',
               ...(content.projectId && { projectId: content.projectId }),
-              ...(content.language && { language: content.language }),
+              language: content.language ?? 'en',
               type: content.type || 'project',
               ...(content.anchor != null && content.anchor !== '' && { anchor: content.anchor }),
               ...(content.headingIndex != null && { headingIndex: content.headingIndex }),

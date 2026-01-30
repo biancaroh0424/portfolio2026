@@ -202,12 +202,16 @@ export async function getAllContent(): Promise<Content[]> {
         return
       }
       
-      // translations에서 콘텐츠 추출
+      // translations에서 콘텐츠 추출 (영어는 content 비어있을 때 legacy project.content 사용)
       let projectContent = ''
-      
-      if (translation.content) {
-        projectContent = translation.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-      } else {
+      const rawContent = translation.content || (lang === 'en' ? project.content : undefined)
+      if (rawContent) {
+        projectContent = (typeof rawContent === 'string' ? rawContent : '')
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      }
+      if (!projectContent) {
         projectContent = translation.title || ''
       }
       
@@ -277,12 +281,14 @@ export async function getAllContent(): Promise<Content[]> {
       }
     })
     
-    // 각 언어별로 content에서 h1-h6 태그 추출하여 개별 콘텐츠로 저장
+    // 각 언어별로 content에서 h1-h6 태그 추출하여 개별 콘텐츠로 저장 (영어는 content 비어있을 때 project.content 사용)
     languages.forEach(lang => {
       const translation = translations[lang]
-      const contentToProcess = translation?.content || (lang === 'en' ? project.content : null)
+      const contentToProcess = (translation?.content && translation.content.trim())
+        ? translation.content
+        : (lang === 'en' ? project.content : null)
       
-      if (!contentToProcess) return
+      if (!contentToProcess || !contentToProcess.trim()) return
       
       // fields 정보를 텍스트로 변환 (heading 콘텐츠에도 포함)
       const fields = translation?.fields || (lang === 'en' ? project.fields : [])

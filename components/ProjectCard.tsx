@@ -72,7 +72,7 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
         }}
         onClick={onClick}
       >
-        {/* Title + key result summary + tag - min-width: 356px, padding: 24px 16px 16px 16px */}
+        {/* Title + summary + tag - min-width: 356px, padding: 24px 16px 16px 16px */}
         <div
           className="tablet:min-w-[356px] w-full"
           style={{
@@ -151,23 +151,6 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
                 </li>
               ))}
             </ul>
-          )}
-
-          {/* Key Result Summary */}
-          {project.keyResult && (
-            <p
-              style={{
-                color: 'var(--text-label, #E6E6E6)',
-                fontFamily: '"Pretendard Variable"',
-                fontSize: '14px',
-                fontStyle: 'normal',
-                fontWeight: 400,
-                lineHeight: '160%',
-                marginBottom: '0px !important',
-              }}
-            >
-              {project.keyResult}
-            </p>
           )}
 
           {/* Tags */}

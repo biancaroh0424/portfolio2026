@@ -227,10 +227,9 @@ export async function POST(request: NextRequest) {
           const currentProject = fullProjectOrFallback
             ? { id: fullProjectOrFallback.id, title: fullProjectOrFallback.title }
             : undefined
+          // 상세 페이지에서는 RAG 결과와 관계없이 전체 프로젝트 본문을 전달 (result 등 누락 방지)
           const fallbackProjectContent =
-            fullProjectOrFallback?.content &&
-            finalContent.length === 0 &&
-            projectId
+            fullProjectOrFallback?.content && projectId
               ? fullProjectOrFallback.content
               : undefined
 

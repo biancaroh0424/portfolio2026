@@ -62,6 +62,12 @@ export async function* generateAIResponseStream(
         }
       }
       contextText = built.trim()
+      // 상세 페이지일 때: 참조 청크에 답이 없을 수 있으므로 전체 본문을 함께 전달
+      if (fallbackProjectContent && fallbackProjectContent.length > 0 && currentProject) {
+        const fallbackCap = 10_000
+        const fallbackBlock = `\n\n[Full project page content — "${currentProject.title}". Use this if the references above do not contain the answer.]\n\n${fallbackProjectContent.slice(0, fallbackCap)}${fallbackProjectContent.length > fallbackCap ? '...[truncated]' : ''}`
+        contextText = contextText + fallbackBlock
+      }
     } else {
       // 검색 0건일 때
       if (fallbackProjectContent && fallbackProjectContent.length > 0 && currentProject) {
