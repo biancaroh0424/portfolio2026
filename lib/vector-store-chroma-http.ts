@@ -82,6 +82,9 @@ export async function initializeVectorStore(force?: boolean): Promise<void> {
     console.log('[Vector Store] Checking initialization status...', force ? '(force refresh)' : '')
     const cid = await getOrCreateCollectionId()
     const allContent = await getAllContent()
+    if (allContent.length === 0) {
+      console.warn('[Vector Store] getAllContent() returned 0 items. Check loadProjectsData (Blob/API) and projects.json in Blob.')
+    }
     const count = await chroma.chromaCount(cfg.apiKey, cfg.tenant, cfg.database, cid)
 
     if (!force && count >= allContent.length) {

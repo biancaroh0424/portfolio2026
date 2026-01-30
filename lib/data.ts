@@ -20,17 +20,25 @@ function isBlobStorageEnabled(): boolean {
 /** Vercel Blob에서 projects.json 읽기 (없거나 실패 시 null) */
 async function readProjectsFromBlob(): Promise<any[] | null> {
   try {
-    const { blobs } = await list({ prefix: 'data/', limit: 10 })
+    const { blobs } = await list({ prefix: 'data/', limit: 20 })
     const blob =
       blobs.find((b) => b.pathname === BLOB_PROJECTS_PATH) ??
-      blobs.find((b) => b.pathname.endsWith('projects.json'))
-    if (!blob?.url) return null
+      blobs.find((b) => (b.pathname && String(b.pathname).endsWith('projects.json'))) ??
+      blobs.find((b) => (b.pathname && String(b.pathname).includes('projects.json')))
+    if (!blob?.url) {
+      if (process.env.VERCEL === '1') console.warn('[data] readProjectsFromBlob: no blob found for data/projects.json')
+      return null
+    }
     const url = blob.url + (blob.url.includes('?') ? '&' : '?') + '_=' + Date.now()
     const res = await fetch(url)
-    if (!res.ok) return null
+    if (!res.ok) {
+      if (process.env.VERCEL === '1') console.warn('[data] readProjectsFromBlob: fetch not ok', res.status)
+      return null
+    }
     const json = await res.json()
     return Array.isArray(json) ? json : null
-  } catch {
+  } catch (e) {
+    if (process.env.VERCEL === '1') console.warn('[data] readProjectsFromBlob error:', e instanceof Error ? e.message : String(e))
     return null
   }
 }
@@ -65,13 +73,16 @@ async function readProjectsFromApi(): Promise<any[] | null> {
 }
 
 async function loadProjectsData(): Promise<any[]> {
-  // 프로덕션(Vercel+Blob): API → Blob만 사용. 파일 fallback 금지 (로컬/빌드 파일이 Chroma에 들어가는 것 방지)
+  // 프로덕션(Vercel+Blob): Blob 우선(같은 서버에서 토큰 사용), 실패 시 API. 파일 fallback 금지.
   if (isBlobStorageEnabled()) {
-    let data = await readProjectsFromApi()
-    if (data === null) data = await readProjectsFromBlob()
-    if (data !== null) return data
+    let data = await readProjectsFromBlob()
+    if (data === null) data = await readProjectsFromApi()
+    if (data !== null) {
+      if (process.env.VERCEL === '1') console.log('[data] loadProjectsData: loaded', data.length, 'projects (Blob or API)')
+      return data
+    }
     console.error(
-      '[data] CRITICAL: API and Blob both failed. Chroma will have no project data. Check BLOB_READ_WRITE_TOKEN, VERCEL_URL, and GET /api/admin/projects.'
+      '[data] CRITICAL: Blob and API both failed. Chroma will have no project data. Check BLOB_READ_WRITE_TOKEN, Blob list("data/"), and GET /api/admin/projects.'
     )
     return []
   }

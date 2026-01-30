@@ -106,7 +106,9 @@ export default function ProjectDetailPage() {
   // 현재 언어의 translation 가져오기 (없어도 빈값으로 반환됨)
   const currentTranslation = project ? getProjectTranslation(project, language) : null
 
-  // hash가 있을 때 전용 스크롤: 콘텐츠 로드와 무관하게 반복 시도 (챗봇에서 섹션 이동 시)
+  // hash가 있을 때 전용 스크롤: 콘텐츠 로드 후에도 재시도 (챗봇에서 섹션 이동 시)
+  // targetHash + 콘텐츠 준비 시점(project/content) 모두 의존 → URL hash로 진입해도 로드 후 스크롤
+  const contentReady = !!(project?.id && (currentTranslation?.content || (project.sections?.length ?? 0) > 0))
   useEffect(() => {
     if (!targetHash) return
 
@@ -164,13 +166,13 @@ export default function ProjectDetailPage() {
     }
 
     const interval = setInterval(tryScrollToHash, 450)
-    const timeout = setTimeout(() => clearInterval(interval), 6000)
+    const timeout = setTimeout(() => clearInterval(interval), 8000)
     tryScrollToHash()
     return () => {
       clearInterval(interval)
       clearTimeout(timeout)
     }
-  }, [targetHash])
+  }, [targetHash, contentReady])
 
   // h1-h6 태그에 id 추가 및 anchor 스크롤 처리 (본문 prose 영역만 사용)
   useEffect(() => {
