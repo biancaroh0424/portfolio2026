@@ -35,31 +35,45 @@ async function readProjectsFromBlob(): Promise<any[] | null> {
   }
 }
 
-/** 프로덕션에서 프로젝트 API로 목록 가져오기 (Blob 직접 읽기 실패 시 fallback) */
+/** 프로덕션에서 프로젝트 API로 목록 가져오기 (관리자와 동일한 Blob 데이터) */
 async function readProjectsFromApi(): Promise<any[] | null> {
+  const base =
+    (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}`) ||
+    process.env.NEXT_PUBLIC_VERCEL_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    'http://localhost:3000'
+  const url = `${base.replace(/\/$/, '')}/api/admin/projects`
   try {
-    const base = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const res = await fetch(`${base}/api/admin/projects`, {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+    const res = await fetch(url, {
       cache: 'no-store',
       headers: { Accept: 'application/json' },
+      signal: controller.signal,
     })
-    if (!res.ok) return null
+    clearTimeout(timeout)
+    if (!res.ok) {
+      console.warn('[data] readProjectsFromApi failed:', res.status, res.statusText, url)
+      return null
+    }
     const json = await res.json()
     return Array.isArray(json) ? json : null
-  } catch {
+  } catch (e) {
+    console.warn('[data] readProjectsFromApi error:', e instanceof Error ? e.message : String(e), url)
     return null
   }
 }
 
 async function loadProjectsData(): Promise<any[]> {
-  // 프로덕션: API 먼저 (관리자와 동일한 Blob 데이터), 실패 시 Blob 직접 읽기
+  // 프로덕션(Vercel+Blob): API → Blob만 사용. 파일 fallback 금지 (로컬/빌드 파일이 Chroma에 들어가는 것 방지)
   if (isBlobStorageEnabled()) {
     let data = await readProjectsFromApi()
     if (data === null) data = await readProjectsFromBlob()
     if (data !== null) return data
-    console.warn('[data] API and Blob both returned null; using file if available.')
+    console.error(
+      '[data] CRITICAL: API and Blob both failed. Chroma will have no project data. Check BLOB_READ_WRITE_TOKEN, VERCEL_URL, and GET /api/admin/projects.'
+    )
+    return []
   }
 
   if (cachedProjects) {
