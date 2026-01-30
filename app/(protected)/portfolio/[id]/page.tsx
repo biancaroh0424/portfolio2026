@@ -47,6 +47,18 @@ export default function ProjectDetailPage() {
   const [isChapterOpen, setIsChapterOpen] = useState(true)
   const [windowWidth, setWindowWidth] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
+  const cleanupRef = useRef<(() => void) | null>(null)
+  const [targetHash, setTargetHash] = useState(() =>
+    typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
+  )
+
+  // URL hash 동기화 (챗봇에서 섹션으로 이동 시 hash 유지)
+  useEffect(() => {
+    setTargetHash(typeof window !== 'undefined' ? window.location.hash.slice(1) : '')
+    const onHashChange = () => setTargetHash(window.location.hash.slice(1))
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
   // 화면 크기 추적
   useEffect(() => {
@@ -94,66 +106,158 @@ export default function ProjectDetailPage() {
   // 현재 언어의 translation 가져오기 (없어도 빈값으로 반환됨)
   const currentTranslation = project ? getProjectTranslation(project, language) : null
 
-  // h1-h6 태그에 id 추가 및 anchor 스크롤 처리, 이미지 클릭 이벤트 추가
+  // hash가 있을 때 전용 스크롤: 콘텐츠 로드와 무관하게 반복 시도 (챗봇에서 섹션 이동 시)
   useEffect(() => {
-    if (!currentTranslation?.content) return
-    const content = currentTranslation.content
+    if (!targetHash) return
 
-    // HTML 콘텐츠가 렌더링된 후 실행
-    const timer = setTimeout(() => {
-      // 모든 h1-h6 태그에 id 추가
-      const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6')
-      const seenAnchors = new Set<string>()
-      
-      headings.forEach((heading) => {
-        const text = heading.textContent?.trim() || ''
-        if (text && !heading.id) {
-          // anchor 생성: 제목을 소문자로 변환하고 공백을 하이픈으로, 특수문자 제거
-          let anchorBase = text
-            .toLowerCase()
-            .replace(/[^\w\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .trim()
-          
-          // 빈 문자열이거나 하이픈만 있는 경우 처리
-          if (!anchorBase || anchorBase === '-' || /^-+$/.test(anchorBase)) {
-            // 텍스트에서 영문자나 숫자가 있는 경우 그 부분만 사용
-            const alphanumeric = text.toLowerCase().match(/[a-z0-9]+/g)
-            if (alphanumeric && alphanumeric.length > 0) {
-              anchorBase = alphanumeric.join('-')
-            } else {
-              // 영문자나 숫자가 없으면 인덱스 기반 ID 사용
-              anchorBase = `heading-${seenAnchors.size + 1}`
+    const getContentHeadings = () => {
+      const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current ?? document.querySelector('.portfolio-content-container .prose.prose-lg')
+      return container ? container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6') : document.querySelectorAll('h1, h2, h3, h4, h5, h6')
+    }
+
+    const tryScrollToHash = () => {
+      const hash = targetHash
+      const assignHeadingIds = () => {
+        const headings = getContentHeadings()
+        const seenSlugs = new Set<string>()
+        headings.forEach((heading, index) => {
+          const positionId = `heading-${index + 1}`
+          if (!heading.id || heading.id !== positionId) heading.id = positionId
+          const text = heading.textContent?.trim() || ''
+          if (text) {
+            let slug = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim()
+            if (!slug || slug === '-' || /^-+$/.test(slug)) {
+              const alphanumeric = text.toLowerCase().match(/[a-z0-9]+/g)
+              slug = alphanumeric?.length ? alphanumeric.join('-') : `heading-${index + 1}`
             }
+            let uniqueSlug = slug
+            let c = 1
+            while (seenSlugs.has(uniqueSlug)) {
+              uniqueSlug = `${slug}-${c}`
+              c++
+            }
+            seenSlugs.add(uniqueSlug)
+            heading.setAttribute('data-heading-slug', uniqueSlug)
           }
-          
-          // 고유한 anchor 생성
-          let anchor = anchorBase
-          let counter = 1
-          while (seenAnchors.has(anchor)) {
-            anchor = `${anchorBase}-${counter}`
-            counter++
-          }
-          seenAnchors.add(anchor)
-          
-          heading.id = anchor
-        }
-      })
-
-      // URL의 hash가 있으면 해당 anchor로 스크롤
-      if (window.location.hash) {
-        const hash = window.location.hash.substring(1)
-        const element = document.getElementById(hash)
-        if (element) {
-          setTimeout(() => {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }, 100)
+        })
+      }
+      assignHeadingIds()
+      let element = document.getElementById(hash)
+      const headingMatch = hash.match(/^heading-(\d+)$/)
+      if (!element && headingMatch) {
+        const headings = getContentHeadings()
+        const index = parseInt(headingMatch[1], 10) - 1
+        if (index >= 0 && index < headings.length) element = headings[index]
+      }
+      if (!element) {
+        const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
+        if (container) {
+          const bySlug = container.querySelector(`[data-heading-slug="${hash}"]`)
+          if (bySlug) element = bySlug as HTMLElement
         }
       }
-    }, 100)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+        return true
+      }
+      return false
+    }
 
-    return () => clearTimeout(timer)
+    const interval = setInterval(tryScrollToHash, 450)
+    const timeout = setTimeout(() => clearInterval(interval), 6000)
+    tryScrollToHash()
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [targetHash])
+
+  // h1-h6 태그에 id 추가 및 anchor 스크롤 처리 (본문 prose 영역만 사용)
+  useEffect(() => {
+    if (!currentTranslation?.content) return
+
+    const getContentHeadings = () => {
+      const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current ?? document.querySelector('.portfolio-content-container .prose.prose-lg')
+      return container ? container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6') : document.querySelectorAll('h1, h2, h3, h4, h5, h6')
+    }
+
+    const assignHeadingIds = () => {
+      const headings = getContentHeadings()
+      const seenSlugs = new Set<string>()
+      headings.forEach((heading, index) => {
+        const positionId = `heading-${index + 1}`
+        if (!heading.id || heading.id !== positionId) heading.id = positionId
+        const text = heading.textContent?.trim() || ''
+        if (text) {
+          let slug = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim()
+          if (!slug || slug === '-' || /^-+$/.test(slug)) {
+            const alphanumeric = text.toLowerCase().match(/[a-z0-9]+/g)
+            slug = alphanumeric?.length ? alphanumeric.join('-') : `heading-${index + 1}`
+          }
+          let uniqueSlug = slug
+          let c = 1
+          while (seenSlugs.has(uniqueSlug)) {
+            uniqueSlug = `${slug}-${c}`
+            c++
+          }
+          seenSlugs.add(uniqueSlug)
+          heading.setAttribute('data-heading-slug', uniqueSlug)
+        }
+      })
+    }
+
+    const scrollToHash = () => {
+      if (!window.location.hash) return false
+      const hash = window.location.hash.substring(1)
+      let element = document.getElementById(hash)
+      const headingMatch = hash.match(/^heading-(\d+)$/)
+      if (!element && headingMatch) {
+        const headings = getContentHeadings()
+        const index = parseInt(headingMatch[1], 10) - 1
+        if (index >= 0 && index < headings.length) element = headings[index]
+      }
+      if (!element) {
+        const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
+        if (container) {
+          const bySlug = container.querySelector(`[data-heading-slug="${hash}"]`)
+          if (bySlug) element = bySlug as HTMLElement
+        }
+      }
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+        return true
+      }
+      return false
+    }
+
+    const runScrollToHash = () => {
+      assignHeadingIds()
+      return scrollToHash()
+    }
+
+    const timer = setTimeout(() => {
+      runScrollToHash()
+      const retryDelays = [200, 500, 1000, 1500, 2500, 4000]
+      const retryTimers: ReturnType<typeof setTimeout>[] = []
+      retryDelays.forEach((delay) => {
+        const t = setTimeout(() => {
+          if (runScrollToHash()) {
+            retryTimers.forEach(clearTimeout)
+          }
+        }, delay)
+        retryTimers.push(t)
+      })
+      window.addEventListener('hashchange', scrollToHash)
+      cleanupRef.current = () => {
+        window.removeEventListener('hashchange', scrollToHash)
+        retryTimers.forEach(clearTimeout)
+      }
+    }, 200)
+
+    return () => {
+      clearTimeout(timer)
+      cleanupRef.current?.()
+    }
   }, [currentTranslation?.content, language])
 
   // 이미지/비디오 클릭 이벤트 추가 (이벤트 위임 사용)
@@ -512,6 +616,7 @@ export default function ProjectDetailPage() {
             {currentTranslation?.content ? (
               <div 
                 ref={contentRef}
+                data-portfolio-body
                 key={`content-${project.id}-${language}`}
                 className="prose prose-lg prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-img:shadow-lg max-w-none w-full"
                 style={{ 

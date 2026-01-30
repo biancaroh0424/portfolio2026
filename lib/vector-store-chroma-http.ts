@@ -118,6 +118,8 @@ export async function initializeVectorStore(force?: boolean): Promise<void> {
               ...(content.projectId && { projectId: content.projectId }),
               ...(content.language && { language: content.language }),
               type: content.type || 'project',
+              ...(content.anchor != null && content.anchor !== '' && { anchor: content.anchor }),
+              ...(content.headingIndex != null && { headingIndex: content.headingIndex }),
             })
             documents.push(chunks[c])
           }
@@ -206,6 +208,8 @@ export async function searchVectorStore(
           projectId: meta.projectId as string | undefined,
           language: docLanguage,
           type: docType as 'project' | 'about' | 'general' | 'resume',
+          anchor: meta.anchor as string | undefined,
+          headingIndex: meta.headingIndex as number | undefined,
         },
       })
     }

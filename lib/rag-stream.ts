@@ -10,7 +10,8 @@ export async function* generateAIResponseStream(
   greeting?: string,
   isProjectListPage?: boolean,
   projectsOnPage?: { id: string; title: string }[],
-  fallbackProjectContent?: string
+  fallbackProjectContent?: string,
+  pendingOpen?: { projectId: string; anchor?: string }
 ): AsyncGenerator<{
   type: 'content' | 'done' | 'error'
   content?: string
@@ -45,13 +46,17 @@ export async function* generateAIResponseStream(
       let built = ''
       for (let idx = 0; idx < topDocs.length && built.length < CONTEXT_MAX_CHARS; idx++) {
         const doc = topDocs[idx]
-        const block = `\n### Reference ${idx + 1}: ${doc.content.title}\n${doc.content.content}\n\n`
+        const refId = doc.content.projectId || doc.content.id || ''
+        const refAnchor = doc.content.anchor ? `, anchor: ${doc.content.anchor}` : ''
+        const refHeadingIndex = doc.content.headingIndex != null ? `, headingIndex: ${doc.content.headingIndex}` : ''
+        const refHeader = refId ? ` (id: ${refId}${refAnchor}${refHeadingIndex})` : ''
+        const block = `\n### Reference ${idx + 1}${refHeader}: ${doc.content.title}\n${doc.content.content}\n\n`
         if (built.length + block.length <= CONTEXT_MAX_CHARS) {
           built += block
           } else {
           const remain = CONTEXT_MAX_CHARS - built.length - 80
           built += remain > 0
-            ? `\n### Reference ${idx + 1}: ${doc.content.title}\n${doc.content.content.slice(0, remain)}...[truncated]\n\n`
+            ? `\n### Reference ${idx + 1}${refHeader}: ${doc.content.title}\n${doc.content.content.slice(0, remain)}...[truncated]\n\n`
             : ''
           break
         }
@@ -100,6 +105,16 @@ ${pageProjectsBlock}
 4. CRITICAL — NO HALLUCINATION: Only mention project names, titles, metrics, and facts that EXPLICITLY appear in [Portfolio Content], in [Current page — Project detail], or in [Current page — Projects on this portfolio list] above. Do NOT invent or assume any other project name or detail. When the user is on a project detail page, you MUST assume they are asking about THAT project.
 5. Be professional and friendly - respond naturally to light jokes, but maintain appropriate formality.
 6. CRITICAL: Your <answer> must be written entirely in ${langName}. If user wrote in Korean, answer ONLY in Korean. If user wrote in English, answer ONLY in English. Do not mix languages in your response.
+7. When you recommend ONE specific project (e.g. user says "포트폴리오가 궁금해" or "추천해줘") and you suggest a project by name, END your answer by offering to open it (e.g. "열어드릴까요?", "Shall I open it for you?", "Vuoi che lo apra?" — use the phrase that fits the user's language). Then on a NEW line output exactly: [OFFERED_LINK: /portfolio/PROJECT_ID] using the project ID from the reference (e.g. rag-chat-builder). No other text after this line.
+8. When the user asks vaguely where something is (e.g. "요금제 관련 내용 어디였지?", "where was the pricing part?") use [Portfolio Content] to find the section. Answer with the project name and section/heading name, then END by offering to guide. Then on a NEW line output [OFFERED_LINK: /portfolio/PROJECT_ID#heading-N] using the reference's "id" and "headingIndex" (N = headingIndex). If headingIndex is missing, use "anchor" for #ANCHOR. No other text after this line.
+9. When YOU proactively offer to guide to a specific section by name (e.g. "Discovery 섹션으로 안내해 드릴까요?"), you MUST output [OFFERED_LINK: /portfolio/PROJECT_ID#heading-N] on a NEW line — use the Reference that contains that section and use its "id" and "headingIndex" (N). Example: Reference 2 (id: rag-chat-builder, headingIndex: 2) → [OFFERED_LINK: /portfolio/rag-chat-builder#heading-2]. If headingIndex is missing, use "anchor". No other text after this line.
+CRITICAL for 7, 8 and 9: Prefer "headingIndex" for section links so they work when section titles change. Use [OFFERED_LINK: /portfolio/ID#heading-N] where N is the reference's headingIndex. Only use "anchor" (slug) when headingIndex is not in the Reference. Do not invent IDs.
+${pendingOpen ? `
+[OPEN LINK — Context] In your PREVIOUS message you offered to open or guide to: /portfolio/${pendingOpen.projectId}${pendingOpen.anchor ? `#${pendingOpen.anchor}` : ''}. The user has just replied. From the CONTEXT and MEANING of their reply, decide if they are confirming (e.g. yes, open it / take me there / guide me there; 응, 네, 그래, 그 지점으로 안내해줘, 결제 경험 부분으로 안내해줘, Payment UX로 가줘, sì, guidami, apri, etc.). If their intent is clearly "yes, open/guide me there", then:
+1. Decide the target: (a) If the user named a section, look in [Portfolio Content] Reference headers for that section — use that reference's "id" and "headingIndex" (output [OPEN_LINK: /portfolio/ID#heading-N] where N = headingIndex). If headingIndex is missing, use "anchor". (b) If the user did not name a section, use projectId=${pendingOpen.projectId} and anchor=${pendingOpen.anchor ? pendingOpen.anchor : 'none'} (if anchor is none, output link without #anchor).
+2. Your <answer> must end with a brief acknowledgment (e.g. "RAG Chat Builder 프로젝트의 결제 경험 파트로 안내해드릴게요." / "Taken you there.").
+3. On the VERY NEXT line, with NO other text after it, output exactly: [OPEN_LINK: /portfolio/PROJECT_ID] or [OPEN_LINK: /portfolio/PROJECT_ID#heading-N] (prefer headingIndex so links work when titles change). Without this line the page will NOT move. If their reply is NOT a confirmation, do NOT output [OPEN_LINK] at all.
+` : ''}
 
 [About YJ Assistant]
 If asked "Who created you?" or "Who made you?" or similar questions about your creator:
@@ -285,18 +300,27 @@ ${contextText}`;
       }
     }
 
-    // 출처 정보 매핑 (참조 수와 동일하게 상위 4개)
+    // 출처 정보 매핑 (프로젝트 링크/앵커 열기용 projectId, anchor, headingIndex 포함)
     const sources = context.slice(0, 4).map(c => ({
-      id: c.content.id,
+      id: c.content.projectId || c.content.id,
       title: c.content.title,
-      type: c.content.type
+      type: c.content.type,
+      anchor: c.content.anchor,
+      headingIndex: c.content.headingIndex,
+      projectId: c.content.projectId
     }))
 
     // 최종 done 메시지 - thinking과 content 모두 포함 (thinking은 항상 전달해 클라이언트가 Step UI 표시)
     const finalThinking = thinkingContent.trim()
+    let doneContent = finalAnswer || rawContent.replace(/<[^>]*>/g, '').trim()
+    // [OPEN_LINK]가 <answer> 밖에 있거나 파싱에서 빠졌을 수 있음 → raw에서 복구해 클라이언트가 이동할 수 있도록 함
+    const openLinkInRaw = rawContent.match(/\[OPEN_LINK:\s*\/portfolio\/[^\]]+\]/)
+    if (openLinkInRaw && !doneContent.includes('[OPEN_LINK:')) {
+      doneContent = (doneContent.trimEnd() + '\n' + openLinkInRaw[0]).trim()
+    }
     yield { 
       type: 'done',
-      content: finalAnswer || rawContent.replace(/<[^>]*>/g, '').trim(), // 태그 제거한 전체 내용
+      content: doneContent,
       thinking: finalThinking,
       thinkingDone: true,
       sources: sources

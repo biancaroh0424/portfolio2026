@@ -79,6 +79,8 @@ export interface Content {
   content: string
   projectId?: string
   anchor?: string
+  /** 1-based 순서. 제목이 바뀌어도 안정적인 앵커용 (heading-1, heading-2) */
+  headingIndex?: number
   language?: 'en' | 'ko' | 'it' // 콘텐츠 언어
 }
 
@@ -304,25 +306,25 @@ export async function getAllContent(): Promise<Content[]> {
         }
       }
       
-      // HTML에서 h1-h6 태그 찾기
+      // HTML에서 h1-h6 태그 찾기 (위치 기반 headingIndex로 제목 변경 시에도 앵커 유지)
       const headingPattern = /<h([1-6])[^>]*>(.*?)<\/h[1-6]>/gi
       let headingMatch
       const seenAnchors = new Set<string>()
-      
+      let headingIndex = 0
+
       while ((headingMatch = headingPattern.exec(contentToProcess)) !== null) {
         const level = parseInt(headingMatch[1], 10)
         const headingText = headingMatch[2].replace(/<[^>]*>/g, '').trim()
         
         if (headingText && headingText.length > 0) {
-          // anchor 생성: 제목을 소문자로 변환하고 공백을 하이픈으로, 특수문자 제거
+          headingIndex += 1
+          // anchor(슬러그) 생성: 제목 기반 (하위 호환)
           const anchorBase = headingText
             .toLowerCase()
             .replace(/[^\w\s-]/g, '')
             .replace(/\s+/g, '-')
             .replace(/-+/g, '-')
             .trim()
-          
-          // 고유한 anchor 생성
           let anchor = anchorBase
           let counter = 1
           while (seenAnchors.has(anchor)) {
@@ -331,7 +333,6 @@ export async function getAllContent(): Promise<Content[]> {
           }
           seenAnchors.add(anchor)
           
-          // 해당 heading 이후의 내용 추출 (다음 heading 전까지)
           const headingEndIndex = headingMatch.index + headingMatch[0].length
           const nextHeadingMatch = contentToProcess.substring(headingEndIndex).match(/<h[1-6][^>]*>/i)
           const contentEndIndex = nextHeadingMatch && nextHeadingMatch.index !== undefined
@@ -345,7 +346,6 @@ export async function getAllContent(): Promise<Content[]> {
             .trim()
           
           if (headingContent && headingContent.length > 0) {
-            // fields 정보도 heading 콘텐츠에 포함
             const fullHeadingContent = fieldsTextForHeadings 
               ? `${headingText}. ${headingContent} ${fieldsTextForHeadings}`
               : `${headingText}. ${headingContent}`
@@ -359,6 +359,7 @@ export async function getAllContent(): Promise<Content[]> {
               content: fullHeadingContent,
               projectId: project.id,
               anchor: anchor,
+              headingIndex,
               language: lang
             })
           }

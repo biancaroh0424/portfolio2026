@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   const t0 = Date.now()
   logAI('요청 수신')
   try {
-    const { message, conversationHistory, currentPath, pageLanguage } = await request.json()
+    const { message, conversationHistory, currentPath, pageLanguage, pendingOpen } = await request.json()
     logAI('파싱 완료', {
       msgLen: message?.length,
       path: currentPath,
@@ -259,7 +259,8 @@ export async function POST(request: NextRequest) {
             greeting,
             isProjectListPage,
             projectsOnPage,
-            fallbackProjectContent
+            fallbackProjectContent,
+            pendingOpen && typeof pendingOpen.projectId === 'string' ? { projectId: pendingOpen.projectId, anchor: pendingOpen.anchor } : undefined
           )
           
           let chunkCount = 0

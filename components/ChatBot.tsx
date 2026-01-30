@@ -874,6 +874,8 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
   const lastThinkingFlushAtRef = useRef(0)
   const thinkingFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingThinkingRef = useRef<{ id: string; text: string; thinkingDone: boolean } | null>(null)
+  /** AI가 "열어드릴까요?" 등으로 제안한 포트폴리오 링크 — 사용자가 "응" 등으로 확인 시 열기 */
+  const pendingOpenRef = useRef<{ projectId: string; anchor?: string } | null>(null)
   const pathname = usePathname()
 
   // Placeholder 스타일 적용
@@ -1233,9 +1235,10 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
         },
         body: JSON.stringify({
           message: messageWithContext,
-          conversationHistory: messagesRef.current, // 최신 messages 사용
+          conversationHistory: messagesRef.current,
           currentPath: pathname,
-          pageLanguage: language // 페이지 언어 전달
+          pageLanguage: language,
+          ...(pendingOpenRef.current && { pendingOpen: pendingOpenRef.current })
         }),
         signal, // AbortSignal 추가
       })
@@ -1419,7 +1422,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                   }
                 }
                 
-                const finalContent = parsed.content || ''
+                let finalContent = parsed.content || ''
                 const finalThinking =
                   typeof parsed.thinking === 'string'
                     ? parsed.thinking
@@ -1427,6 +1430,47 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                       ? String(parsed.thinking)
                       : ''
                 const finalSources = parsed.sources || []
+                // AI가 맥락으로 "제안"했다고 판단하고 출력한 [OFFERED_LINK: ...] 마커만 파싱 (문구 목록/regex로 판단하지 않음)
+                const offeredLinkMatch = finalContent.match(/\[OFFERED_LINK:\s*(\/portfolio\/[^\]]+)\]/)
+                if (offeredLinkMatch) {
+                  const path = offeredLinkMatch[1].trim()
+                  const [pathPart, hashPart] = path.split('#')
+                  const projectId = pathPart.replace(/^\/portfolio\//, '').trim()
+                  const anchor = hashPart?.trim() || undefined
+                  if (projectId) {
+                    pendingOpenRef.current = { projectId, anchor }
+                  }
+                  finalContent = finalContent
+                    .replace(/\s*<p>\s*\[OFFERED_LINK:[^<]*<\/p>\s*/gi, '')
+                    .replace(/\s*\[OFFERED_LINK:[^\]]+\]\s*/g, '')
+                    .trim()
+                }
+
+                // [OPEN_LINK: /portfolio/ID] 또는 [OPEN_LINK: /portfolio/ID#anchor] 파싱 → 실제 이동 + 표시용에서 제거
+                const openLinkMatch = finalContent.match(/\[OPEN_LINK:\s*(\/portfolio\/[^\]]+)\]/)
+                let openPath: string | null = null
+                if (openLinkMatch) {
+                  openPath = openLinkMatch[1].trim()
+                  finalContent = finalContent
+                    .replace(/\s*<p>\s*\[OPEN_LINK:[^<]*<\/p>\s*/gi, '')
+                    .replace(/\s*\[OPEN_LINK:[^\]]+\]\s*/g, '')
+                    .trim()
+                }
+                // AI가 [OPEN_LINK]를 안 썼지만 짧은 인사(안내해드릴게요 등)면 pendingOpenRef로 이동
+                if (!openPath && pendingOpenRef.current) {
+                  const text = (finalContent || '').replace(/<[^>]+>/g, ' ').trim()
+                  const looksLikeAck = text.length < 500 && (
+                    /안내해드릴게요|안내해드렸습니다|열었어요|Opened|Taken you there|Ti ho guidato|이동시켜 드릴게요/i.test(text)
+                  )
+                  if (looksLikeAck) {
+                    const { projectId, anchor } = pendingOpenRef.current
+                    openPath = `/portfolio/${projectId}${anchor ? `#${anchor}` : ''}`
+                  }
+                }
+                if (openPath) {
+                  pendingOpenRef.current = null
+                  window.location.href = openPath
+                }
                 
                 setMessages(prev => prev.map(msg => {
                   if (msg.id !== streamingMessageId) return msg
