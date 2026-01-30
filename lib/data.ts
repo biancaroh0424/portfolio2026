@@ -54,13 +54,12 @@ async function readProjectsFromApi(): Promise<any[] | null> {
 }
 
 async function loadProjectsData(): Promise<any[]> {
+  // 프로덕션: API 먼저 (관리자와 동일한 Blob 데이터), 실패 시 Blob 직접 읽기
   if (isBlobStorageEnabled()) {
-    let fromBlob = await readProjectsFromBlob()
-    if (fromBlob === null) {
-      fromBlob = await readProjectsFromApi()
-    }
-    if (fromBlob !== null) return fromBlob
-    console.warn('[data] Blob and API fallback both returned null; using file if available.')
+    let data = await readProjectsFromApi()
+    if (data === null) data = await readProjectsFromBlob()
+    if (data !== null) return data
+    console.warn('[data] API and Blob both returned null; using file if available.')
   }
 
   if (cachedProjects) {
@@ -280,6 +279,13 @@ export async function getAllContent(): Promise<Content[]> {
       }
       if (!projectContent) {
         projectContent = translation.title || ''
+      }
+      // 영문 본문이 여전히 짧으면 ko/it fallback 한 번 더 (요약 청크에 본문 반드시 포함)
+      if (lang === 'en' && projectContent.length < MIN_SUBSTANTIAL_LENGTH) {
+        const fb = (translations.ko?.content || translations.it?.content) as string | undefined
+        if (fb && typeof fb === 'string') {
+          projectContent = fb.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        }
       }
       
       // 태그 추가
