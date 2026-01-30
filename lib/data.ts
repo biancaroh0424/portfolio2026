@@ -1,16 +1,48 @@
-// CMS 데이터 관리 - JSON 파일에서 읽어오거나 API에서 가져올 수 있음
+// CMS 데이터 관리 - JSON 파일에서 읽어오거나 Vercel Blob(프로덕션)에서 가져옴
 import fs from 'fs/promises'
 import path from 'path'
+import { list } from '@vercel/blob'
 
 const PROJECTS_FILE = path.join(process.cwd(), 'data', 'projects.json')
+const BLOB_PROJECTS_PATH = 'data/projects.json'
 
 let cachedProjects: any[] | null = null
 
+/** 프로덕션(Vercel)에서 Blob 저장소 사용 여부 */
+function isBlobStorageEnabled(): boolean {
+  return (
+    process.env.VERCEL === '1' &&
+    typeof process.env.BLOB_READ_WRITE_TOKEN === 'string' &&
+    process.env.BLOB_READ_WRITE_TOKEN.length > 0
+  )
+}
+
+/** Vercel Blob에서 projects.json 읽기 (없거나 실패 시 null) */
+async function readProjectsFromBlob(): Promise<any[] | null> {
+  try {
+    const { blobs } = await list({ prefix: 'data/', limit: 10 })
+    const blob = blobs.find((b) => b.pathname === BLOB_PROJECTS_PATH)
+    if (!blob?.url) return null
+    const url = blob.url + (blob.url.includes('?') ? '&' : '?') + '_=' + Date.now()
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const json = await res.json()
+    return Array.isArray(json) ? json : null
+  } catch {
+    return null
+  }
+}
+
 async function loadProjectsData(): Promise<any[]> {
+  if (isBlobStorageEnabled()) {
+    const fromBlob = await readProjectsFromBlob()
+    if (fromBlob !== null) return fromBlob
+  }
+
   if (cachedProjects) {
     return cachedProjects
   }
-  
+
   try {
     const data = await fs.readFile(PROJECTS_FILE, 'utf-8')
     cachedProjects = JSON.parse(data)
@@ -202,9 +234,20 @@ export async function getAllContent(): Promise<Content[]> {
         return
       }
       
-      // translations에서 콘텐츠 추출 (영어는 content 비어있을 때 legacy project.content 사용)
+      // translations에서 콘텐츠 추출 (영어는 비어있거나 짧을 때 legacy 또는 ko/it 본문 사용)
+      const MIN_SUBSTANTIAL_LENGTH = 400 // 플레이스홀더와 구분
       let projectContent = ''
-      const rawContent = translation.content || (lang === 'en' ? project.content : undefined)
+      let rawContent: string | undefined = translation.content || (lang === 'en' ? project.content : undefined)
+      if (lang === 'en' && rawContent) {
+        const plain = (typeof rawContent === 'string' ? rawContent : '')
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+        if (plain.length < MIN_SUBSTANTIAL_LENGTH) {
+          const fallback = (translations.ko?.content || translations.it?.content) as string | undefined
+          if (fallback && typeof fallback === 'string') rawContent = fallback
+        }
+      }
       if (rawContent) {
         projectContent = (typeof rawContent === 'string' ? rawContent : '')
           .replace(/<[^>]*>/g, ' ')
@@ -281,13 +324,19 @@ export async function getAllContent(): Promise<Content[]> {
       }
     })
     
-    // 각 언어별로 content에서 h1-h6 태그 추출하여 개별 콘텐츠로 저장 (영어는 content 비어있을 때 project.content 사용)
+    // 각 언어별로 content에서 h1-h6 태그 추출 (영어는 비어있거나 짧을 때 project.content 또는 ko/it 본문 사용)
+    const MIN_SUBSTANTIAL_LENGTH = 400
     languages.forEach(lang => {
       const translation = translations[lang]
-      const contentToProcess = (translation?.content && translation.content.trim())
-        ? translation.content
-        : (lang === 'en' ? project.content : null)
-      
+      let contentToProcess: string | null =
+        (translation?.content && translation.content.trim()) ? translation.content : (lang === 'en' ? project.content : null)
+      if (lang === 'en' && contentToProcess) {
+        const plain = contentToProcess.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        if (plain.length < MIN_SUBSTANTIAL_LENGTH) {
+          const fallback = (translations.ko?.content || translations.it?.content) as string | undefined
+          if (fallback && typeof fallback === 'string') contentToProcess = fallback
+        }
+      }
       if (!contentToProcess || !contentToProcess.trim()) return
       
       // fields 정보를 텍스트로 변환 (heading 콘텐츠에도 포함)
