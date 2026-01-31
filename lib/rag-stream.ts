@@ -152,7 +152,7 @@ If asked "Who created you?" or "Who made you?" or similar questions about your c
 ${contextText}`;
 
     // 히스토리 (최근 2개만)
-    const recentHistory = conversationHistory.slice(-2).map(msg => 
+    const recentHistory = conversationHistory.slice(-10).map(msg => 
       `${msg.role === 'user' ? 'User' : 'Model'}: ${msg.content}`
     ).join('\n');
 

@@ -157,19 +157,26 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
           {project.tags && project.tags.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {project.tags.map((tag, index) => (
-                <span
+                <div
                   key={index}
                   style={{
-                    padding: '4px 8px',
+                    display: 'flex',
+                    padding: '6px 16px',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '8px',
+                    borderRadius: '24px',
+                    border: '1px solid var(--GreyScale-300, #838383)',
+                    color: 'var(--text-tertiary, #E6E6E6)',
+                    fontFamily: 'GalmuriMono9',
                     fontSize: '12px',
-                    borderRadius: '4px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    color: 'var(--text-label, #E6E6E6)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                    fontStyle: 'normal',
+                    fontWeight: 400,
+                    lineHeight: 'normal'
                   }}
                 >
                   {tag}
-                </span>
+                </div>
               ))}
             </div>
           )}

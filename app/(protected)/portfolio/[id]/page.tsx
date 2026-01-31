@@ -389,48 +389,51 @@ export default function ProjectDetailPage() {
     const scrollToHash = () => {
       if (!window.location.hash) return
       const hash = window.location.hash.substring(1)
-      assignHeadingIds()
-      let element = document.getElementById(hash)
-      const headingMatch = hash.match(/^heading-(\d+)$/)
-      if (!element && headingMatch) {
-        const headings = getContentHeadings()
-        const index = parseInt(headingMatch[1], 10) - 1
-        if (index >= 0 && index < headings.length) element = headings[index]
-      }
-      if (!element) {
-        const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
-        if (container) {
-          const bySlugCandidates = container.querySelectorAll<HTMLElement>('[data-heading-slug]')
-          let decoded = hash
-          try { decoded = decodeURIComponent(hash) } catch { /* ignore */ }
-          for (const el of bySlugCandidates) {
-            const slug = el.getAttribute('data-heading-slug')
-            if (slug === hash || slug === decoded) {
-              element = el
-              break
+      // AI(챗봇)에서 hash 설정 시 setTargetHash로 리렌더가 일어나 하이라이트가 사라지므로, 한 프레임 뒤에 스크롤/하이라이트 실행
+      requestAnimationFrame(() => {
+        assignHeadingIds()
+        let element: HTMLElement | null = document.getElementById(hash)
+        const headingMatch = hash.match(/^heading-(\d+)$/)
+        if (!element && headingMatch) {
+          const headings = getContentHeadings()
+          const index = parseInt(headingMatch[1], 10) - 1
+          if (index >= 0 && index < headings.length) element = headings[index]
+        }
+        if (!element) {
+          const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
+          if (container) {
+            const bySlugCandidates = container.querySelectorAll<HTMLElement>('[data-heading-slug]')
+            let decoded = hash
+            try { decoded = decodeURIComponent(hash) } catch { /* ignore */ }
+            for (const el of bySlugCandidates) {
+              const slug = el.getAttribute('data-heading-slug')
+              if (slug === hash || slug === decoded) {
+                element = el
+                break
+              }
             }
           }
         }
-      }
-      if (!element) {
-        const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
-        if (container) {
-          const headings = container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
-          const want = hash.toLowerCase().replace(/-/g, ' ')
-          for (const h of headings) {
-            const text = h.textContent?.trim().toLowerCase().replace(/\s+/g, ' ')
-            if (text === want || text?.replace(/\s+/g, '-') === hash.toLowerCase()) {
-              element = h
-              break
+        if (!element) {
+          const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
+          if (container) {
+            const headings = container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+            const want = hash.toLowerCase().replace(/-/g, ' ')
+            for (const h of headings) {
+              const text = h.textContent?.trim().toLowerCase().replace(/\s+/g, ' ')
+              if (text === want || text?.replace(/\s+/g, '-') === hash.toLowerCase()) {
+                element = h
+                break
+              }
             }
           }
         }
-      }
-      if (element) {
-        scrollToElementWithOffset(element, SCROLL_OFFSET_PX, 'smooth')
-        lastScrolledHashRef.current = hash
-        applyAnchorHighlight(element, anchorHighlightClearRef.current)
-      }
+        if (element) {
+          scrollToElementWithOffset(element, SCROLL_OFFSET_PX, 'smooth')
+          lastScrolledHashRef.current = hash
+          applyAnchorHighlight(element, anchorHighlightClearRef.current)
+        }
+      })
     }
 
     window.addEventListener('hashchange', scrollToHash)

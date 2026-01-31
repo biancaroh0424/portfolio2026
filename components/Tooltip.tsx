@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 
 interface TooltipProps {
@@ -16,11 +16,45 @@ export default function Tooltip({ children, text, position = 'auto' }: TooltipPr
   const containerRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
 
-  // 위치 계산 함수
+  // 트리거(버튼) 기준 초기 위치 — 툴팁이 main 중간에 튀어보이는 것 방지
+  const setInitialPosition = useCallback(() => {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    if (position === 'right') {
+      setTooltipStyle({
+        position: 'fixed',
+        left: `${rect.right + 8}px`,
+        top: `${rect.top + rect.height / 2}px`,
+        transform: 'translateY(-50%)',
+        zIndex: 9999,
+      })
+      return
+    }
+    if (position === 'bottom-right') {
+      setTooltipStyle({
+        position: 'fixed',
+        left: `${rect.right}px`,
+        top: `${rect.bottom + 8}px`,
+        transform: 'translateX(-100%)',
+        zIndex: 9999,
+      })
+      return
+    }
+    const left = rect.left + rect.width / 2
+    const top = position === 'top' ? rect.top - 40 - 8 : rect.bottom + 8
+    setTooltipStyle({
+      position: 'fixed',
+      left: `${left}px`,
+      top: `${top}px`,
+      transform: 'translateX(-50%)',
+      zIndex: 9999,
+    })
+  }, [position])
+
+  // 위치 계산 함수 (경계 보정)
   const calculatePosition = useCallback(() => {
     if (!isVisible || !containerRef.current || !tooltipRef.current) return
     
-    // requestAnimationFrame을 사용하여 DOM이 완전히 렌더링된 후 위치 계산
     requestAnimationFrame(() => {
       if (!containerRef.current || !tooltipRef.current) return
       
@@ -29,20 +63,12 @@ export default function Tooltip({ children, text, position = 'auto' }: TooltipPr
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
       
-      // right position인 경우 오른쪽 정렬
       if (position === 'right') {
         const left = rect.right + 8
         const top = rect.top + rect.height / 2
-        
-        // 화면 경계 체크
         let adjustedTop = top
-        if (top - tooltipRect.height / 2 < 8) {
-          adjustedTop = tooltipRect.height / 2 + 8
-        }
-        if (top + tooltipRect.height / 2 > viewportHeight - 8) {
-          adjustedTop = viewportHeight - tooltipRect.height / 2 - 8
-        }
-        
+        if (top - tooltipRect.height / 2 < 8) adjustedTop = tooltipRect.height / 2 + 8
+        if (top + tooltipRect.height / 2 > viewportHeight - 8) adjustedTop = viewportHeight - tooltipRect.height / 2 - 8
         setTooltipStyle({
           position: 'fixed',
           left: `${left}px`,
@@ -53,19 +79,11 @@ export default function Tooltip({ children, text, position = 'auto' }: TooltipPr
         return
       }
       
-      // bottom-right position인 경우 하단 오른쪽 정렬
       if (position === 'bottom-right') {
         let left = rect.right
         let top = rect.bottom + 8
-        
-        // 화면 경계 체크
-        if (left + tooltipRect.width > viewportWidth - 8) {
-          left = viewportWidth - tooltipRect.width - 8
-        }
-        if (top + tooltipRect.height > viewportHeight - 8) {
-          top = rect.top - tooltipRect.height - 8
-        }
-        
+        if (left + tooltipRect.width > viewportWidth - 8) left = viewportWidth - tooltipRect.width - 8
+        if (top + tooltipRect.height > viewportHeight - 8) top = rect.top - tooltipRect.height - 8
         setTooltipStyle({
           position: 'fixed',
           left: `${left}px`,
@@ -76,37 +94,24 @@ export default function Tooltip({ children, text, position = 'auto' }: TooltipPr
         return
       }
       
-      // position이 명시적으로 'top'이 아니면 항상 하단에 표시
       const finalPosition = position === 'top' ? 'top' : 'bottom'
       setTooltipPosition(finalPosition)
       
-      // fixed position으로 viewport 기준 위치 계산
       let left = rect.left + rect.width / 2
-      
-      // 하단 8px 간격으로 표시
       let top = finalPosition === 'top' 
-        ? rect.top - tooltipRect.height - 8
+        ? rect.top - (tooltipRect.height || 32) - 8
         : rect.bottom + 8
       
-      // 화면 경계 체크 및 조정
       const tooltipWidth = tooltipRect.width || 200
       const halfTooltipWidth = tooltipWidth / 2
+      if (left - halfTooltipWidth < 8) left = halfTooltipWidth + 8
+      if (left + halfTooltipWidth > viewportWidth - 8) left = viewportWidth - halfTooltipWidth - 8
       
-      // 왼쪽 경계 체크
-      if (left - halfTooltipWidth < 8) {
-        left = halfTooltipWidth + 8
-      }
-      // 오른쪽 경계 체크
-      if (left + halfTooltipWidth > viewportWidth - 8) {
-        left = viewportWidth - halfTooltipWidth - 8
-      }
-      
-      // 상하 경계 체크
       if (finalPosition === 'top' && top < 8) {
         top = rect.bottom + 8
         setTooltipPosition('bottom')
-      } else if (finalPosition === 'bottom' && top + tooltipRect.height > viewportHeight - 8) {
-        top = rect.top - tooltipRect.height - 8
+      } else if (finalPosition === 'bottom' && top + (tooltipRect.height || 32) > viewportHeight - 8) {
+        top = rect.top - (tooltipRect.height || 32) - 8
         setTooltipPosition('top')
       }
       
@@ -120,19 +125,19 @@ export default function Tooltip({ children, text, position = 'auto' }: TooltipPr
     })
   }, [isVisible, position])
 
+  // 페인트 전에 초기 위치 설정 → 툴팁이 다른 곳에 튀어보이는 것 방지
+  useLayoutEffect(() => {
+    if (isVisible) {
+      setInitialPosition()
+    }
+  }, [isVisible, position, setInitialPosition])
+
   useEffect(() => {
     if (isVisible) {
-      // 초기 위치 계산
       calculatePosition()
-      
-      // 스크롤 및 리사이즈 이벤트 리스너 추가
-      const handleUpdate = () => {
-        calculatePosition()
-      }
-      
+      const handleUpdate = () => calculatePosition()
       window.addEventListener('scroll', handleUpdate, true)
       window.addEventListener('resize', handleUpdate)
-      
       return () => {
         window.removeEventListener('scroll', handleUpdate, true)
         window.removeEventListener('resize', handleUpdate)
@@ -144,7 +149,7 @@ export default function Tooltip({ children, text, position = 'auto' }: TooltipPr
     <>
       <div
         ref={containerRef}
-        className="relative"
+        className="relative inline-flex shrink-0"
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
       >

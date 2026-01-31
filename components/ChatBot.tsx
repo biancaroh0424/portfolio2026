@@ -1811,7 +1811,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
         {/* Right side icons */}
         <div className="flex items-center gap-2">
           {/* Close button */}
-          <Tooltip text="Close" position="bottom-right">
+          <Tooltip text="Close" position="bottom">
             <button
               onClick={closeChatBot}
               className="flex items-center justify-center w-6 h-6 rounded hover:bg-white/5 transition-colors"
