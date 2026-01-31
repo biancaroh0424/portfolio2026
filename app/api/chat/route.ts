@@ -260,7 +260,8 @@ export async function POST(request: NextRequest) {
             projectsOnPage,
             fallbackProjectContent,
             pendingOpen && typeof pendingOpen.projectId === 'string' ? { projectId: pendingOpen.projectId, anchor: pendingOpen.anchor } : undefined,
-            currentHash && typeof currentHash === 'string' ? currentHash : undefined
+            currentHash && typeof currentHash === 'string' ? currentHash : undefined,
+            pageLang || undefined
           )
           
           let chunkCount = 0

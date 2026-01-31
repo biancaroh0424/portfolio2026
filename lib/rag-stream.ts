@@ -12,7 +12,8 @@ export async function* generateAIResponseStream(
   projectsOnPage?: { id: string; title: string }[],
   fallbackProjectContent?: string,
   pendingOpen?: { projectId: string; anchor?: string },
-  currentAnchor?: string
+  currentAnchor?: string,
+  currentPageLanguage?: string
 ): AsyncGenerator<{
   type: 'content' | 'done' | 'error'
   content?: string
@@ -104,12 +105,19 @@ export async function* generateAIResponseStream(
       ? `\n[Current section — URL hash]\nThe user is currently viewing the section with URL hash: "${currentAnchor}" (from ChapterStatus or in-page link). When they say "그 섹션으로 이동해줘", "거기로 이동해줘", "that section", "take me there", "그곳으로", use this EXACT anchor for [OPEN_LINK: /portfolio/${currentProject.id}#${currentAnchor.trim()}]. Do NOT use a different headingIndex — use the hash as-is so the page scrolls to the same section.\n`
       : ''
 
+    const pageLangName = currentPageLanguage === 'ko' ? 'Korean' : currentPageLanguage === 'it' ? 'Italian' : 'English'
+    const langVersionBlock = currentPageLanguage
+      ? `\n[Current page language]\nThe page the user is viewing is currently in ${pageLangName} (${currentPageLanguage}). Links can include ?lang= to open in a specific language: ?lang=ko (Korean), ?lang=en (English), ?lang=it (Italian). Omit ?lang= to keep the current page language.\n
+[Language version when opening a project]\nWhen the user asks to open or go to a project (or section), YOU decide from context: if the language they are writing in differs from the current page language (e.g. they write in Korean but the page is in English), first ask in the user's language whether to open in their language version or the current page language (e.g. "한국어 버전으로 이동해드릴까요, 아니면 영어 버전으로 유지할까요?"). If they confirm a language (e.g. "한국어로", "영어로", "그래", "네"), then output [OPEN_LINK: /portfolio/PROJECT_ID?lang=ko] or [OPEN_LINK: /portfolio/PROJECT_ID?lang=en] (or with #anchor if a section). If they want to keep current page language or do not specify, output [OPEN_LINK: /portfolio/PROJECT_ID] without ?lang=. All judgment by you — no regex or fixed rules.\n`
+      : ''
+
     const systemPrompt = `You are YJ Assistant for Youngjoo Roh's Portfolio.
 
 CRITICAL — ANSWER LANGUAGE: You MUST write your entire response (including <thinking> and <answer>) ONLY in ${langName}. The user wrote in ${langName}. Never use English if the user asked in Korean; never use Korean if the user asked in English/Italian. Your reply language must match the user's question language exactly.
 ${currentProjectBlock}
 ${pageProjectsBlock}
 ${currentAnchorBlock}
+${langVersionBlock}
 [Instructions]
 1. ALWAYS use <thinking> tag first — keep it very brief (1–2 sentences only). Then use <answer> tag immediately.
 2. Use <answer> tag for your full response. Never truncate: give a complete answer.
@@ -126,8 +134,9 @@ CRITICAL for 7, 8, 9 and 10: Prefer "headingIndex" for section links so they wor
 ${pendingOpen ? `
 [OPEN LINK — Context] In your PREVIOUS message you offered to open or guide to: /portfolio/${pendingOpen.projectId}${pendingOpen.anchor ? `#${pendingOpen.anchor}` : ''}. The user has just replied. From the CONTEXT and MEANING of their reply, decide if they are confirming (e.g. yes, open it / take me there / guide me there; 응, 네, 그래, 그 지점으로 안내해줘, 결제 경험 부분으로 안내해줘, Payment UX로 가줘, sì, guidami, apri, etc.). If their intent is clearly "yes, open/guide me there", then:
 1. Decide the target: (a) If the user named a section, look in [Portfolio Content] Reference headers for that section — use that reference's "id" and "headingIndex" (output [OPEN_LINK: /portfolio/ID#heading-N] where N = headingIndex). If headingIndex is missing, use "anchor". (b) If the user did not name a section, use projectId=${pendingOpen.projectId} and anchor=${pendingOpen.anchor ? pendingOpen.anchor : 'none'} (if anchor is none, output link without #anchor).
-2. Your <answer> must end with a brief acknowledgment (e.g. "RAG Chat Builder 프로젝트의 결제 경험 파트로 안내해드릴게요." / "Taken you there.").
-3. On the VERY NEXT line, with NO other text after it, output exactly: [OPEN_LINK: /portfolio/PROJECT_ID] or [OPEN_LINK: /portfolio/PROJECT_ID#heading-N] (prefer headingIndex so links work when titles change). Without this line the page will NOT move. If their reply is NOT a confirmation, do NOT output [OPEN_LINK] at all.
+2. If the user confirmed a language version (e.g. "한국어로", "영어로", "English", "Korean"), add ?lang=ko or ?lang=en or ?lang=it to the link. Otherwise omit ?lang=.
+3. Your <answer> must end with a brief acknowledgment (e.g. "RAG Chat Builder 프로젝트의 결제 경험 파트로 안내해드릴게요." / "Taken you there.").
+4. On the VERY NEXT line, with NO other text after it, output exactly: [OPEN_LINK: /portfolio/PROJECT_ID] or [OPEN_LINK: /portfolio/PROJECT_ID?lang=ko] or [OPEN_LINK: /portfolio/PROJECT_ID#heading-N] (with ?lang= if they confirmed a language). Without this line the page will NOT move. If their reply is NOT a confirmation, do NOT output [OPEN_LINK] at all.
 ` : ''}
 
 [About YJ Assistant]
