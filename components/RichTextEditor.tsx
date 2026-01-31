@@ -764,7 +764,7 @@ export default function RichTextEditor({
         if (caption) {
           // figure/figcaption 구조로 삽입
           editor.chain().focus().insertContent(
-            `<figure><img src="${pendingMediaUrl}" style="width: 100%; max-width: 100%; height: auto; border-radius: 8px; margin: 2em 0;"><figcaption>${caption}</figcaption></figure>`
+            `<figure><img src="${pendingMediaUrl}" style="width: 100%; max-width: 100%; height: auto; margin: 2em 0;"><figcaption>${caption}</figcaption></figure>`
           ).run()
         } else {
           // caption 없으면 일반 이미지로 삽입
@@ -779,7 +779,7 @@ export default function RichTextEditor({
         } else {
           // caption 없으면 HTML로 직접 삽입 (TipTap이 자동으로 파싱)
           editor.chain().focus().insertContent(
-            `<video src="${pendingMediaUrl}" controls style="width: 100%; max-width: 100%; height: auto; border-radius: 8px; margin: 2em 0;"></video>`
+            `<video src="${pendingMediaUrl}" controls style="width: 100%; max-width: 100%; height: auto; margin: 2em 0;"></video>`
           ).run()
         }
       }

@@ -708,7 +708,6 @@ div[contenteditable="true"].prose-lg h6,
   padding: 0;
   max-width: 100%;
   height: auto;
-  border-radius: 0;
   display: block;
 }
 
@@ -1487,7 +1486,6 @@ div[contenteditable="true"].prose-lg blockquote p {
   margin-left: auto !important;
   margin-right: auto !important;
   padding: 0 !important;
-  border-radius: 16px !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
   max-width: 100% !important;
   height: auto !important;
@@ -1519,7 +1517,6 @@ div[contenteditable="true"].prose-lg blockquote p {
   width: 100% !important;
   max-width: 100% !important;
   height: auto !important;
-  border-radius: 16px !important;
   margin: 0 !important;
   padding: 0 !important;
   border: none !important;
@@ -1579,7 +1576,6 @@ div[contenteditable="true"].prose-lg blockquote p {
   width: 100% !important;
   max-width: 100% !important;
   height: auto !important;
-  border-radius: 16px !important;
   margin-left: auto !important;
   margin-right: auto !important;
   padding: 0 !important;

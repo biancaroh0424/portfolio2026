@@ -201,8 +201,7 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
-                borderRadius: '0px'
+                objectFit: 'cover'
               }}
             />
           ) : (

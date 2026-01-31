@@ -924,7 +924,7 @@ export default function ProjectDetailPage() {
               webkit-playsinline="true"
               x5-playsinline="true"
               x5-video-player-type="h5"
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              className="max-w-full max-h-[85vh] object-contain shadow-2xl"
               style={{
                 width: 'auto',
                 height: 'auto',
