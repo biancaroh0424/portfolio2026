@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useLayoutEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -8,6 +8,34 @@ import { formatProjectTitle } from '@/lib/utils'
 import ChapterStatus from '@/components/ChapterStatus'
 import ProjectChatInput from '@/components/ProjectChatInput'
 import { useLanguage } from '@/contexts/LanguageContext'
+
+// 고정 네비(80px) 아래로 섹션 제목이 보이도록 스크롤 오프셋 (반응형 동일)
+const SCROLL_OFFSET_PX = 100
+const ANCHOR_HIGHLIGHT_CLASS = 'anchor-highlight'
+const ANCHOR_HIGHLIGHT_DURATION_MS = 2200
+
+function scrollToElementWithOffset(element: HTMLElement, offsetPx: number, behavior: ScrollBehavior = 'auto') {
+  const top = element.getBoundingClientRect().top + window.scrollY - offsetPx
+  window.scrollTo({ top: Math.max(0, top), behavior })
+  // 레이아웃 시프트(이미지/폰트 로드 등) 보정: 잠시 후 같은 요소로 다시 스크롤
+  setTimeout(() => {
+    const again = element.getBoundingClientRect().top + window.scrollY - offsetPx
+    if (Math.abs((window.scrollY || 0) - again) > 20) {
+      window.scrollTo({ top: Math.max(0, again), behavior: 'auto' })
+    }
+  }, 150)
+}
+
+function applyAnchorHighlight(element: HTMLElement, clearRef?: { timeoutId: ReturnType<typeof setTimeout> | null }) {
+  if (clearRef?.timeoutId) clearTimeout(clearRef.timeoutId)
+  document.querySelectorAll(`.${ANCHOR_HIGHLIGHT_CLASS}`).forEach((el) => el.classList.remove(ANCHOR_HIGHLIGHT_CLASS))
+  element.classList.add(ANCHOR_HIGHLIGHT_CLASS)
+  const timeoutId = setTimeout(() => {
+    element.classList.remove(ANCHOR_HIGHLIGHT_CLASS)
+    if (clearRef) clearRef.timeoutId = null
+  }, ANCHOR_HIGHLIGHT_DURATION_MS)
+  if (clearRef) clearRef.timeoutId = timeoutId
+}
 
 // 현재 언어의 translation을 가져오는 헬퍼 함수
 const getProjectTranslation = (project: any, language: 'en' | 'ko' | 'it') => {
@@ -48,14 +76,24 @@ export default function ProjectDetailPage() {
   const [windowWidth, setWindowWidth] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
   const cleanupRef = useRef<(() => void) | null>(null)
+  const lastScrolledHashRef = useRef<string | null>(null)
+  const anchorHighlightClearRef = useRef<{ timeoutId: ReturnType<typeof setTimeout> | null }>({ timeoutId: null })
   const [targetHash, setTargetHash] = useState(() =>
     typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
   )
 
   // URL hash 동기화 (챗봇에서 섹션으로 이동 시 hash 유지)
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash && window.history?.scrollRestoration) {
+      window.history.scrollRestoration = 'manual'
+    }
     setTargetHash(typeof window !== 'undefined' ? window.location.hash.slice(1) : '')
-    const onHashChange = () => setTargetHash(window.location.hash.slice(1))
+    const onHashChange = () => {
+      const newHash = window.location.hash.slice(1)
+      setTargetHash(newHash)
+      // 다른 hash로 이동할 때만 스크롤 허용 (이미 스크롤한 hash로 돌아와도 한 번 더 스크롤 가능하도록 초기화)
+      lastScrolledHashRef.current = null
+    }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
@@ -109,16 +147,117 @@ export default function ProjectDetailPage() {
   // hash가 있을 때 전용 스크롤: 콘텐츠 로드 후에도 재시도 (챗봇에서 섹션 이동 시)
   // targetHash + 콘텐츠 준비 시점(project/content) 모두 의존 → URL hash로 진입해도 로드 후 스크롤
   const contentReady = !!(project?.id && (currentTranslation?.content || (project.sections?.length ?? 0) > 0))
-  useEffect(() => {
-    if (!targetHash) return
 
-    const getContentHeadings = () => {
-      const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current ?? document.querySelector('.portfolio-content-container .prose.prose-lg')
-      return container ? container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6') : document.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+  // content 로드 직후 URL hash 다시 반영 (챗봇에서 링크 열었을 때 hash가 아직 targetHash에 없을 수 있음)
+  useEffect(() => {
+    if (!contentReady || typeof window === 'undefined') return
+    const hashFromUrl = window.location.hash.slice(1)
+    if (hashFromUrl && hashFromUrl !== targetHash) setTargetHash(hashFromUrl)
+  }, [contentReady])
+
+  const getContentHeadings = () => {
+    const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current ?? document.querySelector('.portfolio-content-container .prose.prose-lg')
+    return container ? container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6') : document.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+  }
+
+  // contentReady일 때 항상 페인트 전에 헤딩 id 부여 → ChapterStatus가 목차를 채울 수 있도록
+  // hash가 있으면 그때만 스크롤 (위로 갔다 내려오는 깜빡임 방지)
+  useLayoutEffect(() => {
+    if (!contentReady) return
+
+    const assignHeadingIds = () => {
+      const headings = getContentHeadings()
+      const seenSlugs = new Set<string>()
+      headings.forEach((heading, index) => {
+        const positionId = `heading-${index + 1}`
+        if (!heading.id || heading.id !== positionId) heading.id = positionId
+        const text = heading.textContent?.trim() || ''
+        if (text) {
+          let slug = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim()
+          if (!slug || slug === '-' || /^-+$/.test(slug)) {
+            const alphanumeric = text.toLowerCase().match(/[a-z0-9]+/g)
+            slug = alphanumeric?.length ? alphanumeric.join('-') : `heading-${index + 1}`
+          }
+          let uniqueSlug = slug
+          let c = 1
+          while (seenSlugs.has(uniqueSlug)) {
+            uniqueSlug = `${slug}-${c}`
+            c++
+          }
+          seenSlugs.add(uniqueSlug)
+          heading.setAttribute('data-heading-slug', uniqueSlug)
+        }
+      })
+    }
+    assignHeadingIds()
+
+    const hashToUse = targetHash || (typeof window !== 'undefined' ? window.location.hash.slice(1) : '')
+    if (!hashToUse) return
+    if (lastScrolledHashRef.current === hashToUse) return
+
+    if (typeof window !== 'undefined' && window.history?.scrollRestoration) {
+      window.history.scrollRestoration = 'manual'
     }
 
-    const tryScrollToHash = () => {
-      const hash = targetHash
+    const doScrollAndHighlight = () => {
+      assignHeadingIds()
+      let element: HTMLElement | null = document.getElementById(hashToUse)
+      const headingMatch = hashToUse.match(/^heading-(\d+)$/)
+      if (!element && headingMatch) {
+        const headings = getContentHeadings()
+        const index = parseInt(headingMatch[1], 10) - 1
+        if (index >= 0 && index < headings.length) element = headings[index] as HTMLElement
+      }
+      if (!element) {
+        const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
+        if (container) {
+          const bySlugCandidates = container.querySelectorAll<HTMLElement>('[data-heading-slug]')
+          let decoded = hashToUse
+          try { decoded = decodeURIComponent(hashToUse) } catch { /* ignore */ }
+          for (const el of bySlugCandidates) {
+            const slug = el.getAttribute('data-heading-slug')
+            if (slug === hashToUse || slug === decoded) {
+              element = el
+              break
+            }
+          }
+        }
+      }
+      // slug 없으면 제목 텍스트로 검색 (예: Solution, solution)
+      if (!element) {
+        const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
+        if (container) {
+          const headings = container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+          const want = hashToUse.toLowerCase().replace(/-/g, ' ')
+          for (const h of headings) {
+            const text = h.textContent?.trim().toLowerCase().replace(/\s+/g, ' ')
+            if (text === want || text?.replace(/\s+/g, '-') === hashToUse.toLowerCase()) {
+              element = h
+              break
+            }
+          }
+        }
+      }
+      if (element) {
+        scrollToElementWithOffset(element, SCROLL_OFFSET_PX, 'auto')
+        lastScrolledHashRef.current = hashToUse
+        applyAnchorHighlight(element, anchorHighlightClearRef.current)
+      }
+    }
+
+    // 한 프레임 뒤 실행해 DOM(dangerouslySetInnerHTML) 적용 후 스크롤/하이라이트
+    const rafId = requestAnimationFrame(() => {
+      doScrollAndHighlight()
+    })
+    return () => cancelAnimationFrame(rafId)
+  }, [targetHash, contentReady])
+
+  // useLayoutEffect에서 요소를 못 찾았을 때만 재시도 (DOM 지연 렌더 등)
+  useEffect(() => {
+    const hashToUse = targetHash || (typeof window !== 'undefined' ? window.location.hash.slice(1) : '')
+    if (!hashToUse || lastScrolledHashRef.current === hashToUse) return
+
+    const tryScrollToHash = (): boolean => {
       const assignHeadingIds = () => {
         const headings = getContentHeadings()
         const seenSlugs = new Set<string>()
@@ -144,8 +283,8 @@ export default function ProjectDetailPage() {
         })
       }
       assignHeadingIds()
-      let element = document.getElementById(hash)
-      const headingMatch = hash.match(/^heading-(\d+)$/)
+      let element = document.getElementById(hashToUse)
+      const headingMatch = hashToUse.match(/^heading-(\d+)$/)
       if (!element && headingMatch) {
         const headings = getContentHeadings()
         const index = parseInt(headingMatch[1], 10) - 1
@@ -154,23 +293,59 @@ export default function ProjectDetailPage() {
       if (!element) {
         const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
         if (container) {
-          const bySlug = container.querySelector(`[data-heading-slug="${hash}"]`)
-          if (bySlug) element = bySlug as HTMLElement
+          const bySlugCandidates = container.querySelectorAll<HTMLElement>('[data-heading-slug]')
+          let decoded = hashToUse
+          try { decoded = decodeURIComponent(hashToUse) } catch { /* ignore */ }
+          for (const el of bySlugCandidates) {
+            const slug = el.getAttribute('data-heading-slug')
+            if (slug === hashToUse || slug === decoded) {
+              element = el
+              break
+            }
+          }
+        }
+      }
+      if (!element) {
+        const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
+        if (container) {
+          const headings = container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+          const want = hashToUse.toLowerCase().replace(/-/g, ' ')
+          for (const h of headings) {
+            const text = h.textContent?.trim().toLowerCase().replace(/\s+/g, ' ')
+            if (text === want || text?.replace(/\s+/g, '-') === hashToUse.toLowerCase()) {
+              element = h
+              break
+            }
+          }
         }
       }
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+        scrollToElementWithOffset(element, SCROLL_OFFSET_PX, 'auto')
+        lastScrolledHashRef.current = hashToUse
+        applyAnchorHighlight(element, anchorHighlightClearRef.current)
         return true
       }
       return false
     }
 
-    const interval = setInterval(tryScrollToHash, 450)
-    const timeout = setTimeout(() => clearInterval(interval), 8000)
-    tryScrollToHash()
+    let intervalId: ReturnType<typeof setInterval> | null = null
+    const initialDelay = setTimeout(() => {
+      if (tryScrollToHash()) return
+      intervalId = setInterval(() => {
+        if (tryScrollToHash() && intervalId) {
+          clearInterval(intervalId)
+          intervalId = null
+        }
+      }, 400)
+    }, 50)
+    const timeoutId = setTimeout(() => {
+      if (intervalId) clearInterval(intervalId)
+    }, 8000)
+
     return () => {
-      clearInterval(interval)
-      clearTimeout(timeout)
+      clearTimeout(initialDelay)
+      if (intervalId) clearInterval(intervalId)
+      clearTimeout(timeoutId)
     }
   }, [targetHash, contentReady])
 
@@ -208,9 +383,13 @@ export default function ProjectDetailPage() {
       })
     }
 
+    // hash로의 초기 스크롤은 위의 targetHash effect에서만 수행. 여기서는 id 부여 + hashchange 시에만 스크롤 (중복 스크롤로 인한 '위로 갔다 내려옴' 방지)
+    assignHeadingIds()
+
     const scrollToHash = () => {
-      if (!window.location.hash) return false
+      if (!window.location.hash) return
       const hash = window.location.hash.substring(1)
+      assignHeadingIds()
       let element = document.getElementById(hash)
       const headingMatch = hash.match(/^heading-(\d+)$/)
       if (!element && headingMatch) {
@@ -221,43 +400,43 @@ export default function ProjectDetailPage() {
       if (!element) {
         const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
         if (container) {
-          const bySlug = container.querySelector(`[data-heading-slug="${hash}"]`)
-          if (bySlug) element = bySlug as HTMLElement
+          const bySlugCandidates = container.querySelectorAll<HTMLElement>('[data-heading-slug]')
+          let decoded = hash
+          try { decoded = decodeURIComponent(hash) } catch { /* ignore */ }
+          for (const el of bySlugCandidates) {
+            const slug = el.getAttribute('data-heading-slug')
+            if (slug === hash || slug === decoded) {
+              element = el
+              break
+            }
+          }
+        }
+      }
+      if (!element) {
+        const container = document.querySelector('[data-portfolio-body]') ?? contentRef.current
+        if (container) {
+          const headings = container.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+          const want = hash.toLowerCase().replace(/-/g, ' ')
+          for (const h of headings) {
+            const text = h.textContent?.trim().toLowerCase().replace(/\s+/g, ' ')
+            if (text === want || text?.replace(/\s+/g, '-') === hash.toLowerCase()) {
+              element = h
+              break
+            }
+          }
         }
       }
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
-        return true
+        scrollToElementWithOffset(element, SCROLL_OFFSET_PX, 'smooth')
+        lastScrolledHashRef.current = hash
+        applyAnchorHighlight(element, anchorHighlightClearRef.current)
       }
-      return false
     }
 
-    const runScrollToHash = () => {
-      assignHeadingIds()
-      return scrollToHash()
-    }
-
-    const timer = setTimeout(() => {
-      runScrollToHash()
-      const retryDelays = [200, 500, 1000, 1500, 2500, 4000]
-      const retryTimers: ReturnType<typeof setTimeout>[] = []
-      retryDelays.forEach((delay) => {
-        const t = setTimeout(() => {
-          if (runScrollToHash()) {
-            retryTimers.forEach(clearTimeout)
-          }
-        }, delay)
-        retryTimers.push(t)
-      })
-      window.addEventListener('hashchange', scrollToHash)
-      cleanupRef.current = () => {
-        window.removeEventListener('hashchange', scrollToHash)
-        retryTimers.forEach(clearTimeout)
-      }
-    }, 200)
+    window.addEventListener('hashchange', scrollToHash)
+    cleanupRef.current = () => window.removeEventListener('hashchange', scrollToHash)
 
     return () => {
-      clearTimeout(timer)
       cleanupRef.current?.()
     }
   }, [currentTranslation?.content, language])
@@ -497,6 +676,7 @@ export default function ProjectDetailPage() {
             title={currentTranslation.title}
             onToggle={setIsChapterOpen}
             contentContainerRef={contentRef}
+            collapseWhenNarrow={windowWidth > 0 && windowWidth < 744}
           />
         )}
         

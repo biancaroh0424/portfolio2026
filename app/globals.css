@@ -91,7 +91,33 @@ body {
   color: inherit;
 }
 
-
+/* 포트폴리오 앵커로 이동 시 제목 하이라이트 (왼쪽 → 오른쪽, 텍스트 길이만큼만) */
+.anchor-highlight {
+  position: relative;
+  isolation: isolate;
+  width: fit-content;
+  max-width: 100%;
+}
+.anchor-highlight::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: rgba(194, 73, 13, 0.40);
+  border-radius: 4px;
+  z-index: -1;
+  animation: anchor-highlight-sweep 1s ease-out forwards;
+}
+@keyframes anchor-highlight-sweep {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
 
 :root {
   --background: #ffffff;
@@ -963,6 +989,7 @@ div[data-type="column"],
 }
 
 /* 프로젝트 상세 페이지용 h 태그 스타일 - 최고 우선순위 */
+/* h1~h6: margin으로 간격 처리 → 앵커 하이라이트(::after)가 텍스트 라인만 덮고 간격은 밖으로 */
 div.prose.prose-lg h1,
 div.prose.prose-lg h1 *,
 .prose.prose-lg h1,
@@ -974,8 +1001,10 @@ div.prose.prose-lg h1 *,
   font-weight: 700 !important;
   line-height: 1.4 !important;
   letter-spacing: 0 !important;
-  padding-top: 8px !important;
-  padding-bottom: 40px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 8px !important;
+  margin-bottom: 40px !important;
   color: var(--greyscale-900) !important;
 }
 
@@ -990,8 +1019,10 @@ div.prose.prose-lg h2 *,
   font-weight: 700 !important;
   line-height: 1.4 !important;
   letter-spacing: 0 !important;
-  padding-top: 8px !important;
-  padding-bottom: 40px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 8px !important;
+  margin-bottom: 40px !important;
   color: var(--greyscale-white) !important;
 }
 
@@ -1006,8 +1037,10 @@ div.prose.prose-lg h3 *,
   font-weight: 700 !important;
   line-height: 1.4 !important;
   letter-spacing: 0 !important;
-  padding-top: 8px !important;
-  padding-bottom: 40px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 8px !important;
+  margin-bottom: 40px !important;
   color: var(--greyscale-white) !important;
 }
 
@@ -1022,8 +1055,10 @@ div.prose.prose-lg h4 *,
   font-weight: 700 !important;
   line-height: 1.4 !important;
   letter-spacing: 0 !important;
-  padding-top: 8px !important;
-  padding-bottom: 40px!important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 8px !important;
+  margin-bottom: 40px !important;
   color: var(--greyscale-white) !important;
 }
 
@@ -1038,8 +1073,10 @@ div.prose.prose-lg h5 *,
   font-weight: 700 !important;
   line-height: 1.4 !important;
   letter-spacing: 0 !important;
-  padding-top: 8px !important;
-  padding-bottom: 24px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 8px !important;
+  margin-bottom: 24px !important;
   color: var(--greyscale-white) !important;
 }
 
@@ -1054,8 +1091,10 @@ div.prose.prose-lg h6 *,
   font-weight: 700 !important;
   line-height: 140% !important;
   letter-spacing: 0 !important;
-  padding-top: 8px !important;
-  padding-bottom: 16px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 8px !important;
+  margin-bottom: 16px !important;
   color: var(--GreyScale-white, #FFF) !important;
 }
 

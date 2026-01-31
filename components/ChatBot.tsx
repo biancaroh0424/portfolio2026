@@ -917,12 +917,25 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
       setMessages(storedMessages)
       messagesRef.current = storedMessages
     } else {
-      // 저장된 메시지가 없으면 현재 언어로 초기 메시지 설정
+      // 저장된 메시지가 없으면 현재 언어(브라우저 언어 반영)로 초기 메시지 설정
       const defaultMsgs = getDefaultMessage(t('chatbot.greeting'))
       setMessages(defaultMsgs)
       messagesRef.current = defaultMsgs
     }
   }, [])
+
+  // 브라우저/선택 언어 변경 시 환영 메시지만 있을 때 해당 언어로 환영 문구 동기화
+  useEffect(() => {
+    if (!isMounted) return
+    const current = messagesRef.current ?? messages
+    const isOnlyGreeting = current.length === 1 && current[0]?.role === 'assistant'
+    if (isOnlyGreeting) {
+      const defaultMsgs = getDefaultMessage(t('chatbot.greeting'))
+      setMessages(defaultMsgs)
+      messagesRef.current = defaultMsgs
+      saveMessagesToStorage(defaultMsgs)
+    }
+  }, [language])
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -1237,6 +1250,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
           message: messageWithContext,
           conversationHistory: messagesRef.current,
           currentPath: pathname,
+          currentHash: typeof window !== 'undefined' && window.location.hash ? window.location.hash.slice(1) : '',
           pageLanguage: language,
           ...(pendingOpenRef.current && { pendingOpen: pendingOpenRef.current })
         }),
@@ -1469,7 +1483,29 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                 }
                 if (openPath) {
                   pendingOpenRef.current = null
-                  window.location.href = openPath
+                  const win = typeof window !== 'undefined' ? window : null
+                  if (win && win.innerWidth <= 743) {
+                    closeChatBot()
+                    try { localStorage.setItem('chatbot-is-open', 'false') } catch { /* ignore */ }
+                  }
+                  if (win) {
+                    const currentPath = win.location.pathname
+                    const currentHash = win.location.hash.slice(1)
+                    const [targetPath, targetHashPart] = openPath.includes('#') ? [openPath.split('#')[0], openPath.slice(openPath.indexOf('#') + 1)] : [openPath.replace(/#.*$/, ''), '']
+                    const samePath = currentPath === targetPath
+                    const sameHash = !targetHashPart || currentHash === targetHashPart
+                    if (samePath && targetHashPart) {
+                      // 같은 페이지에서 hash만 바꿀 땐 full reload 없이 hash만 변경 → hashchange로 스크롤/하이라이트 동작
+                      if (sameHash) {
+                        win.location.hash = ''
+                        setTimeout(() => { win.location.hash = targetHashPart }, 0)
+                      } else {
+                        win.location.hash = targetHashPart
+                      }
+                    } else if (!samePath || !sameHash) {
+                      win.location.href = openPath
+                    }
+                  }
                 }
                 
                 setMessages(prev => prev.map(msg => {
@@ -1791,6 +1827,13 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto" style={{ padding: '16px' }}>
+        {messages.length === 0 && isMounted && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 0 }}>
+            <div style={{ width: '100%', maxWidth: '100%' }} className="chatbot-prose">
+              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(t('chatbot.greeting') || '') }} />
+            </div>
+          </div>
+        )}
         {messages.map((message, index) => (
           <div
             key={message.id}
@@ -2113,8 +2156,8 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                 </div>
               )}
 
-              {/* Assistant Message Content 표시 - 마크다운 렌더링 및 출처를 인라인 링크로 변환 */}
-              {message.role === 'assistant' && message.content && message.thinkingDone && (
+              {/* Assistant Message Content 표시 - 마크다운 렌더링 및 출처를 인라인 링크로 변환 (환영 메시지 id '1' 또는 thinking 없음 → 표시) */}
+              {message.role === 'assistant' && message.content && (message.id === '1' || message.thinkingDone !== false || !message.thinking) && (
                 <div 
                   style={{
                     marginTop: message.thinking ? '12px' : '0',

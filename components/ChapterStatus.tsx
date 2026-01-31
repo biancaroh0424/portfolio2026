@@ -8,28 +8,45 @@ interface Chapter {
   level: number
 }
 
+const NARROW_THRESHOLD = 744
+
 interface ChapterStatusProps {
   content: string
   title?: string
   onToggle?: (isOpen: boolean) => void
   /** 본문 DOM 컨테이너 ref. 넘기면 이 안에서만 헤딩을 찾아 렌더가 안정적임 */
   contentContainerRef?: React.RefObject<HTMLElement | null>
+  /** true이면 본문 영역이 좁을 때(744px 미만) 사이드바 접힘 */
+  collapseWhenNarrow?: boolean
 }
 
-export default function ChapterStatus({ content, title, onToggle, contentContainerRef }: ChapterStatusProps) {
+export default function ChapterStatus({ content, title, onToggle, contentContainerRef, collapseWhenNarrow }: ChapterStatusProps) {
   const [chapters, setChapters] = useState<Chapter[]>([])
   const [activeChapter, setActiveChapter] = useState<string | null>(null)
   const [hoveredChapter, setHoveredChapter] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(true)
+
+  // 본문 영역 744px 미만 → 접힘, 744px 이상 → 자동으로 열림
+  useEffect(() => {
+    if (collapseWhenNarrow) {
+      setIsOpen(false)
+    } else {
+      setIsOpen(true)
+    }
+  }, [collapseWhenNarrow])
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isScrollingRef = useRef(false)
 
-  // HTML 콘텐츠에서 헤딩 추출 (h2~h6만)
+  // HTML 콘텐츠에서 헤딩 추출 (h2~h5)
   useEffect(() => {
     if (!content) return
 
     const run = () => {
-      const root = contentContainerRef?.current ?? document
+      // ref가 아직 안 붙었을 수 있으므로 [data-portfolio-body] 폴백 사용
+      const root =
+        contentContainerRef?.current ??
+        document.querySelector('[data-portfolio-body]') ??
+        document
       const selector = 'h2, h3, h4, h5'
       const headings = root.querySelectorAll(selector)
       const chaptersList: Chapter[] = []
@@ -40,25 +57,66 @@ export default function ChapterStatus({ content, title, onToggle, contentContain
         const tagName = heading.tagName.toLowerCase()
         const level = parseInt(tagName.replace('h', ''), 10)
 
-        // h2~h5만 포함 (level 2~5, h6 제외) 및 ID가 있는 경우만 추가
-        // ID는 프로젝트 상세 페이지에서 생성되므로, ID가 없으면 아직 생성되지 않은 것으로 간주
+        // h2~h5만 포함, ID가 있는 경우만 추가 (상세 페이지 useLayoutEffect에서 id 부여)
         if (text && level >= 2 && level <= 5 && id && id !== '-' && !/^-+$/.test(id)) {
           chaptersList.push({ id, text, level })
         }
       })
 
-      setChapters(chaptersList)
+      if (chaptersList.length > 0) {
+        setChapters(chaptersList)
+      }
     }
 
-    const t1 = setTimeout(run, 400)
-    const t2 = setTimeout(run, 900)
-    const t3 = setTimeout(run, 1400)
+    run()
+    const t1 = setTimeout(run, 100)
+    const t2 = setTimeout(run, 400)
+    const t3 = setTimeout(run, 900)
+    const t4 = setTimeout(run, 1600)
+    const t5 = setTimeout(run, 2500)
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
       clearTimeout(t3)
+      clearTimeout(t4)
+      clearTimeout(t5)
     }
   }, [content, contentContainerRef])
+
+  // URL hash와 활성 챕터 동기화 (챗봇/링크로 이동 시 즉시 반영)
+  useEffect(() => {
+    const syncFromHash = () => {
+      if (typeof window === 'undefined') return
+      const hash = window.location.hash.slice(1)
+      if (!hash) return
+      let activeId: string | null = null
+      if (chapters.some((c) => c.id === hash)) {
+        activeId = hash
+      } else {
+        // slug 형태 hash면 data-heading-slug로 요소 찾아서 id(heading-N)로 매칭
+        const root = contentContainerRef?.current ?? document.querySelector('[data-portfolio-body]')
+        if (root) {
+          const candidates = root.querySelectorAll<HTMLElement>('[data-heading-slug]')
+          let decoded = hash
+          try { decoded = decodeURIComponent(hash) } catch { /* ignore */ }
+          for (const el of candidates) {
+            const slug = el.getAttribute('data-heading-slug')
+            if (slug === hash || slug === decoded) {
+              const id = el.id
+              if (id && chapters.some((c) => c.id === id)) {
+                activeId = id
+                break
+              }
+            }
+          }
+        }
+      }
+      if (activeId) setActiveChapter(activeId)
+    }
+    syncFromHash()
+    window.addEventListener('hashchange', syncFromHash)
+    return () => window.removeEventListener('hashchange', syncFromHash)
+  }, [chapters, contentContainerRef])
 
   // 스크롤 위치에 따라 활성 챕터 업데이트
   useEffect(() => {
@@ -89,21 +147,14 @@ export default function ChapterStatus({ content, title, onToggle, contentContain
       if (chapterPositions.length > 0) {
         const firstChapter = chapterPositions[0]
         if (scrollPosition < firstChapter.top) {
-          // 첫 번째 챕터 위에 있으면 첫 번째 챕터를 active로
           activeId = firstChapter.id
         } else {
-          // 역순으로 확인하여 가장 위에 있는 챕터를 찾음 (스크롤 업/다운 모두 작동)
+          // 역순으로 확인하여 가장 위에 있는 챕터를 찾음
           for (let i = chapterPositions.length - 1; i >= 0; i--) {
             const currentChapter = chapterPositions[i]
             const nextChapter = chapterPositions[i + 1]
-
-            // 현재 챕터의 시작 위치
             const chapterStart = currentChapter.top
-
-            // 다음 챕터가 있으면 그 위치까지, 없으면 페이지 끝까지
             const chapterEnd = nextChapter ? nextChapter.top : Infinity
-
-            // 스크롤 위치가 현재 챕터 영역에 있으면 active
             if (scrollPosition >= chapterStart && scrollPosition < chapterEnd) {
               activeId = currentChapter.id
               break
@@ -112,11 +163,9 @@ export default function ChapterStatus({ content, title, onToggle, contentContain
         }
       }
 
-      // active 상태 업데이트
       setActiveChapter(activeId)
     }
 
-    // 스크롤 이벤트 리스너 (throttle 적용)
     let ticking = false
     const throttledHandleScroll = () => {
       if (!ticking) {
@@ -129,11 +178,12 @@ export default function ChapterStatus({ content, title, onToggle, contentContain
     }
 
     window.addEventListener('scroll', throttledHandleScroll, { passive: true })
-    handleScroll() // 초기 실행
-
+    handleScroll()
+    // DOM/레이아웃 안정화 후 한 번 더 실행
+    const t = setTimeout(handleScroll, 200)
     return () => {
+      clearTimeout(t)
       window.removeEventListener('scroll', throttledHandleScroll)
-      // 타이머 정리
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current)
         scrollTimeoutRef.current = null

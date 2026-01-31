@@ -11,7 +11,8 @@ export async function* generateAIResponseStream(
   isProjectListPage?: boolean,
   projectsOnPage?: { id: string; title: string }[],
   fallbackProjectContent?: string,
-  pendingOpen?: { projectId: string; anchor?: string }
+  pendingOpen?: { projectId: string; anchor?: string },
+  currentAnchor?: string
 ): AsyncGenerator<{
   type: 'content' | 'done' | 'error'
   content?: string
@@ -99,11 +100,16 @@ export async function* generateAIResponseStream(
           ? `\n[Current page — Project detail]\nThe user is on a project detail page: /portfolio/${currentProject.id}. Assume their questions refer to THIS project. Do NOT say you don't know which project they are viewing.\n`
           : ''
 
+    const currentAnchorBlock = currentProject && currentAnchor && currentAnchor.trim()
+      ? `\n[Current section — URL hash]\nThe user is currently viewing the section with URL hash: "${currentAnchor}" (from ChapterStatus or in-page link). When they say "그 섹션으로 이동해줘", "거기로 이동해줘", "that section", "take me there", "그곳으로", use this EXACT anchor for [OPEN_LINK: /portfolio/${currentProject.id}#${currentAnchor.trim()}]. Do NOT use a different headingIndex — use the hash as-is so the page scrolls to the same section.\n`
+      : ''
+
     const systemPrompt = `You are YJ Assistant for Youngjoo Roh's Portfolio.
 
 CRITICAL — ANSWER LANGUAGE: You MUST write your entire response (including <thinking> and <answer>) ONLY in ${langName}. The user wrote in ${langName}. Never use English if the user asked in Korean; never use Korean if the user asked in English/Italian. Your reply language must match the user's question language exactly.
 ${currentProjectBlock}
 ${pageProjectsBlock}
+${currentAnchorBlock}
 [Instructions]
 1. ALWAYS use <thinking> tag first — keep it very brief (1–2 sentences only). Then use <answer> tag immediately.
 2. Use <answer> tag for your full response. Never truncate: give a complete answer.
@@ -114,7 +120,9 @@ ${pageProjectsBlock}
 7. When you recommend ONE specific project (e.g. user says "포트폴리오가 궁금해" or "추천해줘") and you suggest a project by name, END your answer by offering to open it (e.g. "열어드릴까요?", "Shall I open it for you?", "Vuoi che lo apra?" — use the phrase that fits the user's language). Then on a NEW line output exactly: [OFFERED_LINK: /portfolio/PROJECT_ID] using the project ID from the reference (e.g. rag-chat-builder). No other text after this line.
 8. When the user asks vaguely where something is (e.g. "요금제 관련 내용 어디였지?", "where was the pricing part?") use [Portfolio Content] to find the section. Answer with the project name and section/heading name, then END by offering to guide. Then on a NEW line output [OFFERED_LINK: /portfolio/PROJECT_ID#heading-N] using the reference's "id" and "headingIndex" (N = headingIndex). If headingIndex is missing, use "anchor" for #ANCHOR. No other text after this line.
 9. When YOU proactively offer to guide to a specific section by name (e.g. "Discovery 섹션으로 안내해 드릴까요?"), you MUST output [OFFERED_LINK: /portfolio/PROJECT_ID#heading-N] on a NEW line — use the Reference that contains that section and use its "id" and "headingIndex" (N). Example: Reference 2 (id: rag-chat-builder, headingIndex: 2) → [OFFERED_LINK: /portfolio/rag-chat-builder#heading-2]. If headingIndex is missing, use "anchor". No other text after this line.
-CRITICAL for 7, 8 and 9: Prefer "headingIndex" for section links so they work when section titles change. Use [OFFERED_LINK: /portfolio/ID#heading-N] where N is the reference's headingIndex. Only use "anchor" (slug) when headingIndex is not in the Reference. Do not invent IDs.
+10. When the user DIRECTLY asks to go to a section (e.g. "정량지표 파트로 이동해줘", "Solution으로 안내해줘", "Impact 섹션으로 이동해줘", "take me to the metrics section", "이동해줘"), you MUST navigate in the SAME message: (1) Give a brief acknowledgment in ${langName} (e.g. "네, Impact 정량 지표 섹션으로 바로 안내해 드리겠습니다."). (2) On the VERY NEXT line, with NO other text after it, output exactly [OPEN_LINK: /portfolio/PROJECT_ID#heading-N] — find that section in [Portfolio Content] (or [Current page — Project detail]) and use the reference's "id" and "headingIndex" (N = headingIndex). If headingIndex is missing, use "anchor" for #ANCHOR. Use currentProject.id for PROJECT_ID when the user is on a project detail page. Without [OPEN_LINK] the page will NOT move.
+CRITICAL for 10 — EXACT subsection: When the user names a specific subsection (e.g. "정량 지표", "정량지표 파트", "Payment UX", "결제 UX"), use the headingIndex of the heading that EXACTLY or most closely matches that subsection title (e.g. "정량 지표 (리뉴얼 전후 8개월 비교)" for "정량지표"), NOT the parent section's heading (e.g. do NOT use the "Impact" h2 headingIndex when the user asked for "정량 지표" — use the "정량 지표" heading's own headingIndex). Otherwise the page will scroll to the wrong position (too far up).
+CRITICAL for 7, 8, 9 and 10: Prefer "headingIndex" for section links so they work when section titles change. Use [OFFERED_LINK: /portfolio/ID#heading-N] or [OPEN_LINK: /portfolio/ID#heading-N] where N is the reference's headingIndex. Only use "anchor" (slug) when headingIndex is not in the Reference. Do not invent IDs.
 ${pendingOpen ? `
 [OPEN LINK — Context] In your PREVIOUS message you offered to open or guide to: /portfolio/${pendingOpen.projectId}${pendingOpen.anchor ? `#${pendingOpen.anchor}` : ''}. The user has just replied. From the CONTEXT and MEANING of their reply, decide if they are confirming (e.g. yes, open it / take me there / guide me there; 응, 네, 그래, 그 지점으로 안내해줘, 결제 경험 부분으로 안내해줘, Payment UX로 가줘, sì, guidami, apri, etc.). If their intent is clearly "yes, open/guide me there", then:
 1. Decide the target: (a) If the user named a section, look in [Portfolio Content] Reference headers for that section — use that reference's "id" and "headingIndex" (output [OPEN_LINK: /portfolio/ID#heading-N] where N = headingIndex). If headingIndex is missing, use "anchor". (b) If the user did not name a section, use projectId=${pendingOpen.projectId} and anchor=${pendingOpen.anchor ? pendingOpen.anchor : 'none'} (if anchor is none, output link without #anchor).
