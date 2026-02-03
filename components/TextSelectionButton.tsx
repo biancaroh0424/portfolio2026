@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useChatBot } from '@/contexts/ChatBotContext'
 
+const isDev = process.env.NODE_ENV === 'development'
+
 export default function TextSelectionButton() {
   const [selectedText, setSelectedText] = useState('')
   const [buttonPosition, setButtonPosition] = useState<{ top: number; left: number } | null>(null)
@@ -29,7 +31,7 @@ export default function TextSelectionButton() {
         }
       } catch (error) {
         // 모바일에서 Range 접근 실패 시 무시
-        console.log('Range access error (mobile):', error)
+        if (isDev) console.log('Range access error (mobile):', error)
         setSelectedText('')
         setButtonPosition(null)
         return
@@ -53,7 +55,7 @@ export default function TextSelectionButton() {
           return
         }
       } catch (error) {
-        console.log('Range getRangeAt error:', error)
+        if (isDev) console.log('Range getRangeAt error:', error)
         setSelectedText('')
         setButtonPosition(null)
         return
@@ -113,7 +115,7 @@ export default function TextSelectionButton() {
         return
       }
 
-      console.log('Text selected:', text)
+      if (isDev) console.log('Text selected:', text)
       setSelectedText(text)
 
       // 모바일에서 getBoundingClientRect 안전하게 호출
@@ -127,7 +129,7 @@ export default function TextSelectionButton() {
           return
         }
       } catch (error) {
-        console.log('getBoundingClientRect error:', error)
+        if (isDev) console.log('getBoundingClientRect error:', error)
         setSelectedText('')
         setButtonPosition(null)
         return
@@ -144,9 +146,11 @@ export default function TextSelectionButton() {
       const adjustedLeft = Math.max(100, Math.min(left, viewportWidth - 100)) // 좌우 여백 100px
       const adjustedTop = Math.max(80, top) // 상단 네비게이션 고려 (최소 80px)
 
-      console.log('Button position (viewport):', { top: adjustedTop, left: adjustedLeft })
-      console.log('Selection rect:', rect)
-      console.log('Window scroll:', { scrollY: window.scrollY, scrollX: window.scrollX })
+      if (isDev) {
+        console.log('Button position (viewport):', { top: adjustedTop, left: adjustedLeft })
+        console.log('Selection rect:', rect)
+        console.log('Window scroll:', { scrollY: window.scrollY, scrollX: window.scrollX })
+      }
       setButtonPosition({ top: adjustedTop, left: adjustedLeft })
     }
 
@@ -197,9 +201,10 @@ export default function TextSelectionButton() {
     const textToSend = selectedText
     
     if (textToSend && textToSend.trim()) {
-      console.log('Button clicked, selected text:', textToSend)
-      console.log('setSelectedTextChip available:', !!setSelectedTextChip)
-      
+      if (isDev) {
+        console.log('Button clicked, selected text:', textToSend)
+        console.log('setSelectedTextChip available:', !!setSelectedTextChip)
+      }
       // 선택 해제 (먼저 해제)
       window.getSelection()?.removeAllRanges()
       setSelectedText('')
@@ -212,15 +217,15 @@ export default function TextSelectionButton() {
         setTimeout(() => {
           if (setSelectedTextChip) {
             setSelectedTextChip(textToSend)
-            console.log('setSelectedTextChip called with (after open):', textToSend)
+            if (isDev) console.log('setSelectedTextChip called with (after open):', textToSend)
           }
         }, 300)
       } else {
         if (setSelectedTextChip) {
           setSelectedTextChip(textToSend)
-          console.log('setSelectedTextChip called with:', textToSend)
+          if (isDev) console.log('setSelectedTextChip called with:', textToSend)
         } else {
-          console.warn('setSelectedTextChip is not available')
+          if (isDev) console.warn('setSelectedTextChip is not available')
         }
       }
     }
@@ -229,16 +234,16 @@ export default function TextSelectionButton() {
   if (!buttonPosition || !selectedText) {
     return null
   }
-  
-  console.log('Rendering button at position:', buttonPosition, 'with text:', selectedText)
 
-  // 디버깅: 버튼이 실제로 렌더링되는지 확인
-  console.log('About to render button:', {
-    position: buttonPosition,
-    text: selectedText,
-    scrollY: window.scrollY,
-    viewportHeight: window.innerHeight
-  })
+  if (isDev) {
+    console.log('Rendering button at position:', buttonPosition, 'with text:', selectedText)
+    console.log('About to render button:', {
+      position: buttonPosition,
+      text: selectedText,
+      scrollY: window.scrollY,
+      viewportHeight: window.innerHeight
+    })
+  }
 
   return (
     <div
