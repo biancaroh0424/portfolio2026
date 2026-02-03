@@ -25,11 +25,37 @@ export default function MixpanelProvider() {
     if (typeof window === 'undefined') return
     if (!MIXPANEL_TOKEN) return
     mixpanel.init(MIXPANEL_TOKEN, {
-      autocapture: true,
-      record_sessions_percent: 100,
       persistence: 'localStorage',
       debug: process.env.NODE_ENV === 'development',
+      // Heatmap + Session Replay
+      record_sessions_percent: 100,
+      autocapture: {
+        pageview: 'full-url',
+        click: true,
+        input: true,
+        scroll: true,
+        submit: true,
+        capture_text_content: false,
+      },
+      // 세션 녹화: 전부 unmask (텍스트·입력 모두 노출)
+      record_mask_all_text: false,
+      record_mask_text_selector: [],
+      record_mask_all_inputs: false,
+      record_mask_input_selector: [],
     })
+    // Device별 구분: stable device id 등록 (대시보드에서 $device_id / distinct_id로 필터 가능)
+    try {
+      let deviceId = typeof localStorage !== 'undefined' ? localStorage.getItem('mp_device_id') : null
+      if (!deviceId && typeof crypto !== 'undefined' && crypto.randomUUID) {
+        deviceId = crypto.randomUUID()
+        localStorage?.setItem('mp_device_id', deviceId)
+      }
+      if (deviceId) {
+        mixpanel.register({ $device_id: deviceId, distinct_id: `$device:${deviceId}` })
+      }
+    } catch {
+      /* ignore */
+    }
     // init 직후 track이 빠지지 않도록 짧게 지연 후 전송
     const t = setTimeout(() => {
       mixpanel.track('App Loaded', { source: 'portfolio' })
