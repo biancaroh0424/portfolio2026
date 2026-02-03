@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useChatBot } from '@/contexts/ChatBotContext'
 import { useLanguage } from '@/contexts/LanguageContext'
+import Button from '@/components/Button'
 
 
 export default function Navigation() {
@@ -14,9 +16,12 @@ export default function Navigation() {
   const { t } = useLanguage()
   const isMainPage = pathname === '/' || pathname === '/home'
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobileMenuClosing, setIsMobileMenuClosing] = useState(false)
   const [isResumeDropdownOpen, setIsResumeDropdownOpen] = useState(false)
   const [resumeFiles, setResumeFiles] = useState<{ en?: string; ko?: string; it?: string }>({})
   const resumeDropdownRef = useRef<HTMLDivElement>(null)
+  const menuCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closeClipId = useId()
   // Hydration 에러 방지: 초기값은 항상 false로 설정
   const [isMobile, setIsMobile] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
@@ -53,6 +58,13 @@ export default function Navigation() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  // 메뉴 닫기 타임아웃 정리
+  useEffect(() => {
+    return () => {
+      if (menuCloseTimeoutRef.current) clearTimeout(menuCloseTimeoutRef.current)
+    }
+  }, [])
+
   // width가 유효한 숫자인지 확인
   const validWidth = typeof width === 'number' && !isNaN(width) && width > 0 ? width : 320
 
@@ -62,12 +74,36 @@ export default function Navigation() {
     }`
 
   const handleMobileMenuClose = () => {
-    setIsMobileMenuOpen(false)
+    setIsMobileMenuClosing(true)
+    const t = setTimeout(() => {
+      setIsMobileMenuOpen(false)
+      setIsMobileMenuClosing(false)
+    }, 240)
+    return () => clearTimeout(t)
   }
 
   const handleNavClick = (href: string) => {
-    setIsMobileMenuOpen(false)
-    router.push(href)
+    setIsMobileMenuClosing(true)
+    const t = setTimeout(() => {
+      setIsMobileMenuOpen(false)
+      setIsMobileMenuClosing(false)
+      router.push(href)
+    }, 240)
+    return () => clearTimeout(t)
+  }
+
+  const handleMobileMenuAIAssistant = () => {
+    setIsMobileMenuClosing(true)
+    setTimeout(() => {
+      setIsMobileMenuOpen(false)
+      setIsMobileMenuClosing(false)
+      if (pathname === '/portfolio' || pathname?.startsWith('/portfolio/')) {
+        toggleChatBot()
+      } else {
+        router.push('/portfolio')
+        setTimeout(() => openChatBot(), 100)
+      }
+    }, 240)
   }
 
   // Resume 파일 로드
@@ -155,40 +191,22 @@ export default function Navigation() {
           zIndex: 1
         }}
       >
-        {/* Left side: Hamburger (mobile) + Logo */}
+        {/* Left side: 햄버거(모바일) + Logo */}
         <div className="flex items-center" style={{ gap: '8px' }}>
-          {/* Mobile Hamburger Menu Button - 모바일에서만 표시 */}
+          {/* 모바일: 햄버거만 표시 (닫기 X는 오버레이 안에 있음) */}
           {isMounted && isMobile && (
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="flex items-center justify-center text-white"
-              style={{ 
-                height: '40px', 
-                width: '40px', 
-                padding: '10px' 
-              }}
-              aria-label={isMobileMenuOpen ? "Close menu" : "Toggle menu"}
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="flex items-center justify-center text-white touch-manipulation"
+              style={{ height: '44px', width: '44px', padding: '10px', minWidth: '44px', minHeight: '44px' }}
+              aria-label="Open menu"
+              aria-expanded={isMobileMenuOpen}
             >
-              <div className="relative w-[20px] h-[20px]">
-                <img 
-                  alt="Close" 
-                  className={`absolute inset-0 h-[20px] w-[20px] transition-all duration-300 ${
-                    isMobileMenuOpen ? 'opacity-100 rotate-0' : 'opacity-0 rotate-90'
-                  }`}
-                  src="/icon/general/close.svg"
-                />
-                <img 
-                  alt="Menu" 
-                  className={`absolute inset-0 h-[20px] w-[20px] transition-all duration-300 ${
-                    isMobileMenuOpen ? 'opacity-0 -rotate-90' : 'opacity-100 rotate-0'
-                  }`}
-                  src="/icon/menu/lines.svg"
-                />
-              </div>
+              <img alt="Menu" className="h-5 w-5 pointer-events-none" src="/icon/menu/lines.svg" />
             </button>
           )}
-          
-          <Link href="/home" className={isMounted && isMobile ? "h-[16px] w-[100px]" : "h-[18px] w-[120px]"} style={{ display: 'block' }}>
+          <Link href="/home" className={isMounted && isMobile ? 'h-[16px] w-[100px]' : 'h-[18px] w-[120px]'} style={{ display: 'block' }}>
             <img alt="Youngjoo Roh logo" className="h-full w-full" src="/icon/logo.svg" />
           </Link>
         </div>
@@ -347,21 +365,45 @@ export default function Navigation() {
         )}
       </div>
 
-      {/* Mobile Menu Panel — 100vh, nav 높이만큼 padding-top */}
-      {isMounted && isMobile && isMobileMenuOpen && (
+      {/* Mobile Menu Panel — body에 포털, 100vw×100vh로 nav 포함 전체 덮음 */}
+      {isMounted && isMobile && (isMobileMenuOpen || isMobileMenuClosing) && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed left-0 w-full bg-[var(--greyscale-800)] z-[2001] transition-all duration-300 ease-out"
+          className={`fixed left-0 top-0 bg-[var(--greyscale-800)] ${isMobileMenuClosing ? 'mobile-menu-overlay-leave' : 'mobile-menu-overlay-enter'}`}
           style={{
-            top: 0,
+            width: '100vw',
             height: '100vh',
-            paddingTop: '64px',
-            boxSizing: 'border-box'
+            paddingTop: '180px',
+            paddingBottom: '80px',
+            boxSizing: 'border-box',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            zIndex: 9999
           }}
         >
+          {/* 닫기 버튼 — top 12px, left 16px */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Close menu"
+            className="absolute w-10 h-10 p-2.5 rounded-3xl inline-flex justify-center items-center gap-2 hover:bg-white/10 transition-colors"
+            style={{ top: 12, left: 16 }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <g clipPath={`url(#${closeClipId})`}>
+                <path d="M18.75 1.25L1.25 18.75M1.25 1.25L18.75 18.75" stroke="white" strokeLinecap="round" strokeLinejoin="round"/>
+              </g>
+              <defs>
+                <clipPath id={closeClipId}>
+                  <rect width="20" height="20" fill="white"/>
+                </clipPath>
+              </defs>
+            </svg>
+          </button>
           <div className="flex flex-col h-full">
-            <div className="flex flex-col flex-1 gap-4 overflow-y-auto"
+            <div className="flex flex-col flex-1 gap-4 overflow-y-auto min-h-0"
             style={{ 
-              padding: '0 16px 80px'
+              padding: '0 16px 24px'
             }}>
               <button
                 onClick={() => handleNavClick('/portfolio')}
@@ -490,8 +532,40 @@ export default function Navigation() {
                 </div>
               </div>
             </div>
+            {/* 하단: AI Assistant + Contact (col 정렬, 16px gap, 텍스트 16px) */}
+            <div className="mt-auto shrink-0 flex flex-col items-stretch w-full" style={{ padding: '24px 16px 0', gap: '16px' }}>
+              <Button
+                onClick={handleMobileMenuAIAssistant}
+                variant="lined"
+                status="default"
+                iconPosition="left"
+                className="custom-ai-assistant-button uppercase w-full"
+                style={{ fontSize: '16px' }}
+                icon={
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M15 3.90909V5.18182H13.7273V5.81818H13.0909V7.09091H11.8182V5.81818H11.1818V5.18182H9.90909V3.90909H11.1818V3.27273H11.8182V2H13.0909V3.27273H13.7273V3.90909H15ZM11.1818 8.36364V9.63636H9.90909V10.2727H8.63636V10.9091H8V11.5455H7.36364V12.8182H6.72727V14.0909H5.45455V12.8182H4.81818V11.5455H4.18182V10.9091H3.54545V10.2727H2.27273V9.63636H1V8.36364H2.27273V7.72727H3.54545V7.09091H4.18182V6.45455H4.81818V5.18182H5.45455V3.90909H6.72727V5.18182H7.36364V6.45455H8V7.09091H8.63636V7.72727H9.90909V8.36364H11.1818Z" fill="white"/>
+                  </svg>
+                }
+              >
+                {t('home.button.aiAssistant')}
+              </Button>
+              <a
+                href="mailto:biancaroh0424@gmail.com"
+                className="uppercase flex items-center justify-center gap-2 rounded-[24px] bg-[#FF6B35] text-white transition-colors hover:bg-[#FF7A4A] w-full"
+                aria-label="Contact"
+                style={{ 
+                  padding: '14px 16px',
+                  fontFamily: 'galmuri, monospace',
+                  fontSize: '16px'
+                }}
+              >
+                <img alt="" className="h-[14px] w-[14px]" src="/icon/general/mail.svg" />
+                <span style={{ fontFamily: 'galmuri, monospace' }}>{t('nav.contact')}</span>
+              </a>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </nav>
   )
