@@ -3,6 +3,7 @@ import { ReactNode, Suspense } from 'react'
 import './globals.css'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import UrlLangSync from '@/components/UrlLangSync'
+import MixpanelProvider from '@/components/MixpanelProvider'
 
 export const metadata: Metadata = {
   title: 'Youngjoo Roh - Portfolio',
@@ -21,6 +22,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <UrlLangSync />
           </Suspense>
+          <MixpanelProvider />
           {children}
         </LanguageProvider>
       </body>
