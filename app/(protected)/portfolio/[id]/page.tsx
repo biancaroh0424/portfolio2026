@@ -750,6 +750,31 @@ export default function ProjectDetailPage() {
                                 {field.value}
                               </span>
                             </div>
+                          ) : field.type === 'note_warning' ? (
+                            <div className="self-stretch pt-4 inline-flex flex-col justify-start items-start gap-2">
+                              <div
+                                className="w-full px-2 pt-2 pb-3 bg-black rounded-lg inline-flex justify-start items-center gap-2"
+                                style={{
+                                  outline: '1px solid rgb(250 204 21)',
+                                  outlineOffset: -1,
+                                }}
+                              >
+                                <div className="flex justify-start items-center gap-4">
+                                  <div
+                                    className="justify-start whitespace-pre-line"
+                                    style={{
+                                      color: 'rgb(250 204 21)',
+                                      fontFamily: '"Pretendard Variable"',
+                                      fontSize: '13px',
+                                      fontWeight: 700,
+                                      lineHeight: '20px',
+                                    }}
+                                  >
+                                    {field.value}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           ) : (
                             field.label && (
                               <div 

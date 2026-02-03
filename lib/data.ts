@@ -115,7 +115,7 @@ async function loadProjectsData(): Promise<any[]> {
 export interface ProjectField {
   label: string
   value: string
-  type?: 'default' | 'note' | 'duration' | 'summary'
+  type?: 'default' | 'note' | 'note_warning' | 'duration' | 'summary'
 }
 
 export interface ProjectTranslation {

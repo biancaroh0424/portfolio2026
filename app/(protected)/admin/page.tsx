@@ -8,7 +8,7 @@ import { formatProjectTitle } from '@/lib/utils'
 interface ProjectField {
   label: string
   value: string
-  type?: 'default' | 'note' | 'duration' | 'summary'
+  type?: 'default' | 'note' | 'note_warning' | 'duration' | 'summary'
 }
 
 interface ProjectTranslation {
@@ -129,15 +129,14 @@ export default function AdminPage() {
     }
   }, [isAuthenticated])
 
-  // 프로젝트/언어 전환 시에만 ref 동기화. 필드 수정/삭제 시에는 ref를 덮어쓰지 않음
+  // 저장 시 사용하는 ref: 태그/필드 추가·삭제 시에도 최신 translation 반영되도록 editingProject 전체 의존
   useEffect(() => {
     if (editingProject) {
       currentTranslationRef.current = getCurrentTranslation(editingProject, currentEditLanguage)
     } else {
       currentTranslationRef.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- editingProject 전체 의존 시 필드 삭제 후 저장해도 이전 fields가 저장됨
-  }, [editingProject?.id, currentEditLanguage])
+  }, [editingProject, currentEditLanguage])
 
   const loadResume = async () => {
     setIsLoadingResume(true)
@@ -717,9 +716,9 @@ export default function AdminPage() {
       if (i !== index) return f
       const next =
         field === 'type'
-          ? { ...f, type: (['default', 'note', 'duration', 'summary'].includes(newValue) ? newValue as ProjectField['type'] : f.type) }
+          ? { ...f, type: (['default', 'note', 'note_warning', 'duration', 'summary'].includes(newValue) ? newValue as ProjectField['type'] : f.type) }
           : { ...f, [field]: newValue }
-      if (field === 'type' && (newValue === 'note' || newValue === 'duration' || newValue === 'summary')) {
+      if (field === 'type' && (newValue === 'note' || newValue === 'note_warning' || newValue === 'duration' || newValue === 'summary')) {
         return { ...next, label: '' }
       }
       return next as ProjectField
@@ -1074,12 +1073,13 @@ export default function AdminPage() {
                         <div className="flex gap-2 items-center">
                           <select
                             value={field.type || 'default'}
-                            onChange={(e) => handleFieldChange(index, 'type', e.target.value as 'default' | 'note' | 'duration' | 'summary')}
+                            onChange={(e) => handleFieldChange(index, 'type', e.target.value as 'default' | 'note' | 'note_warning' | 'duration' | 'summary')}
                             className="px-3 py-2 border rounded-lg text-sm bg-transparent text-white"
                             style={{ borderColor: 'var(--fill-white-10)' }}
                           >
                             <option value="default">Default</option>
                             <option value="note">Note</option>
+                            <option value="note_warning">Note (Warning)</option>
                             <option value="duration">Duration</option>
                             <option value="summary">Summary</option>
                           </select>
@@ -1121,7 +1121,7 @@ export default function AdminPage() {
                           <textarea
                             value={field.value}
                             onChange={(e) => handleFieldChange(index, 'value', e.target.value)}
-                            placeholder={(field.type || 'default') === 'note' ? 'Note 내용' : '내용'}
+                            placeholder={(field.type || 'default') === 'note' || (field.type || 'default') === 'note_warning' ? ((field.type || 'default') === 'note_warning' ? 'Warning 문구 (노란 테두리 박스로 표시)' : 'Note 내용') : '내용'}
                             rows={2}
                             className="w-full px-3 py-2 border rounded-lg text-sm bg-transparent text-white"
                             style={{ borderColor: 'var(--fill-white-10)' }}

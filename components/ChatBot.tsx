@@ -886,7 +886,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
     const style = document.createElement('style')
     style.id = styleId
     style.textContent = `
-      #chatbot-input-container input::placeholder {
+      #chatbot-input-container textarea::placeholder {
         color: var(--text-placeholder, #B3B3B3);
         font-family: "Pretendard Variable", sans-serif;
         font-size: 14px;
