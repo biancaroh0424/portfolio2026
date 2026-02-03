@@ -416,12 +416,12 @@ export default function AdminPage() {
         ''
       const baseTranslation = getCurrentTranslation(projectWithTags, currentEditLanguage)
       const fromRef = currentTranslationRef.current
-      // fromRef 있으면 fields/title/tags는 ref 기준 (필드 삭제 후 저장 시 반영)
+      // fromRef 있으면 fields/title은 ref 기준. tags는 항상 baseTranslation(projectWithTags) 기준으로 저장 (tagInput 병합 반영)
       const updatedTranslation: ProjectTranslation = {
         title: fromRef?.title ?? baseTranslation.title,
         content: latestContent || baseTranslation.content,
         fields: fromRef ? (fromRef.fields ?? []) : (baseTranslation.fields ?? []),
-        tags: Array.isArray(fromRef?.tags) ? fromRef.tags : (baseTranslation.tags ?? [])
+        tags: Array.isArray(baseTranslation.tags) ? baseTranslation.tags : []
       }
       
       // 프로젝트에 현재 언어의 translation만 업데이트하고 다른 언어는 유지
@@ -921,6 +921,7 @@ export default function AdminPage() {
                               ...currentTranslation,
                               tags: (Array.isArray(currentTranslation.tags) ? currentTranslation.tags : []).filter((_, i) => i !== index)
                             }
+                            currentTranslationRef.current = updatedTranslation
                             setEditingProject(setCurrentTranslation(editingProject, currentEditLanguage, updatedTranslation))
                           }}
                           className="ml-1 hover:text-white"
@@ -947,6 +948,7 @@ export default function AdminPage() {
                             ...currentTranslation,
                             tags: [...(Array.isArray(currentTranslation.tags) ? currentTranslation.tags : []), value]
                           }
+                          currentTranslationRef.current = updatedTranslation
                           setEditingProject(setCurrentTranslation(editingProject, currentEditLanguage, updatedTranslation))
                           setTagInput('')
                         }
@@ -958,6 +960,7 @@ export default function AdminPage() {
                           ...currentTranslation,
                           tags: [...(Array.isArray(currentTranslation.tags) ? currentTranslation.tags : []), value]
                         }
+                        currentTranslationRef.current = updatedTranslation
                         setEditingProject(setCurrentTranslation(editingProject, currentEditLanguage, updatedTranslation))
                         setTagInput('')
                       } else if (e.key === 'Backspace' && tagInput === '') {
@@ -969,6 +972,7 @@ export default function AdminPage() {
                             ...currentTranslation,
                             tags: currentTags.slice(0, -1)
                           }
+                          currentTranslationRef.current = updatedTranslation
                           setEditingProject(setCurrentTranslation(editingProject, currentEditLanguage, updatedTranslation))
                         }
                       }
