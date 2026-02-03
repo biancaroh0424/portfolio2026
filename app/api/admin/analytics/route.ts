@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { put, list } from '@vercel/blob'
 
 const ANALYTICS_FILE = path.join(process.cwd(), 'data', 'analytics.json')
+const BLOB_ANALYTICS_PATH = 'data/analytics.json'
 
 interface ChatEntry {
   id: string
@@ -19,11 +21,66 @@ interface ChatEntry {
   browser?: string // 브라우저
 }
 
+/** Vercel 배포 환경에서만 Blob 사용. 로컬에서는 fs 사용 */
+function isBlobStorageEnabled(): boolean {
+  return (
+    process.env.VERCEL === '1' &&
+    typeof process.env.BLOB_READ_WRITE_TOKEN === 'string' &&
+    process.env.BLOB_READ_WRITE_TOKEN.length > 0
+  )
+}
+
+/** Blob에서 analytics.json 읽기 (프로덕션용) */
+async function readAnalyticsFromBlob(): Promise<ChatEntry[]> {
+  try {
+    const { blobs } = await list({ prefix: 'data/', limit: 20 })
+    const blob =
+      blobs.find((b) => b.pathname === BLOB_ANALYTICS_PATH) ??
+      blobs.find((b) => b.pathname === `/${BLOB_ANALYTICS_PATH}`) ??
+      blobs.find((b) => b.pathname?.endsWith?.('analytics.json'))
+    if (!blob?.url) return []
+    const url = blob.url + (blob.url.includes('?') ? '&' : '?') + '_=' + Date.now()
+    const res = await fetch(url)
+    if (!res.ok) return []
+    const json = await res.json()
+    return Array.isArray(json) ? json : []
+  } catch {
+    return []
+  }
+}
+
+/** Blob에 analytics 저장 (프로덕션용) */
+async function writeAnalyticsToBlob(entries: ChatEntry[]): Promise<void> {
+  await put(BLOB_ANALYTICS_PATH, JSON.stringify(entries, null, 2), {
+    access: 'public',
+    contentType: 'application/json',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  })
+}
+
+/** 로컬 fs에서 analytics 읽기 */
+async function readAnalyticsFromFs(): Promise<ChatEntry[]> {
+  try {
+    const fileContent = await fs.readFile(ANALYTICS_FILE, 'utf-8')
+    const parsed = JSON.parse(fileContent)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+/** 로컬 fs에 analytics 저장 */
+async function writeAnalyticsToFs(entries: ChatEntry[]): Promise<void> {
+  await fs.mkdir(path.dirname(ANALYTICS_FILE), { recursive: true })
+  await fs.writeFile(ANALYTICS_FILE, JSON.stringify(entries, null, 2), 'utf-8')
+}
+
 // 질문 데이터 저장
 export async function POST(request: NextRequest) {
   try {
     const { question, answer, userId, location, device, deviceType, os, browser } = await request.json()
-    
+
     if (!question || !answer) {
       return NextResponse.json({ error: 'Question and answer are required' }, { status: 400 })
     }
@@ -44,22 +101,17 @@ export async function POST(request: NextRequest) {
       browser: browser || 'unknown'
     }
 
-    // analytics.json 파일 읽기
-    let entries: ChatEntry[] = []
-    try {
-      const fileContent = await fs.readFile(ANALYTICS_FILE, 'utf-8')
-      entries = JSON.parse(fileContent)
-    } catch (error) {
-      // 파일이 없으면 새로 생성
-      entries = []
-    }
+    const entries: ChatEntry[] = isBlobStorageEnabled()
+      ? await readAnalyticsFromBlob()
+      : await readAnalyticsFromFs()
 
-    // 새 엔트리 추가
     entries.push(entry)
 
-    // 파일 저장
-    await fs.mkdir(path.dirname(ANALYTICS_FILE), { recursive: true })
-    await fs.writeFile(ANALYTICS_FILE, JSON.stringify(entries, null, 2), 'utf-8')
+    if (isBlobStorageEnabled()) {
+      await writeAnalyticsToBlob(entries)
+    } else {
+      await writeAnalyticsToFs(entries)
+    }
 
     return NextResponse.json({ success: true, id: entry.id })
   } catch (error) {
@@ -71,15 +123,9 @@ export async function POST(request: NextRequest) {
 // 질문 데이터 조회 (시간별 통계 포함)
 export async function GET(request: NextRequest) {
   try {
-    // analytics.json 파일 읽기
-    let entries: ChatEntry[] = []
-    try {
-      const fileContent = await fs.readFile(ANALYTICS_FILE, 'utf-8')
-      entries = JSON.parse(fileContent)
-    } catch (error) {
-      // 파일이 없으면 빈 배열 반환
-      entries = []
-    }
+    const entries: ChatEntry[] = isBlobStorageEnabled()
+      ? await readAnalyticsFromBlob()
+      : await readAnalyticsFromFs()
 
     // 쿼리 파라미터 확인
     const { searchParams } = new URL(request.url)
