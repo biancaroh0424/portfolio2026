@@ -23,19 +23,27 @@ const ASCII_LOGGED_KEY = '__yj_ascii_art_logged'
 export default function MixpanelProvider() {
   useEffect(() => {
     if (typeof window === 'undefined') return
-    // 스니펫과 동일 옵션 (https://developer.mixpanel.com/docs/javascript)
+    if (!MIXPANEL_TOKEN) return
     mixpanel.init(MIXPANEL_TOKEN, {
       autocapture: true,
       record_sessions_percent: 100,
       persistence: 'localStorage',
-      debug: process.env.NODE_ENV === 'development', // 개발 시 콘솔에 전송 로그 출력
+      debug: process.env.NODE_ENV === 'development',
     })
-    mixpanel.track('App Loaded', { source: 'portfolio' })
-    // Easter egg: ASCII art 한 번만 (Strict Mode 이중 마운트 방지)
-    if (!(window as unknown as Record<string, boolean>)[ASCII_LOGGED_KEY] && typeof console !== 'undefined' && console.log) {
-      (window as unknown as Record<string, boolean>)[ASCII_LOGGED_KEY] = true
-      console.log('%c' + ASCII_ART, 'font-family: monospace; font-size: 10px; line-height: 1.2; color: #888;')
-    }
+    // init 직후 track이 빠지지 않도록 짧게 지연 후 전송
+    const t = setTimeout(() => {
+      mixpanel.track('App Loaded', { source: 'portfolio' })
+      if (process.env.NODE_ENV === 'development' && typeof console !== 'undefined') {
+        console.log('[Mixpanel] init + App Loaded sent. Check Network tab for api-js.mixpanel.com.')
+      }
+    }, 200)
+    const asciiT = setTimeout(() => {
+      if (!(window as unknown as Record<string, boolean>)[ASCII_LOGGED_KEY] && typeof console !== 'undefined' && console.log) {
+        (window as unknown as Record<string, boolean>)[ASCII_LOGGED_KEY] = true
+        console.log('%c' + ASCII_ART, 'font-family: monospace; font-size: 10px; line-height: 1.2; color: #888;')
+      }
+    }, 300)
+    return () => { clearTimeout(t); clearTimeout(asciiT) }
   }, [])
 
   return null
