@@ -62,9 +62,13 @@ const nextConfig = {
     // 개발 모드에서는 CSP를 완화하여 HMR 등이 작동하도록 함
     const isDev = process.env.NODE_ENV === 'development'
     
+    // connect-src: Mixpanel track + record (api-js.mixpanel.com), 기타 Google 등
+    const connectSrc = isDev
+      ? "'self' https://*.googleapis.com https://*.google.com https://api-js.mixpanel.com https://*.mixpanel.com https:"
+      : "'self' https://*.googleapis.com https://*.google.com https://api-js.mixpanel.com https://*.mixpanel.com"
     const cspValue = isDev
-      ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.googleapis.com https://*.google.com; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src 'self' https://*.googleapis.com https://*.google.com;"
-      : "script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.google.com; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src 'self' https://*.googleapis.com https://*.google.com;"
+      ? `script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.googleapis.com https://*.google.com; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src ${connectSrc};`
+      : `script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.google.com; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src ${connectSrc};`
     
     return [
       {

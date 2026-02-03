@@ -538,7 +538,7 @@ interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  sources?: Array<{ id: string; title: string; anchor?: string; type?: string; projectId?: string }>
+  sources?: Array<{ id: string; title: string; anchor?: string; headingIndex?: number; type?: string; projectId?: string }>
   thinking?: string // Thinking process
   thinkingDone?: boolean
   selectedText?: string // 드래그한 텍스트
@@ -1444,15 +1444,15 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                       ? String(parsed.thinking)
                       : ''
                 const finalSources = parsed.sources || []
-                // AI가 맥락으로 "제안"했다고 판단하고 출력한 [OFFERED_LINK: ...] 마커만 파싱 (문구 목록/regex로 판단하지 않음)
-                const offeredLinkMatch = finalContent.match(/\[OFFERED_LINK:\s*(\/portfolio\/[^\]]+)\]/)
+                // [OFFERED_LINK: ...] 마커는 표시에서만 제거 (portfolio면 pendingOpen, /resume 포함 모든 경로 제거)
+                const offeredLinkMatch = finalContent.match(/\[OFFERED_LINK:\s*([^\]]+)\]/)
                 if (offeredLinkMatch) {
                   const path = offeredLinkMatch[1].trim()
-                  const [pathPart, hashPart] = path.split('#')
-                  const projectId = pathPart.replace(/^\/portfolio\//, '').trim()
-                  const anchor = hashPart?.trim() || undefined
-                  if (projectId) {
-                    pendingOpenRef.current = { projectId, anchor }
+                  if (path.startsWith('/portfolio/')) {
+                    const [pathPart, hashPart] = path.split('#')
+                    const projectId = pathPart.replace(/^\/portfolio\//, '').trim()
+                    const anchor = hashPart?.trim() || undefined
+                    if (projectId) pendingOpenRef.current = { projectId, anchor }
                   }
                   finalContent = finalContent
                     .replace(/\s*<p>\s*\[OFFERED_LINK:[^<]*<\/p>\s*/gi, '')
@@ -1460,7 +1460,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                     .trim()
                 }
 
-                // [OPEN_LINK: /portfolio/ID] 또는 [OPEN_LINK: /portfolio/ID#anchor] 파싱 → 실제 이동 + 표시용에서 제거
+                // [OPEN_LINK: /portfolio/...] 파싱 → 실제 이동 + 표시용에서 제거 (이력서는 페이지 없음, 다운로드만)
                 const openLinkMatch = finalContent.match(/\[OPEN_LINK:\s*(\/portfolio\/[^\]]+)\]/)
                 let openPath: string | null = null
                 if (openLinkMatch) {
@@ -1470,6 +1470,55 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                     .replace(/\s*\[OPEN_LINK:[^\]]+\]\s*/g, '')
                     .trim()
                 }
+                // [OPEN_TEL: +82-10-2852-9692] → 전화 걸기
+                const openTelMatch = finalContent.match(/\[OPEN_TEL:\s*([^\]]+)\]/)
+                if (openTelMatch) {
+                  const tel = openTelMatch[1].trim()
+                  if (typeof window !== 'undefined' && tel) {
+                    window.location.href = `tel:${tel}`
+                  }
+                  finalContent = finalContent
+                    .replace(/\s*<p>\s*\[OPEN_TEL:[^<]*<\/p>\s*/gi, '')
+                    .replace(/\s*\[OPEN_TEL:[^\]]+\]\s*/g, '')
+                    .trim()
+                }
+                // [OPEN_MAILTO: email] → 메일 앱 열기
+                const openMailtoMatch = finalContent.match(/\[OPEN_MAILTO:\s*([^\]]+)\]/)
+                if (openMailtoMatch) {
+                  const email = openMailtoMatch[1].trim()
+                  if (typeof window !== 'undefined' && email) {
+                    window.location.href = `mailto:${email}`
+                  }
+                  finalContent = finalContent
+                    .replace(/\s*<p>\s*\[OPEN_MAILTO:[^<]*<\/p>\s*/gi, '')
+                    .replace(/\s*\[OPEN_MAILTO:[^\]]+\]\s*/g, '')
+                    .trim()
+                }
+                // [DOWNLOAD_RESUME: lang] → 이력서 PDF 다운로드 (먼저 토큰 제거 후 새 탭에서 열어 현재 페이지 유지)
+                const downloadResumeMatch = finalContent.match(/\[DOWNLOAD_RESUME:\s*([^\]]+)\]/)
+                if (downloadResumeMatch) {
+                  const lang = downloadResumeMatch[1].trim().toLowerCase()
+                  finalContent = finalContent
+                    .replace(/\s*<p>\s*\[DOWNLOAD_RESUME:[^<]*<\/p>\s*/gi, '')
+                    .replace(/\s*\[DOWNLOAD_RESUME:[^\]]+\]\s*/g, '')
+                    .trim()
+                  if (typeof window !== 'undefined' && ['en', 'ko', 'it'].includes(lang)) {
+                    const a = document.createElement('a')
+                    a.href = `/api/resume/download?lang=${lang}`
+                    a.target = '_blank'
+                    a.rel = 'noopener noreferrer'
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                  }
+                }
+                // 표시 텍스트에서 Mailto: 제거 (전각 콜론 포함, 마크다운 링크 텍스트 [Mailto:email](mailto:...) → [email](mailto:...))
+                const mailtoColon = '[:\uFF1A]'
+                const mailtoEmail = '([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})'
+                finalContent = finalContent
+                  .replace(new RegExp(`\\[\s*(?:Mailto|mailto|MAILTO)\\s*${mailtoColon}\\s*${mailtoEmail}\\s*\\]`, 'gi'), '[$1]') // 링크 텍스트
+                  .replace(new RegExp(`(?:[Mm]ailto|MAILTO)\\s*${mailtoColon}\\s*${mailtoEmail}`, 'gi'), '$1')
+                  .replace(new RegExp(`(?:Mailto|mailto|MAILTO)\\s*${mailtoColon}\\s*`, 'gi'), '')
                 // AI가 [OPEN_LINK]를 안 썼지만 짧은 인사(안내해드릴게요 등)면 pendingOpenRef로 이동
                 if (!openPath && pendingOpenRef.current) {
                   const text = (finalContent || '').replace(/<[^>]+>/g, ' ').trim()
@@ -1637,6 +1686,21 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
       // Navigate to project page if needed
       window.location.href = `/portfolio/${source.id}`
     }
+  }
+
+  /** DOM 내 모든 텍스트 노드에서 "Mailto:" 접두사 제거 (href는 건드리지 않음) */
+  const stripMailtoFromTextNodes = (root: Node) => {
+    const doc = root.ownerDocument || (typeof document !== 'undefined' ? document : null)
+    if (!doc) return
+    const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
+    const toReplace: { node: Text; newText: string }[] = []
+    let textNode: Text | null
+    while ((textNode = walker.nextNode() as Text | null)) {
+      const text = textNode.textContent || ''
+      const cleaned = text.replace(/(?:Mailto|mailto|MAILTO)\s*[:\uFF1A]\s*/gi, '')
+      if (cleaned !== text) toReplace.push({ node: textNode, newText: cleaned })
+    }
+    toReplace.forEach(({ node, newText }) => { node.textContent = newText })
   }
 
   const renderMarkdown = (markdown: string) => {
@@ -2190,94 +2254,109 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                       .replace(/<\/?thinking[^>]*>/gi, '')
                       .replace(/<\/?answer[^>]*$/gim, '')
                       .replace(/<\/?thinking[^>]*$/gim, '')
+                      // Mailto: 제거 (마크다운 링크 텍스트 [Mailto:email] → [email], 일반 텍스트도 제거)
+                      .replace(/\[\s*(?:Mailto|mailto|MAILTO)\s*[:\uFF1A]\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\s*\]/gi, '[$1]')
+                      .replace(/(?:[Mm]ailto|MAILTO)\s*[:\uFF1A]\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi, '$1')
+                      .replace(/(?:Mailto|mailto|MAILTO)\s*[:\uFF1A]\s*/gi, '')
+                      // 토큰 마커는 사용자에게 노출하지 않음 (스트림 타이밍 등으로 남아 있어도 표시에서 제거)
+                      .replace(/\s*<p>\s*\[(?:OFFERED_LINK|OPEN_LINK|OPEN_TEL|OPEN_MAILTO|DOWNLOAD_RESUME):[^<]*<\/p>\s*/gi, '')
+                      .replace(/\s*\[OFFERED_LINK:[^\]]+\]\s*/g, '')
+                      .replace(/\s*\[OPEN_LINK:[^\]]+\]\s*/g, '')
+                      .replace(/\s*\[OPEN_TEL:[^\]]+\]\s*/g, '')
+                      .replace(/\s*\[OPEN_MAILTO:[^\]]+\]\s*/g, '')
+                      .replace(/\s*\[DOWNLOAD_RESUME:[^\]]+\]\s*/g, '')
                     const sourcePattern = /\[Source:\s*([^\]]+)\]/g
                     
-                    // href별로 번호를 매핑 (같은 링크는 같은 번호)
+                    // href별로 번호·표시 텍스트 매핑 (프로젝트 상세에서는 앵커일 때 섹션 제목 표시)
                     const hrefToNumber = new Map<string, number>()
                     const hrefToFirstTitle = new Map<string, string>()
+                    const hrefToDisplayText = new Map<string, string>()
                     let linkCounter = 1
+                    const isProjectDetailPage = pathname?.startsWith('/portfolio/') && pathname !== '/portfolio'
+                    const currentProjectId = pathname?.match(/^\/portfolio\/([^/]+)/)?.[1]
                     
-                    // 먼저 모든 링크를 찾아서 href와 번호 매핑
-                    const allMatches: Array<{ index: number; sourceTitle: string; href: string; originalMatch: string }> = []
+                    const getChipTextFromHref = (href: string): string => {
+                      const pathMatch = href.match(/\/portfolio\/([^#]+)/)
+                      const segment = pathMatch ? pathMatch[1].replace(/-/g, ' ') : href.replace(/^\//, '').split('#')[0].replace(/-/g, ' ')
+                      return segment ? segment.charAt(0).toUpperCase() + segment.slice(1) : ''
+                    }
+                    
+                    const allMatches: Array<{ index: number; sourceTitle: string; href: string; originalMatch: string; displayText: string }> = []
                     let match
                     
                     while ((match = sourcePattern.exec(content)) !== null) {
                       const sourceTitle = match[1].trim()
                       let href = ''
+                      let displayText = sourceTitle
                       
                       const source = sourcesMap.get(sourceTitle)
                       if (source) {
                         const isResume = source.type === 'resume' || source.id === 'resume' || !source.projectId
                         const baseUrl = isResume ? '/resume' : `/portfolio/${source.id}`
-                        href = source.anchor ? `${baseUrl}#${source.anchor}` : baseUrl
+                        const hasAnchor = source.anchor || source.headingIndex != null
+                        const hash = source.headingIndex != null
+                          ? `#heading-${source.headingIndex}`
+                          : source.anchor ? `#${source.anchor}` : ''
+                        
+                        if (!isResume && isProjectDetailPage && currentProjectId && source.projectId === currentProjectId && hasAnchor) {
+                          href = `${baseUrl}${hash}`
+                          displayText = source.title.includes(' - ') ? source.title.split(' - ').slice(1).join(' - ').trim() : source.title
+                        } else {
+                          href = hash ? `${baseUrl}${hash}` : baseUrl
+                          displayText = !isProjectDetailPage && source.title.includes(' - ')
+                            ? source.title.split(' - ')[0].trim()
+                            : source.title
+                        }
                       } else {
                         const projectId = titleToIdMap.get(sourceTitle)
                         if (projectId) {
                           href = `/portfolio/${projectId}`
                         } else if (projectMap.has(sourceTitle)) {
-                          // sourceTitle이 프로젝트 id인 경우 (예: rag-chat-builder)
                           href = `/portfolio/${sourceTitle}`
                         }
+                        displayText = sourceTitle
                       }
                       
                       if (href) {
-                        allMatches.push({ 
-                          index: match.index!, 
-                          sourceTitle, 
-                          href, 
-                          originalMatch: match[0] 
-                        })
+                        allMatches.push({ index: match.index!, sourceTitle, href, originalMatch: match[0], displayText })
                         if (!hrefToNumber.has(href)) {
                           hrefToNumber.set(href, linkCounter)
                           hrefToFirstTitle.set(href, sourceTitle)
+                          hrefToDisplayText.set(href, displayText)
                           linkCounter++
                         }
                       }
                     }
                     
-                    // href에서 chip 텍스트 생성 함수
-                    const getChipText = (href: string): string => {
-                      let text = ''
-                      const pathMatch = href.match(/\/portfolio\/([^#]+)/)
-                      if (pathMatch) {
-                        text = pathMatch[1].replace(/-/g, ' ')
-                      } else {
-                        // /resume 같은 경우
-                        const pathWithoutSlash = href.replace(/^\//, '').split('#')[0]
-                        text = pathWithoutSlash.replace(/-/g, ' ')
-                      }
-                      // 첫 글자를 대문자로 변환
-                      return text.charAt(0).toUpperCase() + text.slice(1)
-                    }
-                    
-                    // 모든 링크를 chip 형태로 변환
-                    allMatches.reverse().forEach(({ index, sourceTitle, href, originalMatch }) => {
-                      const chipText = getChipText(href)
-                      content = content.substring(0, index) + `[${chipText}](${href})` + content.substring(index + originalMatch.length)
+                    allMatches.reverse().forEach(({ index, href, originalMatch, displayText }) => {
+                      content = content.substring(0, index) + `[${displayText}](${href})` + content.substring(index + originalMatch.length)
                     })
                     
-                    // hrefToNumber를 message에 저장하여 Related projects에서 사용
                     ;(message as any).__linkNumbers = hrefToNumber
                     
                     const html = renderMarkdown(content)
                     
-                    // HTML에서 모든 링크를 chip 스타일로 변환
                     let finalHtml = html
                     if (typeof window !== 'undefined') {
                       const parser = new DOMParser()
                       const doc = parser.parseFromString(html, 'text/html')
                       const links = doc.querySelectorAll('a')
                       
+                      const mailtoEmailRe = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
                       links.forEach((link) => {
                         const href = link.getAttribute('href') || ''
-                        const chipText = getChipText(href)
-                        
-                        // link를 chip 스타일로 변환
+                        let chipText = hrefToDisplayText.get(href) ?? getChipTextFromHref(href)
+                        // mailto: 링크는 href에서 이메일만 추출해 주소만 표시 (Mailto: 절대 노출 안 함)
+                        if (/^mailto:/i.test(href)) {
+                          const emailOnly = href.match(mailtoEmailRe)?.[0]
+                          chipText = emailOnly ?? (href.replace(/^mailto:\s*/i, '').replace(/^(?:Mailto|mailto|MAILTO)\s*[:\uFF1A]\s*/gi, '').trim() || chipText)
+                        }
                         link.setAttribute('class', 'chatbot-link-chip')
                         link.setAttribute('data-href', href)
                         link.textContent = chipText
                       })
-                      
+                      // 모든 텍스트 노드에서 Mailto: 제거 (<strong>, <p>, <a> 내부 등 전부)
+                      stripMailtoFromTextNodes(doc.body)
                       finalHtml = doc.body.innerHTML
                     }
                     

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import fs from 'fs/promises'
+import path from 'path'
 import { 
   searchRelevantContent, 
   isProjectRelated
@@ -9,6 +11,19 @@ import { getProjects, getProject } from '@/lib/data'
 import { detectLanguage, getCountryFromIP, getGreeting, type SupportedLanguage } from '@/lib/language'
 
 export const runtime = 'nodejs'
+
+const RESUME_FILE = path.join(process.cwd(), 'data', 'resume.json')
+
+/** 이력서 PDF가 실제로 있는 언어만 반환 (ko 없으면 포함 안 함) */
+async function getAvailableResumeLangs(): Promise<string[]> {
+  try {
+    const data = await fs.readFile(RESUME_FILE, 'utf-8')
+    const resume = JSON.parse(data) as Record<string, string>
+    return (['en', 'ko', 'it'] as const).filter((lang) => resume[lang]?.trim())
+  } catch {
+    return []
+  }
+}
 
 const logAI = (msg: string, extra?: Record<string, unknown>) => {
   const t = new Date().toISOString().slice(11, 23)
@@ -171,8 +186,9 @@ export async function POST(request: NextRequest) {
           safeEnqueue(new TextEncoder().encode(`data: ${thinkingPlaceholder}\n\n`))
           logAI('스트림 열림, thinking 플레이스홀더 전송', { elapsed: `${Date.now() - t0}ms` })
 
-          // 2) 그 다음 컨텍스트 fetch (임베딩·벡터 검색 등)
-          logAI('컨텍스트 fetch 시작 (프로젝트·벡터검색·리스트)')
+          // 2) 프로젝트 관련 여부는 LLM이 판단 (벡터 검색은 관련 있을 때만)
+          const projectRelated = await isProjectRelated(actualMessage)
+          logAI('컨텍스트 fetch 시작 (프로젝트·벡터검색·리스트)', { projectRelated })
           const contextStart = Date.now()
           const [fullProjectOrFallback, relevantContent, allProjects] = await Promise.all([
             (async (): Promise<{ id: string; title: string; content?: string } | undefined> => {
@@ -198,6 +214,7 @@ export async function POST(request: NextRequest) {
               }
             })(),
             (async () => {
+              if (!projectRelated) return []
               try {
                 return await searchRelevantContent(
                   searchQuery,
@@ -249,6 +266,7 @@ export async function POST(request: NextRequest) {
               }))
             : undefined
 
+          const availableResumeLangs = await getAvailableResumeLangs()
           const generator = generateAIResponseStream(
             messageWithContext,
             finalContent,
@@ -261,7 +279,8 @@ export async function POST(request: NextRequest) {
             fallbackProjectContent,
             pendingOpen && typeof pendingOpen.projectId === 'string' ? { projectId: pendingOpen.projectId, anchor: pendingOpen.anchor } : undefined,
             currentHash && typeof currentHash === 'string' ? currentHash : undefined,
-            pageLang || undefined
+            pageLang || undefined,
+            availableResumeLangs
           )
           
           let chunkCount = 0
