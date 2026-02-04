@@ -34,7 +34,7 @@ function isBlobStorageEnabled(): boolean {
 async function readAnalyticsFromBlob(): Promise<ChatEntry[]> {
   try {
     const { blobs } = await list({ prefix: 'data/', limit: 50 })
-    const pathnameOf = (b: { pathname?: string; [k: string]: unknown }) => (b.pathname ?? (b as { name?: string }).name ?? '') as string
+    const pathnameOf = (b: { pathname?: string }) => (b.pathname ?? '')
     const blob =
       blobs.find((b) => pathnameOf(b) === BLOB_ANALYTICS_PATH) ??
       blobs.find((b) => pathnameOf(b) === `/${BLOB_ANALYTICS_PATH}`) ??
