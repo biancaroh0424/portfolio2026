@@ -2499,6 +2499,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
             }}
           >
             <textarea
+              className="scrollbar-transparent-hover"
               ref={inputRef}
               value={chatInput || ''}
               onChange={(e) => {

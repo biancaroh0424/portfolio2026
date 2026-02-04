@@ -452,7 +452,7 @@ export default function AnalyticsPage() {
             {/* 사용자별 통계 */}
             <div className="bg-gray-800 p-6 rounded-lg mb-8">
               <h2 className="text-xl font-bold mb-4">Users ({userStats.length})</h2>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-transparent-hover">
                 {userStats.slice(0, 10).map((user) => (
                   <div
                     key={user.userId}
@@ -702,7 +702,7 @@ export default function AnalyticsPage() {
             {/* 최근 질문 목록 */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h2 className="text-xl font-bold mb-4">Recent Questions</h2>
-              <div className="space-y-4 max-h-96 overflow-y-auto">
+              <div className="space-y-4 max-h-96 overflow-y-auto scrollbar-transparent-hover">
                 {entries.slice(-20).reverse().map((entry) => (
                   <div
                     key={entry.id}
@@ -738,7 +738,7 @@ export default function AnalyticsPage() {
       {/* 상세 내역 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto scrollbar-transparent-hover">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold">

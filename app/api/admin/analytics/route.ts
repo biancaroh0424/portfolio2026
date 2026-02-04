@@ -30,17 +30,19 @@ function isBlobStorageEnabled(): boolean {
   )
 }
 
-/** Blob에서 analytics.json 읽기 (프로덕션용) */
+/** Blob에서 analytics.json 읽기 (프로덕션용) — pathname 변형 허용 */
 async function readAnalyticsFromBlob(): Promise<ChatEntry[]> {
   try {
-    const { blobs } = await list({ prefix: 'data/', limit: 20 })
+    const { blobs } = await list({ prefix: 'data/', limit: 50 })
+    const pathnameOf = (b: { pathname?: string; [k: string]: unknown }) => (b.pathname ?? (b as { name?: string }).name ?? '') as string
     const blob =
-      blobs.find((b) => b.pathname === BLOB_ANALYTICS_PATH) ??
-      blobs.find((b) => b.pathname === `/${BLOB_ANALYTICS_PATH}`) ??
-      blobs.find((b) => b.pathname?.endsWith?.('analytics.json'))
+      blobs.find((b) => pathnameOf(b) === BLOB_ANALYTICS_PATH) ??
+      blobs.find((b) => pathnameOf(b) === `/${BLOB_ANALYTICS_PATH}`) ??
+      blobs.find((b) => pathnameOf(b).endsWith('analytics.json')) ??
+      blobs.find((b) => pathnameOf(b).includes('analytics.json'))
     if (!blob?.url) return []
-    const url = blob.url + (blob.url.includes('?') ? '&' : '?') + '_=' + Date.now()
-    const res = await fetch(url)
+    const url = String(blob.url) + (String(blob.url).includes('?') ? '&' : '?') + '_=' + Date.now()
+    const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } })
     if (!res.ok) return []
     const json = await res.json()
     return Array.isArray(json) ? json : []

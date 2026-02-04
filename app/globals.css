@@ -1779,6 +1779,29 @@ div[contenteditable="true"].prose-lg blockquote p {
 .loading-dot:nth-child(3) { animation-delay: 0.4s; }
 .loading-dot:nth-child(4) { animation-delay: 0.6s; }
 
+/* 스크롤바: 배경 transparent, hover 시에만 thumb 표시 (white 50%) */
+.scrollbar-transparent-hover {
+  scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
+}
+.scrollbar-transparent-hover:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+}
+.scrollbar-transparent-hover::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-transparent-hover::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-transparent-hover::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+.scrollbar-transparent-hover:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.5);
+}
+
 /* ============================================
    챗봇 전용 타이포그래피 스타일
    ============================================ */
