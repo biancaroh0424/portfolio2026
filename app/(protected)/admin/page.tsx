@@ -463,16 +463,12 @@ export default function AdminPage() {
       const responseData = await response.json()
       const savedProject = responseData.project || projectToSave
 
-      setMessage('프로젝트가 저장되었습니다. 벡터 저장소를 업데이트하는 중...')
-      
       // 저장된 프로젝트로 즉시 editingProject 업데이트 (언어별 태그 포함)
       // 현재 편집 중인 언어 상태도 유지
       const finalProject = {
         ...savedProject,
         currentLanguage: currentEditLanguage // 현재 편집 중인 언어 유지
       }
-      
-      // 즉시 UI에 반영 (저장한 데이터 그대로 유지)
       setEditingProject(finalProject)
       editorContentRef.current = latestContent || ''
       preserveEditStateAfterSaveRef.current = finalProject.id
@@ -480,14 +476,19 @@ export default function AdminPage() {
       // 목록만 새로고침 (Blob eventual consistency로 GET이 아직 이전 버전을 줄 수 있으므로 editingProject는 덮어쓰지 않음)
       await loadProjects()
 
-      // 벡터 저장소 재생성 (재시도 포함)
-      const embedResult = await initializeVectorStoreWithRetry()
-      if (embedResult.success) {
-        const detail = embedResult.chunksCount != null ? ` (${embedResult.contentsCount ?? 0}개 콘텐츠, ${embedResult.chunksCount}개 청크)` : ''
-        setMessage(`✅ 프로젝트가 저장되고 벡터 저장소가 업데이트되었습니다!${detail}`)
-      } else {
-        setMessage(embedResult.errorMessage ?? '⚠️ 프로젝트는 저장되었지만 벡터 저장소 업데이트에 실패했습니다.')
-      }
+      // 저장 직후 UI 해제 — 벡터 저장소는 백그라운드에서 업데이트 (저장이 느리게 느껴지는 원인 제거)
+      setMessage('✅ 프로젝트가 저장되었습니다. 벡터 저장소는 백그라운드에서 업데이트 중입니다. (챗봇 검색은 잠시 후 반영됩니다.)')
+      setIsSaving(false)
+
+      // 벡터 저장소 재생성은 기다리지 않고 백그라운드 실행, 완료 시 메시지만 갱신
+      initializeVectorStoreWithRetry().then((embedResult) => {
+        if (embedResult.success) {
+          const detail = embedResult.chunksCount != null ? ` (${embedResult.contentsCount ?? 0}개 콘텐츠, ${embedResult.chunksCount}개 청크)` : ''
+          setMessage(`✅ 벡터 저장소 업데이트 완료!${detail}`)
+        } else {
+          setMessage(embedResult.errorMessage ?? '⚠️ 벡터 저장소 업데이트에 실패했습니다. Admin에서 다시 시도하거나 챗봇은 이전 인덱스를 사용합니다.')
+        }
+      })
     } catch (error) {
       console.error('Error saving project:', error)
       const msg = error instanceof Error ? error.message : '저장 중 오류가 발생했습니다.'
@@ -759,16 +760,16 @@ export default function AdminPage() {
         throw new Error('Failed to delete project')
       }
 
-      setMessage('프로젝트가 삭제되었습니다. 벡터 저장소를 업데이트하는 중...')
       await loadProjects()
-
-      const embedResult = await initializeVectorStoreWithRetry()
-      if (embedResult.success) {
-        const detail = embedResult.chunksCount != null ? ` (${embedResult.contentsCount ?? 0}개 콘텐츠, ${embedResult.chunksCount}개 청크)` : ''
-        setMessage(`✅ 프로젝트가 삭제되고 벡터 저장소가 업데이트되었습니다!${detail}`)
-      } else {
-        setMessage(embedResult.errorMessage ?? '⚠️ 프로젝트는 삭제되었지만 벡터 저장소 업데이트에 실패했습니다.')
-      }
+      setMessage('✅ 프로젝트가 삭제되었습니다. 벡터 저장소는 백그라운드에서 업데이트 중입니다.')
+      initializeVectorStoreWithRetry().then((embedResult) => {
+        if (embedResult.success) {
+          const detail = embedResult.chunksCount != null ? ` (${embedResult.contentsCount ?? 0}개 콘텐츠, ${embedResult.chunksCount}개 청크)` : ''
+          setMessage(`✅ 벡터 저장소 업데이트 완료!${detail}`)
+        } else {
+          setMessage(embedResult.errorMessage ?? '⚠️ 벡터 저장소 업데이트에 실패했습니다. 챗봇은 이전 인덱스를 사용합니다.')
+        }
+      })
     } catch (error) {
       console.error('Error deleting project:', error)
       setMessage('❌ 삭제 중 오류가 발생했습니다.')
