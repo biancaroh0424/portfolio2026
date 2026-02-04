@@ -1803,11 +1803,11 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
           </Tooltip>
           
           {/* Chat History icon with dropdown */}
-          <div className="relative" ref={historyDropdownRef}>
+          <div className="relative inline-flex shrink-0" ref={historyDropdownRef}>
             <Tooltip text="Chat History">
               <button
                 onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                className="flex items-center justify-center w-6 h-6 rounded hover:bg-white/5 transition-colors group"
+                className="inline-flex shrink-0 items-center justify-center w-6 h-6 rounded hover:bg-white/5 transition-colors group"
                 style={{ color: 'var(--text-primary)' }}
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

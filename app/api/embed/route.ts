@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
-// 프로젝트/청크 많을 때 임베딩이 오래 걸릴 수 있음 (Vercel Pro에서 60초까지)
+// 프로젝트/청크 많을 때 임베딩이 오래 걸릴 수 있음. 504 = 타임아웃 → Hobby 10초, Pro 60초. Pro 권장.
 export const maxDuration = 60
 
 // 벡터 저장소 초기화 API (Admin 저장 등 CMS 데이터 변경 시 호출 — 항상 전체 재구성)

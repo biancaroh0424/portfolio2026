@@ -11,27 +11,24 @@ export function detectLanguage(text: string): SupportedLanguage {
     return 'ko'
   }
 
-  // 영어 일반 단어 패턴 (이탈리아어보다 우선)
-  const englishCommonWords = /\b(the|is|are|was|were|have|has|had|do|does|did|will|would|should|could|can|may|might|this|that|these|those|there|here|what|where|when|why|how|who|which|and|or|but|not|no|yes|there is|there are|there was|there were|contents|content|portfolio|project|projects|designer|design|experience|skills|about|information|help|assistant|hello|hi|hey)\b/i
+  // 영어 일반 단어/구 패턴 (질문·답변에 자주 쓰이는 표현 포함)
+  const englishCommonWords = /\b(the|is|are|was|were|have|has|had|do|does|did|will|would|should|could|can|may|might|this|that|these|those|there|here|what|where|when|why|how|who|which|and|or|but|not|no|yes|there is|there are|there was|there were|contents|content|portfolio|project|projects|designer|design|experience|skills|about|information|help|assistant|hello|hi|hey|result|results|increase|conversions|conversion|did the|what is|what are|so what)\b/i
   const hasEnglishWords = englishCommonWords.test(text)
   
-  // 이탈리아어 감지 (더 많은 패턴)
-  const italianPattern = /\b(ciao|grazie|prego|scusa|per favore|perfavore|come|stai|bene|male|si|no|cosa|dove|quando|perché|perchè|chi|quanto|italiano|italia|dimmi|raccontami|spiegami|parlami|progetto|progetti|portfolio|designer|design|esperienza|competenze|chi sei|cosa fai|come funziona|non ci sono|non c'è|vuoto|vuota)\b/i
-  const hasItalianWords = italianPattern.test(text)
+  // 이탈리아어 전용 단어 (영어와 겹치지 않는 것 위주: ciao, grazie, cosa, dove, perché 등)
+  const italianOnlyPattern = /\b(ciao|grazie|prego|scusa|per favore|perfavore|come stai|bene|male|cosa|dove|quando|perché|perchè|chi|quanto|italiano|italia|dimmi|raccontami|spiegami|parlami|progetto|progetti|esperienza|competenze|chi sei|cosa fai|come funziona|non ci sono|non c'è|vuoto|vuota|vuol dire|questo|questa|parli)\b/i
+  const hasItalianOnlyWords = italianOnlyPattern.test(text)
   
-  // 이탈리아어 특수 문자 패턴 (è, é, à, ò, ù 등)
+  // 이탈리아어 특수 문자 패턴 (è, é, à, ò, ù 등) → 이탈리아어 강한 신호
   const italianChars = /[èéàòùì]/i
   const hasItalianChars = italianChars.test(text) && !koreanSyllables.test(text) && !koreanJamo.test(text)
 
-  // 영어 단어가 있으면 영어 우선 (이탈리아어 단어가 있어도 영어가 더 많으면 영어)
-  if (hasEnglishWords && !hasItalianWords) {
-    return 'en'
-  }
-  
-  // 이탈리아어 단어나 특수 문자가 있으면 이탈리아어
-  if (hasItalianWords || hasItalianChars) {
-    return 'it'
-  }
+  // 이탈리아어 강한 신호(특수문자)가 있으면 이탈리아어
+  if (hasItalianChars) return 'it'
+  // 영어 문장이면 영어 (did the, what is, the design 등) → 사용자 질문 언어 우선
+  if (hasEnglishWords) return 'en'
+  // 이탈리아어 전용 단어가 있으면 이탈리아어
+  if (hasItalianOnlyWords) return 'it'
 
   // 기본값 영어
   return 'en'
