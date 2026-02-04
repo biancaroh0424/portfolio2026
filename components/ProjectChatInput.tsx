@@ -90,7 +90,8 @@ function ChipWithRemoveButton({ selectedTextChip, onRemove }: { selectedTextChip
 }
 
 export default function ProjectChatInput() {
-  const [isVisible, setIsVisible] = useState(true)
+  const [inputVisible, setInputVisible] = useState(true)
+  const lastScrollY = useRef(0)
   const [isFocused, setIsFocused] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [leftPosition, setLeftPosition] = useState('50%')
@@ -168,25 +169,21 @@ export default function ProjectChatInput() {
     }
   }, [pathname, width, isOpen])
 
-  // 스크롤 위치 감지 — 맨 아래 도달 시 입력창 숨김 (모바일·데스크톱 공통)
+  // 스크롤 방향 감지 — nav와 반대: scroll down → 표시, scroll up → 숨김
   useEffect(() => {
     const handleScroll = () => {
-      const windowHeight = window.innerHeight
-      const documentHeight = document.documentElement.scrollHeight
-      const scrollTop = window.scrollY || document.documentElement.scrollTop
-      // 맨 아래에 도달했는지 확인 (50px 여유)
-      const isBottom = scrollTop + windowHeight >= documentHeight - 50
-      setIsVisible(!isBottom)
+      const y = window.scrollY
+      if (y <= 60) {
+        setInputVisible(true)
+      } else if (y > lastScrollY.current) {
+        setInputVisible(true)
+      } else {
+        setInputVisible(false)
+      }
+      lastScrollY.current = y
     }
-
     window.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', handleScroll)
-    handleScroll() // 초기 실행
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
-    }
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
 
@@ -300,10 +297,13 @@ export default function ProjectChatInput() {
     // chip 제거는 ChatBot의 handleSend에서 처리하도록 함 (메시지 전송 후)
   }
 
-  // 챗봇이 열려있거나 스크롤이 맨 아래면 숨기기 (모바일·데스크톱 공통)
-  if (isOpen || !isVisible) {
-    return null
-  }
+  if (isOpen) return null
+
+  // 숨길 때 화면 아래로 완전히 치우기: 100% + bottom(24px) + 여유
+  const translateHidden = 'translateY(calc(100% + 48px))'
+  const transformVisible = isMobile
+    ? (inputVisible ? 'translateY(0)' : translateHidden)
+    : (inputVisible ? 'translateX(-50%) translateY(0)' : `translateX(-50%) ${translateHidden}`)
 
   return (
     <div
@@ -311,15 +311,15 @@ export default function ProjectChatInput() {
         position: 'fixed',
         bottom: '24px',
         left: isMobile ? '0' : leftPosition,
-        transform: isMobile ? 'none' : 'translateX(-50%)',
+        transform: transformVisible,
         zIndex: 1000,
         width: '100%',
         maxWidth: '980px',
         padding: isMobile ? '0 16px' : '0 24px',
-        pointerEvents: 'auto',
+        pointerEvents: inputVisible ? 'auto' : 'none',
         display: 'flex',
         justifyContent: 'center',
-        transition: 'none' // transition 제거하여 즉시 업데이트
+        transition: 'transform 0.3s ease-out'
       }}
     >
       <div

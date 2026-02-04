@@ -1820,7 +1820,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
             {/* History Dropdown */}
             {isHistoryOpen && (
               <div 
-                className="absolute top-full left-0 mt-2 z-50"
+                className="absolute top-full left-0 mt-2 z-50 scrollbar-transparent-hover"
                 style={{ 
                   display: 'flex',
                   width: '240px',
@@ -1890,7 +1890,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: '16px' }}>
+      <div className="flex-1 overflow-y-auto scrollbar-transparent-hover" style={{ padding: '16px' }}>
         {messages.length === 0 && isMounted && (
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 0 }}>
             <div style={{ width: '100%', maxWidth: '100%' }} className="chatbot-prose">

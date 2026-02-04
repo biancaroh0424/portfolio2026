@@ -340,7 +340,7 @@ export default function ChapterStatus({ content, title, onToggle, contentContain
 
       {/* 사이드바 메인 컨테이너 */}
       <div 
-        className="sticky top-[80px] left-0 z-30 transition-transform duration-300 ease-in-out self-start" 
+        className="sticky top-[80px] left-0 z-30 transition-transform duration-300 ease-in-out self-start scrollbar-transparent-hover" 
         data-no-text-selection="true"
         style={{ 
           width: '260px',
@@ -353,7 +353,7 @@ export default function ChapterStatus({ content, title, onToggle, contentContain
           overflowY: 'auto'
         }}
       >
-        <div className="overflow-y-auto">
+        <div className="overflow-y-auto scrollbar-transparent-hover">
           <div className="space-y-0">
             {/* Portfolio Title Chapter */}
             {title && (
