@@ -159,7 +159,7 @@ export default function AdminPage() {
 
   // 벡터 저장소 재초기화 헬퍼 (재시도 포함). 실패 시 API의 error/hint 반환.
   const initializeVectorStoreWithRetry = async (maxRetries = 3): Promise<{ success: boolean; errorMessage?: string; contentsCount?: number; chunksCount?: number }> => {
-    const timeoutMs = 90_000 // 서버 maxDuration 60초까지 기다림 (504 전에 클라이언트에서 끊지 않도록)
+    const timeoutMs = 320_000 // 서버 maxDuration 300초까지 기다림 (504 전에 클라이언트에서 끊지 않도록)
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         setIsInitializing(true)
@@ -173,7 +173,7 @@ export default function AdminPage() {
         }
         // 504 Gateway Timeout: Vercel 함수 타임아웃 (Hobby 10초, Pro 60초). 재시도해도 동일하면 안내 메시지.
         if (embedResponse.status === 504) {
-          const timeoutMsg = '벡터 저장소 초기화가 시간 초과(504)되었습니다. Vercel Hobby는 10초, Pro는 60초 제한입니다. 프로젝트가 많으면 60초를 넘길 수 있어 Pro 플랜 사용을 권장합니다. 챗봇은 이전 인덱스를 사용하며, 나중에 다시 시도하거나 Admin에서 재실행해 주세요.'
+          const timeoutMsg = '벡터 저장소 초기화가 시간 초과(504)되었습니다. 이 라우트는 최대 300초까지 설정돼 있습니다. Vercel 대시보드 → Settings → Functions에서 Function Max Duration이 300 이상인지 확인해 주세요. (Fluid Compute 사용 시 Pro 기본 300초.) 챗봇은 이전 인덱스를 사용하며, 나중에 다시 시도해 주세요.'
           if (attempt === maxRetries) return { success: false, errorMessage: timeoutMsg }
           console.warn(`Vector store init failed (504), retrying... (${attempt}/${maxRetries})`)
           await new Promise((r) => setTimeout(r, 2000 * attempt))
@@ -192,7 +192,7 @@ export default function AdminPage() {
         const isAbort = (error instanceof Error && error.name === 'AbortError') || /abort/i.test(errMsg)
         console.error(`Error initializing vector store (attempt ${attempt}):`, error)
         if (attempt === maxRetries) {
-          return { success: false, errorMessage: isAbort ? '요청 시간 초과. 벡터 저장소 초기화는 Pro에서 최대 60초 걸릴 수 있습니다. 다시 시도하거나 Vercel 플랜(Hobby 10초 제한)을 확인해 주세요.' : errMsg }
+          return { success: false, errorMessage: isAbort ? '요청 시간 초과. 벡터 저장소 초기화는 최대 300초 걸릴 수 있습니다. Vercel Settings → Functions → Max Duration을 확인해 주세요.' : errMsg }
         }
         await new Promise((r) => setTimeout(r, 1000 * attempt))
       } finally {
