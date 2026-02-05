@@ -17,17 +17,15 @@ export default function HomePage() {
   const { openChatBot, toggleChatBot } = useChatBot()
   const { t, renderText } = useLanguage()
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const [isMounted, setIsMounted] = useState(false)
+  const [center, setCenter] = useState({ x: 0, y: 0 })
   const smallDotRef1 = useRef<SVGGElement>(null)
   const smallDotRef3 = useRef<SVGGElement>(null)
   
 
   useEffect(() => {
-    setIsMounted(true)
-    
-    // 초기 마우스 위치를 중앙으로 설정
     const initialX = typeof window !== 'undefined' ? window.innerWidth / 2 : 960
     const initialY = typeof window !== 'undefined' ? window.innerHeight / 2 : 540
+    setCenter({ x: initialX, y: initialY })
     setMousePosition({ x: initialX, y: initialY })
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -217,7 +215,7 @@ export default function HomePage() {
       console.log('Animations started')
     }
 
-    // Wait for DOM to be ready - use useEffect with isMounted dependency
+    // Wait for DOM to be ready - run when center is set after mount
     const timeoutId = setTimeout(() => {
       const pathElement = document.getElementById('bigCirclePath')
       const pathElement2 = document.getElementById('bigCirclePath2')
@@ -229,7 +227,7 @@ export default function HomePage() {
         pathElement2: !!pathElement2,
         dot1: !!dot1,
         dot3: !!dot3,
-        isMounted
+        center.x || center.y
       })
       
       if (pathElement && dot1 && pathElement2 && dot3) {
@@ -250,7 +248,7 @@ export default function HomePage() {
       clearTimeout(timeoutId)
       // Note: resize listeners are added inside animateDots, cleanup would need refs
     }
-  }, [isMounted])
+  }, [center.x, center.y])
 
   const handleSend = () => {
     router.push('/portfolio')
@@ -274,8 +272,7 @@ export default function HomePage() {
     <div className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0">
         {/* Deep Green Circle */}
-        {isMounted && (
-          <div
+        <div
             style={{
               position: 'absolute',
               top: 0,
@@ -284,7 +281,7 @@ export default function HomePage() {
               width: '108.245vw', // 2076.307px / 1920px * 100
               height: '170.404vh', // 1840.364px / 1080px * 100
               zIndex: 200,
-              transform: `translate(${(mousePosition.x - window.innerWidth / 2) * 0.01}px, ${(mousePosition.y - window.innerHeight / 2) * 0.01}px)`,
+              transform: `translate(${(mousePosition.x - center.x) * 0.01}px, ${(mousePosition.y - center.y) * 0.01}px)`,
               transition: 'transform 0.2s ease-out',
             }}
           >
@@ -323,11 +320,9 @@ export default function HomePage() {
             </g>
           </svg>
         </div>
-        )}
 
         {/* Grey Circle */}
-        {isMounted && (
-          <div
+        <div
             style={{
               position: 'absolute',
               top: '29.815vh', // 322px / 1080px * 100
@@ -336,7 +331,7 @@ export default function HomePage() {
               width: '93.782vw', // 1800.615px / 1920px * 100
               height: '140.202vh', // 1514.182px / 1080px * 100
               zIndex: 201,
-              transform: `translate(${(mousePosition.x - window.innerWidth / 2) * 0.015}px, ${(mousePosition.y - window.innerHeight / 2) * 0.015}px)`,
+              transform: `translate(${(mousePosition.x - center.x) * 0.015}px, ${(mousePosition.y - center.y) * 0.015}px)`,
               transition: 'transform 0.2s ease-out',
             }}
           >
@@ -375,11 +370,9 @@ export default function HomePage() {
             </g>
           </svg>
         </div>
-        )}
 
         {/* Second Grey Circle */}
-        {isMounted && (
-          <div
+        <div
             style={{
               position: 'absolute',
               top: '28.333vh', // 306px / 1080px * 100
@@ -388,7 +381,7 @@ export default function HomePage() {
               width: '76.25vw', // 1463px / 1920px * 100
               height: '140.202vh', // 1514.182px / 1080px * 100
               zIndex: 202,
-              transform: `translate(${(mousePosition.x - window.innerWidth / 2) * 0.02}px, ${(mousePosition.y - window.innerHeight / 2) * 0.02}px)`,
+              transform: `translate(${(mousePosition.x - center.x) * 0.02}px, ${(mousePosition.y - center.y) * 0.02}px)`,
               transition: 'transform 0.2s ease-out',
             }}
           >
@@ -423,11 +416,9 @@ export default function HomePage() {
             </g>
           </svg>
         </div>
-        )}
 
         {/* Third Grey Circle */}
-        {isMounted && (
-          <div
+        <div
             style={{
               position: 'absolute',
               top: '37.593vh', // 406px / 1080px * 100
@@ -436,7 +427,7 @@ export default function HomePage() {
               width: '93.782vw', // 1800.615px / 1920px * 100
               height: '140.202vh', // 1514.182px / 1080px * 100
               zIndex: 203,
-              transform: `translate(${(mousePosition.x - window.innerWidth / 2) * 0.025}px, ${(mousePosition.y - window.innerHeight / 2) * 0.025}px)`,
+              transform: `translate(${(mousePosition.x - center.x) * 0.025}px, ${(mousePosition.y - center.y) * 0.025}px)`,
               transition: 'transform 0.2s ease-out',
             }}
           >
@@ -475,16 +466,14 @@ export default function HomePage() {
             </g>
           </svg>
         </div>
-        )}
 
         {/* Yellow Circle */}
-        {isMounted && (
-          <div
+        <div
             style={{
               position: 'absolute',
               top: '0.185vh', // 2px / 1080px * 100
               left: '50%',
-              transform: `translate(calc(-50% + ${(mousePosition.x - window.innerWidth / 2) * 0.05}px), calc(${0.185}vh + ${(mousePosition.y - window.innerHeight / 2) * 0.05}px))`,
+              transform: `translate(calc(-50% + ${(mousePosition.x - center.x) * 0.05}px), calc(${0.185}vh + ${(mousePosition.y - center.y) * 0.05}px))`,
               pointerEvents: 'none',
               width: '86.25vw', // 1656px / 1920px * 100
               height: '164.647vh', // 1778.182px / 1080px * 100
@@ -527,11 +516,9 @@ export default function HomePage() {
             </g>
           </svg>
         </div>
-        )}
 
         {/* Light Blue Circle */}
-        {isMounted && (
-          <div
+        <div
             style={{
               position: 'absolute',
               top: '28.333vh', // 306px / 1080px * 100
@@ -540,7 +527,7 @@ export default function HomePage() {
               width: '108.245vw', // 2076.307px / 1920px * 100
               height: '170.404vh', // 1840.364px / 1080px * 100
               zIndex: 205,
-              transform: `translate(calc(-50% + ${(mousePosition.x - window.innerWidth / 2) * 0.04}px), ${(mousePosition.y - window.innerHeight / 2) * 0.04}px)`,
+              transform: `translate(calc(-50% + ${(mousePosition.x - center.x) * 0.04}px), ${(mousePosition.y - center.y) * 0.04}px)`,
               transition: 'transform 0.2s ease-out',
             }}
           >
@@ -579,11 +566,9 @@ export default function HomePage() {
             </g>
           </svg>
         </div>
-        )}
 
         {/* Big Circle Path */}
-        {isMounted && (
-          <div
+        <div
             id="bigCircleContainer"
             style={{
               position: 'absolute',
@@ -605,23 +590,19 @@ export default function HomePage() {
                 fill="none"
               />
             {/* Small Dot 1 - inside SVG for proper coordinate system */}
-            {isMounted && (
-              <g ref={smallDotRef1 as any} style={{ pointerEvents: 'none' }}>
-                <circle
-                  cx="0"
-                  cy="0"
-                  r="4"
-                  fill="#E6E6E6"
-                />
-              </g>
-            )}
+            <g ref={smallDotRef1 as any} style={{ pointerEvents: 'none' }}>
+              <circle
+                cx="0"
+                cy="0"
+                r="4"
+                fill="#E6E6E6"
+              />
+            </g>
           </svg>
         </div>
-        )}
 
         {/* Second Big Circle Path */}
-        {isMounted && (
-          <div
+        <div
             id="bigCircleContainer2"
             style={{
               position: 'absolute',
@@ -644,23 +625,20 @@ export default function HomePage() {
               />
             
             {/* Small Dot 3 - inside SVG for proper coordinate system */}
-            {isMounted && (
-              <g ref={smallDotRef3 as any} style={{ pointerEvents: 'none' }}>
-                <circle
-                  cx="0"
-                  cy="0"
-                  r="4"
-                  fill="#E6E6E6"
-                  style={{ 
-                    transform: 'scale(1)',
-                    transformOrigin: 'center'
-                  }}
-                />
-              </g>
-            )}
+            <g ref={smallDotRef3 as any} style={{ pointerEvents: 'none' }}>
+              <circle
+                cx="0"
+                cy="0"
+                r="4"
+                fill="#E6E6E6"
+                style={{ 
+                  transform: 'scale(1)',
+                  transformOrigin: 'center'
+                }}
+              />
+            </g>
           </svg>
         </div>
-        )}
       </div>
       <div className="absolute inset-0 flex items-center justify-center px-4" style={{ zIndex: 1000 }}>
         <div className="mx-auto flex flex-col gap-12">
