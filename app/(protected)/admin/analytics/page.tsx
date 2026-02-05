@@ -263,7 +263,7 @@ export default function AnalyticsPage() {
             <div className="bg-gray-800 p-6 rounded-lg mb-8">
               <h2 className="text-xl font-bold mb-4">Questions by Hour (24h)</h2>
               <div className="relative w-full" style={{ height: `${chartHeight}px` }}>
-                <svg width="100%" height={chartHeight} className="overflow-visible" viewBox={`0 0 240 ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
+                <svg width="100%" height={chartHeight} className="overflow-visible" viewBox={`0 0 240 ${chartHeight}`} preserveAspectRatio="none">
                   {/* 그리드 라인 */}
                   {Array.from({ length: 5 }).map((_, i) => {
                     const y = (chartHeight / 4) * i
