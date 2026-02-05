@@ -430,12 +430,11 @@ export default function AdminPage() {
         getCurrentTranslation(projectWithTags, currentEditLanguage).content ??
         ''
       const baseTranslation = getCurrentTranslation(projectWithTags, currentEditLanguage)
-      const fromRef = currentTranslationRef.current
-      // fromRef 있으면 fields/title은 ref 기준. tags는 항상 baseTranslation(projectWithTags) 기준으로 저장 (tagInput 병합 반영)
+      // 항상 현재 편집 상태(projectWithTags)만 사용. ref 사용 시 태그/다른 수정 직후 저장에서 예전 title·fields로 덮어써 데이터 유실 방지
       const updatedTranslation: ProjectTranslation = {
-        title: fromRef?.title ?? baseTranslation.title,
-        content: latestContent || baseTranslation.content,
-        fields: fromRef ? (fromRef.fields ?? []) : (baseTranslation.fields ?? []),
+        title: baseTranslation.title ?? '',
+        content: latestContent ?? baseTranslation.content ?? '',
+        fields: Array.isArray(baseTranslation.fields) ? baseTranslation.fields : [],
         tags: Array.isArray(baseTranslation.tags) ? baseTranslation.tags : []
       }
       
@@ -598,22 +597,27 @@ export default function AdminPage() {
       setEditingProject(null)
       setActiveTab('projects')
     } else if (pathname === '/admin/new') {
-      // 새 프로젝트 페이지
-      const newProject: Project = {
-        id: '', // 사용자가 직접 입력하도록 빈값으로 시작
+      // 새 프로젝트 페이지 — 이미 새 프로젝트(id 빈값) 편집 중이면 덮어쓰지 않음 (projects 변경 시 사용자 입력 유실 방지)
+      const emptyNewProject: Project = {
+        id: '',
         currentLanguage: 'en',
-        tags: [], // 태그를 빈 배열로 명시적으로 초기화
+        tags: [],
         translations: {
-          en: {
-            title: '',
-            content: '',
-            fields: []
-          }
+          en: { title: '', content: '', fields: [] }
         }
       }
-      setEditingProject(newProject)
-      setCurrentEditLanguage('en')
-      setTagInput('') // 태그 입력 필드 초기화
+      let didPreserveNew = false
+      setEditingProject(prev => {
+        if (prev && prev.id === '') {
+          didPreserveNew = true
+          return prev
+        }
+        return emptyNewProject
+      })
+      if (!didPreserveNew) {
+        setCurrentEditLanguage('en')
+        setTagInput('')
+      }
     } else if (pathname?.startsWith('/admin/edit/')) {
       // 편집 페이지: 항상 API에서 최신 프로젝트 로드 (목록이 스테일이면 Summary 삭제 후 필드 추가 시 이전 내용이 섞이는 문제 방지)
       const projectId = pathname.replace('/admin/edit/', '').replace(/\/$/, '')
