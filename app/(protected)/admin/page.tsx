@@ -475,6 +475,11 @@ export default function AdminPage() {
       // 목록만 새로고침 (Blob eventual consistency로 GET이 아직 이전 버전을 줄 수 있으므로 editingProject는 덮어쓰지 않음)
       await loadProjects()
 
+      // 새 프로젝트(기존 id 빈값) 저장 후에는 편집 URL로 이동 → 저장한 내용이 그대로 보이도록
+      if (!projectToSave.id && savedProject.id) {
+        router.push(`/admin/edit/${savedProject.id}`)
+      }
+
       // 저장 직후 UI 해제 — 벡터 저장소는 백그라운드에서 업데이트 (저장이 느리게 느껴지는 원인 제거)
       setMessage('✅ 프로젝트가 저장되었습니다. 벡터 저장소는 백그라운드에서 업데이트 중입니다. (챗봇 검색은 잠시 후 반영됩니다.)')
       setIsSaving(false)
@@ -597,7 +602,7 @@ export default function AdminPage() {
       setEditingProject(null)
       setActiveTab('projects')
     } else if (pathname === '/admin/new') {
-      // 새 프로젝트 페이지 — 이미 새 프로젝트(id 빈값) 편집 중이면 덮어쓰지 않음 (projects 변경 시 사용자 입력 유실 방지)
+      // 새 프로젝트 페이지 — 편집 중인 내용 있으면 덮어쓰지 않음 (저장 직후에도 저장된 프로젝트가 그대로 보이도록)
       const emptyNewProject: Project = {
         id: '',
         currentLanguage: 'en',
@@ -606,15 +611,9 @@ export default function AdminPage() {
           en: { title: '', content: '', fields: [] }
         }
       }
-      let didPreserveNew = false
-      setEditingProject(prev => {
-        if (prev && prev.id === '') {
-          didPreserveNew = true
-          return prev
-        }
-        return emptyNewProject
-      })
-      if (!didPreserveNew) {
+      // editingProject가 null일 때만 빈 프로젝트 세팅 (직접 /admin/new 진입 시). 이미 있으면 유지(새로 작성 중이거나 방금 저장한 것).
+      if (editingProject == null) {
+        setEditingProject(emptyNewProject)
         setCurrentEditLanguage('en')
         setTagInput('')
       }

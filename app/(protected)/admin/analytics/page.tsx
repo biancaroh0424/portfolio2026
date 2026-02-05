@@ -259,59 +259,56 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            {/* 시간별 라인 그래프 — viewBox로 균등 간격 */}
+            {/* 시간별 라인 그래프 — viewBox 0 0 100 300 으로 비율 유지, 날짜 차트와 동일하게 보기 좋게 */}
             <div className="bg-gray-800 p-6 rounded-lg mb-8">
               <h2 className="text-xl font-bold mb-4">Questions by Hour (24h)</h2>
-              <div className="relative w-full" style={{ height: `${chartHeight}px` }}>
-                <svg width="100%" height={chartHeight} className="overflow-visible" viewBox={`0 0 240 ${chartHeight}`} preserveAspectRatio="none">
-                  {/* 그리드 라인 */}
+              <div className="relative" style={{ height: `${chartHeight}px`, padding: '0 20px' }}>
+                <svg width="100%" height={chartHeight} viewBox="0 0 100 300" preserveAspectRatio="xMidYMid meet" className="overflow-visible">
                   {Array.from({ length: 5 }).map((_, i) => {
-                    const y = (chartHeight / 4) * i
+                    const y = (300 / 4) * i
                     return (
-                      <line key={i} x1="10" y1={y} x2="230" y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                      <line key={i} x1="0" y1={y} x2="100" y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
                     )
                   })}
-                  {/* Y축 레이블 */}
                   {Array.from({ length: 5 }).map((_, i) => {
                     const value = Math.round((maxCount / 4) * (4 - i))
-                    const y = (chartHeight / 4) * i
+                    const y = (300 / 4) * i
                     return (
-                      <text key={i} x="8" y={y + 4} fontSize="11" fill="rgba(255,255,255,0.5)" textAnchor="end">{value}</text>
+                      <text key={i} x="2" y={y + 4} fontSize="11" fill="rgba(255,255,255,0.5)" textAnchor="start">{value}</text>
                     )
                   })}
-                  {/* 라인 그래프 — 24점을 10~230에 균등 배치 */}
                   <polyline
                     points={hourlyStats.map((stat, index) => {
-                      const x = 10 + (index / 23) * 220
-                      const y = chartHeight - (stat.count / maxCount) * (chartHeight - 40) - 20
+                      const x = 5 + (index / 23) * 90
+                      const y = 300 - (stat.count / maxCount) * (300 - 40) - 20
                       return `${x},${y}`
                     }).join(' ')}
                     fill="none"
                     stroke="#DB6930"
-                    strokeWidth="2.5"
+                    strokeWidth="1.2"
                     className="cursor-pointer"
                   />
                   {hourlyStats.map((stat, index) => {
-                    const x = 10 + (index / 23) * 220
-                    const y = chartHeight - (stat.count / maxCount) * (chartHeight - 40) - 20
+                    const x = 5 + (index / 23) * 90
+                    const y = 300 - (stat.count / maxCount) * (300 - 40) - 20
                     const showLabel = stat.hour % 2 === 0
                     return (
                       <g key={index}>
                         <circle
                           cx={x}
                           cy={y}
-                          r="6"
+                          r="1.8"
                           fill="#DB6930"
                           className="cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => handleLineClick(stat.hour)}
                         />
                         {showLabel && (
-                          <text x={x} y={chartHeight - 5} textAnchor="middle" fontSize="11" fill="rgba(255,255,255,0.7)">
+                          <text x={x} y={295} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.6)">
                             {stat.hour}:00
                           </text>
                         )}
                         {stat.count > 0 && (
-                          <text x={x} y={y - 12} textAnchor="middle" fontSize="10" fill="#DB6930" fontWeight="bold">
+                          <text x={x} y={y - 8} textAnchor="middle" fontSize="9" fill="#DB6930" fontWeight="bold">
                             {stat.count}
                           </text>
                         )}
