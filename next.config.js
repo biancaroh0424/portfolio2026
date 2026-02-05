@@ -63,10 +63,10 @@ const nextConfig = {
     const isDev = process.env.NODE_ENV === 'development'
     
     // connect-src: Mixpanel + 모든 HTTPS 허용 (배포 시 연결 안 됨 방지)
-    const connectSrc = "'self' https://*.googleapis.com https://*.google.com https://api-js.mixpanel.com https://*.mixpanel.com https://cdn.mixpanel.com https:"
+    const connectSrc = "'self' https://*.googleapis.com https://*.google.com https://api-js.mixpanel.com https://*.mixpanel.com https://cdn.mixpanel.com https://www.clarity.ms https://*.clarity.ms https:"
     const cspValue = isDev
-      ? `script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.googleapis.com https://*.google.com; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src ${connectSrc};`
-      : `script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.google.com; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src ${connectSrc};`
+      ? `script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.googleapis.com https://*.google.com https://www.clarity.ms; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src ${connectSrc};`
+      : `script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.google.com https://www.clarity.ms; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src ${connectSrc};`
     
     return [
       {

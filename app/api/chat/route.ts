@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs/promises'
 import path from 'path'
-import { 
-  searchRelevantContent, 
+import { list } from '@vercel/blob'
+import {
+  searchRelevantContent,
   isProjectRelated
 } from '@/lib/rag'
 import { ensureVectorStoreInitialized } from '@/lib/vector-store'
@@ -13,13 +14,37 @@ import { detectLanguage, getCountryFromIP, getGreeting, type SupportedLanguage }
 export const runtime = 'nodejs'
 
 const RESUME_FILE = path.join(process.cwd(), 'data', 'resume.json')
+const BLOB_RESUME_PATH = 'data/resume.json'
 
-/** 이력서 PDF가 실제로 있는 언어만 반환 (ko 없으면 포함 안 함) */
+function isBlobStorageEnabled(): boolean {
+  return (
+    process.env.VERCEL === '1' &&
+    typeof process.env.BLOB_READ_WRITE_TOKEN === 'string' &&
+    process.env.BLOB_READ_WRITE_TOKEN.length > 0
+  )
+}
+
+/** 이력서 PDF가 실제로 있는 언어만 반환. 프로덕션은 Blob의 resume.json 기준 */
 async function getAvailableResumeLangs(): Promise<string[]> {
+  const langs = ['en', 'ko', 'it'] as const
   try {
+    if (isBlobStorageEnabled()) {
+      const { blobs } = await list({ prefix: 'data/', limit: 20 })
+      const pathnameOf = (b: { pathname?: string; name?: string }) => (b.pathname ?? b.name ?? '') as string
+      const blob =
+        blobs.find((b) => pathnameOf(b) === BLOB_RESUME_PATH) ??
+        blobs.find((b) => pathnameOf(b)?.endsWith?.('resume.json')) ??
+        blobs.find((b) => pathnameOf(b)?.includes?.('resume.json'))
+      if (!blob?.url) return []
+      const url = String(blob.url) + (String(blob.url).includes('?') ? '&' : '?') + '_=' + Date.now()
+      const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } })
+      if (!res.ok) return []
+      const resume = (await res.json()) as Record<string, string>
+      return langs.filter((lang) => resume[lang]?.trim())
+    }
     const data = await fs.readFile(RESUME_FILE, 'utf-8')
     const resume = JSON.parse(data) as Record<string, string>
-    return (['en', 'ko', 'it'] as const).filter((lang) => resume[lang]?.trim())
+    return langs.filter((lang) => resume[lang]?.trim())
   } catch {
     return []
   }
