@@ -7,12 +7,13 @@ type LanguageOption = {
   code: 'en' | 'ko' | 'it'
   label: string
   displayName: string
+  disabled?: boolean
 }
 
 const languages: LanguageOption[] = [
   { code: 'en', label: 'ENGLISH', displayName: 'ENGLISH' },
   { code: 'ko', label: '한국어', displayName: '한국어' },
-  { code: 'it', label: 'ITALIANO', displayName: 'ITALIANO' },
+  { code: 'it', label: 'ITALIANO', displayName: 'ITALIANO', disabled: true },
 ]
 
 export default function LanguageDropdown() {
@@ -81,10 +82,12 @@ export default function LanguageDropdown() {
           {languages.map((lang) => (
             <button
               key={lang.code}
-              onClick={() => handleLanguageSelect(lang.code)}
-              className={`border border-transparent rounded-[8px] w-full flex items-center gap-2 px-3 py-2 text-[13px] text-white transition-colors hover:bg-white/10 ${
-                lang.code === language ? 'bg-white/5' : ''
-              }`}
+              type="button"
+              disabled={lang.disabled}
+              onClick={() => !lang.disabled && handleLanguageSelect(lang.code)}
+              className={`border border-transparent rounded-[8px] w-full flex items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
+                lang.disabled ? 'text-white/40 cursor-not-allowed' : 'text-white hover:bg-white/10'
+              } ${lang.code === language ? 'bg-white/5' : ''}`}
             >
               {lang.code === language && (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-[16px]" style={{ color: 'var(--lightblue-500)' }}>
