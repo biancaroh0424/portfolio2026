@@ -64,23 +64,28 @@ export default function AnalyticsPage() {
   const [selectedEntries, setSelectedEntries] = useState<ChatEntry[]>([])
   const [showModal, setShowModal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
 
   useEffect(() => {
     const checkAuth = () => {
       const savedAuth = localStorage.getItem('admin_authenticated')
       if (savedAuth === 'true') {
         setIsAuthenticated(true)
-        loadAnalytics()
       }
       setIsCheckingAuth(false)
     }
     checkAuth()
   }, [])
 
+  useEffect(() => {
+    if (isAuthenticated) loadAnalytics()
+  }, [isAuthenticated, dateRange])
+
   const loadAnalytics = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/admin/analytics')
+      const url = dateRange === 'all' ? '/api/admin/analytics' : `/api/admin/analytics?range=${dateRange}`
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setEntries(data.entries || [])
@@ -196,9 +201,23 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8" style={{ paddingTop: '120px' }}>
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
           <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="text-gray-400 text-sm">기간:</span>
+            <div className="flex rounded-lg overflow-hidden border border-gray-600">
+              {(['7d', '30d', '90d', 'all'] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setDateRange(r)}
+                  className={`px-3 py-2 text-sm transition-colors ${
+                    dateRange === r ? 'bg-orange-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {r === '7d' ? '7일' : r === '30d' ? '30일' : r === '90d' ? '90일' : '전체'}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => router.push('/admin')}
               className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
@@ -240,49 +259,30 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            {/* 시간별 라인 그래프 */}
+            {/* 시간별 라인 그래프 — viewBox로 균등 간격 */}
             <div className="bg-gray-800 p-6 rounded-lg mb-8">
               <h2 className="text-xl font-bold mb-4">Questions by Hour (24h)</h2>
-              <div className="relative" style={{ height: `${chartHeight}px`, padding: '0 20px' }}>
-                <svg width="100%" height={chartHeight} className="overflow-visible">
+              <div className="relative w-full" style={{ height: `${chartHeight}px` }}>
+                <svg width="100%" height={chartHeight} className="overflow-visible" viewBox={`0 0 240 ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
                   {/* 그리드 라인 */}
                   {Array.from({ length: 5 }).map((_, i) => {
                     const y = (chartHeight / 4) * i
                     return (
-                      <line
-                        key={i}
-                        x1="0"
-                        y1={y}
-                        x2="100%"
-                        y2={y}
-                        stroke="rgba(255,255,255,0.1)"
-                        strokeWidth="1"
-                      />
+                      <line key={i} x1="10" y1={y} x2="230" y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
                     )
                   })}
-                  
                   {/* Y축 레이블 */}
                   {Array.from({ length: 5 }).map((_, i) => {
                     const value = Math.round((maxCount / 4) * (4 - i))
                     const y = (chartHeight / 4) * i
                     return (
-                      <text
-                        key={i}
-                        x="0"
-                        y={y + 4}
-                        fontSize="11"
-                        fill="rgba(255,255,255,0.5)"
-                        textAnchor="start"
-                      >
-                        {value}
-                      </text>
+                      <text key={i} x="8" y={y + 4} fontSize="11" fill="rgba(255,255,255,0.5)" textAnchor="end">{value}</text>
                     )
                   })}
-                  
-                  {/* 라인 그래프 */}
+                  {/* 라인 그래프 — 24점을 10~230에 균등 배치 */}
                   <polyline
                     points={hourlyStats.map((stat, index) => {
-                      const x = 20 + ((index / 23) * (100 - 40))
+                      const x = 10 + (index / 23) * 220
                       const y = chartHeight - (stat.count / maxCount) * (chartHeight - 40) - 20
                       return `${x},${y}`
                     }).join(' ')}
@@ -291,12 +291,9 @@ export default function AnalyticsPage() {
                     strokeWidth="2.5"
                     className="cursor-pointer"
                   />
-                  
-                  {/* 포인트 및 클릭 영역 */}
                   {hourlyStats.map((stat, index) => {
-                    const x = 20 + ((index / 23) * (100 - 40))
+                    const x = 10 + (index / 23) * 220
                     const y = chartHeight - (stat.count / maxCount) * (chartHeight - 40) - 20
-                    // 2시간 간격으로만 레이블 표시 (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22)
                     const showLabel = stat.hour % 2 === 0
                     return (
                       <g key={index}>
@@ -305,30 +302,16 @@ export default function AnalyticsPage() {
                           cy={y}
                           r="6"
                           fill="#DB6930"
-                          className="cursor-pointer hover:r-8 transition-all"
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => handleLineClick(stat.hour)}
-                          style={{ transition: 'r 0.2s' }}
                         />
                         {showLabel && (
-                          <text
-                            x={x}
-                            y={chartHeight - 5}
-                            textAnchor="middle"
-                            fontSize="11"
-                            fill="rgba(255,255,255,0.7)"
-                          >
+                          <text x={x} y={chartHeight - 5} textAnchor="middle" fontSize="11" fill="rgba(255,255,255,0.7)">
                             {stat.hour}:00
                           </text>
                         )}
                         {stat.count > 0 && (
-                          <text
-                            x={x}
-                            y={y - 12}
-                            textAnchor="middle"
-                            fontSize="10"
-                            fill="#DB6930"
-                            fontWeight="bold"
-                          >
+                          <text x={x} y={y - 12} textAnchor="middle" fontSize="10" fill="#DB6930" fontWeight="bold">
                             {stat.count}
                           </text>
                         )}

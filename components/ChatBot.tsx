@@ -1309,12 +1309,11 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
           if (assistantIndex > 0) {
             const userMessage = currentMessages[assistantIndex - 1]
             if (userMessage && userMessage.role === 'user') {
-              // 최종 답변 내용 가져오기
               const queue = streamQueuesRef.current.get(streamingMessageId)
-              const finalAnswer = queue ? 
-                (queue.contentQueue.join('') + queue.pendingContent) : 
-                fullContent
-              
+              const fromQueue = queue ? (queue.contentQueue.join('') + queue.pendingContent) : ''
+              const assistantMsg = currentMessages[assistantIndex]
+              // type:'done'으로만 content가 오면 큐는 비어 있음 → 상태에 반영된 content 사용
+              const finalAnswer = (fromQueue || fullContent || assistantMsg?.content || '').trim()
               if (finalAnswer) {
                 try {
                   const { getUserInfoForAnalytics } = await import('@/lib/user-analytics')

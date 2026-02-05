@@ -139,42 +139,55 @@ export async function GET(request: NextRequest) {
       ? await readAnalyticsFromBlob()
       : await readAnalyticsFromFs()
 
-    // 쿼리 파라미터 확인
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date')
     const hour = searchParams.get('hour')
+    const range = searchParams.get('range') || 'all' // 7d | 30d | 90d | all
 
-    // 특정 날짜/시간 필터링
-    let filteredEntries = entries
+    // 기간 필터 (전체가 아닐 때)
+    let rangeFiltered = entries
+    if (range !== 'all') {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const days = range === '7d' ? 7 : range === '30d' ? 30 : range === '90d' ? 90 : 0
+      if (days > 0) {
+        const from = new Date(today)
+        from.setDate(from.getDate() - days)
+        const fromStr = from.toISOString().split('T')[0]
+        rangeFiltered = entries.filter(e => e.date >= fromStr)
+      }
+    }
+
+    // 특정 날짜/시간 필터링 (모달용)
+    let filteredEntries = rangeFiltered
     if (date) {
       filteredEntries = filteredEntries.filter(e => e.date === date)
     }
-    if (hour !== null) {
-      const hourNum = parseInt(hour || '0')
+    if (hour !== null && hour !== '') {
+      const hourNum = parseInt(hour || '0', 10)
       filteredEntries = filteredEntries.filter(e => e.hour === hourNum)
     }
 
-    // 시간별 통계 생성 (24시간)
+    // 시간별 통계 (선택 기간 내)
     const hourlyStats = Array.from({ length: 24 }, (_, i) => {
-      const count = entries.filter(e => e.hour === i).length
+      const count = rangeFiltered.filter(e => e.hour === i).length
       return { hour: i, count }
     })
 
-    // 날짜별 통계 생성 (최근 30일)
+    // 날짜별 통계 (선택 기간 내, 최대 90일)
     const dateStats = new Map<string, number>()
-    entries.forEach(entry => {
+    rangeFiltered.forEach(entry => {
       const count = dateStats.get(entry.date) || 0
       dateStats.set(entry.date, count + 1)
     })
-
     const dateStatsArray = Array.from(dateStats.entries())
-      .map(([date, count]) => ({ date, count }))
+      .map(([d, count]) => ({ date: d, count }))
       .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(-30) // 최근 30일
+      .slice(-90)
 
-    // 사용자별 통계
+    // 사용자별 통계 (선택 기간 내)
     const userStats = new Map<string, { count: number; firstSeen: string; lastSeen: string; location?: string; device?: string }>()
-    entries.forEach(entry => {
+    rangeFiltered.forEach(entry => {
       if (entry.userId) {
         const existing = userStats.get(entry.userId) || { count: 0, firstSeen: entry.timestamp, lastSeen: entry.timestamp, location: entry.location, device: entry.device }
         existing.count++
@@ -188,18 +201,18 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // 디바이스별 통계
+    // 디바이스별 통계 (선택 기간 내)
     const deviceStats = new Map<string, number>()
-    entries.forEach(entry => {
+    rangeFiltered.forEach(entry => {
       if (entry.deviceType) {
         const count = deviceStats.get(entry.deviceType) || 0
         deviceStats.set(entry.deviceType, count + 1)
       }
     })
 
-    // 위치별 통계
+    // 위치별 통계 (선택 기간 내)
     const locationStats = new Map<string, number>()
-    entries.forEach(entry => {
+    rangeFiltered.forEach(entry => {
       if (entry.location) {
         const count = locationStats.get(entry.location) || 0
         locationStats.set(entry.location, count + 1)
@@ -210,7 +223,7 @@ export async function GET(request: NextRequest) {
       entries: filteredEntries,
       hourlyStats,
       dateStats: dateStatsArray,
-      total: entries.length,
+      total: rangeFiltered.length,
       userStats: Array.from(userStats.entries()).map(([userId, stats]) => ({ userId, ...stats })),
       deviceStats: Array.from(deviceStats.entries()).map(([device, count]) => ({ device, count })),
       locationStats: Array.from(locationStats.entries()).map(([location, count]) => ({ location, count }))
