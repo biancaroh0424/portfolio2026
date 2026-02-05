@@ -1317,11 +1317,9 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
               
               if (finalAnswer) {
                 try {
-                  // 사용자 정보 수집
                   const { getUserInfoForAnalytics } = await import('@/lib/user-analytics')
                   const userInfo = await getUserInfoForAnalytics()
-                  
-                  await fetch('/api/admin/analytics', {
+                  const res = await fetch('/api/admin/analytics', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1330,6 +1328,10 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                       ...userInfo
                     })
                   })
+                  if (!res.ok) {
+                    const errBody = await res.text()
+                    console.error('Analytics save failed', res.status, errBody)
+                  }
                 } catch (error) {
                   console.error('Failed to save analytics:', error)
                 }

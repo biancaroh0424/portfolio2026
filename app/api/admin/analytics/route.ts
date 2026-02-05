@@ -78,6 +78,8 @@ async function writeAnalyticsToFs(entries: ChatEntry[]): Promise<void> {
   await fs.writeFile(ANALYTICS_FILE, JSON.stringify(entries, null, 2), 'utf-8')
 }
 
+export const dynamic = 'force-dynamic'
+
 // 질문 데이터 저장
 export async function POST(request: NextRequest) {
   try {
@@ -110,7 +112,15 @@ export async function POST(request: NextRequest) {
     entries.push(entry)
 
     if (isBlobStorageEnabled()) {
-      await writeAnalyticsToBlob(entries)
+      try {
+        await writeAnalyticsToBlob(entries)
+      } catch (blobErr) {
+        console.error('Analytics Blob write failed:', blobErr)
+        return NextResponse.json(
+          { error: 'Failed to save analytics to Blob', detail: String(blobErr) },
+          { status: 500 }
+        )
+      }
     } else {
       await writeAnalyticsToFs(entries)
     }
