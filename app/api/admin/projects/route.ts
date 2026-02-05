@@ -87,8 +87,16 @@ export async function GET() {
   }
 }
 
+function getUpdatedAt(p: any): number {
+  const t = p?.updatedAt
+  if (!t) return 0
+  const ms = new Date(t).getTime()
+  return Number.isNaN(ms) ? 0 : ms
+}
+
 async function saveProject(request: NextRequest) {
   const project = await request.json()
+  project.updatedAt = project.updatedAt || new Date().toISOString()
 
   let projects: any[] = []
   if (isBlobStorageEnabled()) {
@@ -112,7 +120,18 @@ async function saveProject(request: NextRequest) {
   }
 
   if (isBlobStorageEnabled()) {
-    await writeProjectsToBlob(projects)
+    // 프로덕션 Blob: 재읽기 후 시간순 병합. 같은 id면 updatedAt 최신만 유지, 최종 목록은 updatedAt 내림차순(최신 먼저)
+    const reRead = await readProjectsFromBlob()
+    const reList = reRead ?? []
+    const byId = new Map<string, any>()
+    for (const p of [...reList, ...projects]) {
+      const existing = byId.get(p.id)
+      const t = getUpdatedAt(p)
+      const existingT = existing ? getUpdatedAt(existing) : -1
+      if (existing == null || t >= existingT) byId.set(p.id, p)
+    }
+    const merged = Array.from(byId.values()).sort((a, b) => getUpdatedAt(b) - getUpdatedAt(a))
+    await writeProjectsToBlob(merged)
   } else {
     const dir = path.dirname(PROJECTS_FILE)
     await fs.mkdir(dir, { recursive: true })

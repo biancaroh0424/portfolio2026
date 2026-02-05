@@ -61,7 +61,11 @@ export async function DELETE(
 ) {
   try {
     const projectId = params.id
-    const projects = await readProjects()
+    let projects = await readProjects()
+    if (isBlobStorageEnabled()) {
+      const reRead = await readProjects()
+      if (reRead.length > projects.length) projects = reRead
+    }
     const filteredProjects = projects.filter((p: any) => p.id !== projectId)
     if (filteredProjects.length === projects.length) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
