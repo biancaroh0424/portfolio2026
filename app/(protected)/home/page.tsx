@@ -227,7 +227,7 @@ export default function HomePage() {
         pathElement2: !!pathElement2,
         dot1: !!dot1,
         dot3: !!dot3,
-        center.x || center.y
+        center,
       })
       
       if (pathElement && dot1 && pathElement2 && dot3) {
