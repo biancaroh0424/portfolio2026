@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import ProjectCard from '@/components/ProjectCard'
 import ProjectChatInput from '@/components/ProjectChatInput'
 import ProjectListSkeleton from '@/components/ProjectListSkeleton'
@@ -43,9 +43,11 @@ const getProjectTranslation = (project: any, language: 'en' | 'ko' | 'it') => {
 
 export default function ProjectsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { language } = useLanguage()
   const [projects, setProjects] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const forceSkeleton = searchParams?.get('skeleton') === '1'
 
   const loadProjects = useCallback(async () => {
     const controller = new AbortController()
@@ -82,6 +84,7 @@ export default function ProjectsPage() {
 
   // 초기 로드 및 언어 변경 시 로드
   useEffect(() => {
+    if (forceSkeleton) return
     setIsLoading(true)
     loadProjects()
 
@@ -91,10 +94,11 @@ export default function ProjectsPage() {
     }, LOAD_TIMEOUT_MS)
 
     return () => clearTimeout(safetyTimer)
-  }, [language, loadProjects])
+  }, [language, loadProjects, forceSkeleton])
 
   // 주기적으로 프로젝트 데이터 업데이트 확인 (1분마다, 페이지가 보일 때만)
   useEffect(() => {
+    if (forceSkeleton) return
     // 페이지가 숨겨져 있으면 폴링하지 않음
     if (document.hidden) return
     
@@ -106,10 +110,11 @@ export default function ProjectsPage() {
     }, 60000) // 1분마다 확인 (서버 부하 감소)
 
     return () => clearInterval(interval)
-  }, [loadProjects])
+  }, [loadProjects, forceSkeleton])
 
   // 페이지 포커스/가시성 변경 시 프로젝트 데이터 다시 로드 (폴링보다 우선)
   useEffect(() => {
+    if (forceSkeleton) return
     let visibilityTimeout: NodeJS.Timeout | null = null
 
     const handleVisibilityChange = () => {
@@ -144,9 +149,9 @@ export default function ProjectsPage() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleFocus)
     }
-  }, [loadProjects])
+  }, [loadProjects, forceSkeleton])
 
-  if (isLoading) {
+  if (forceSkeleton || isLoading) {
     return <ProjectListSkeleton />
   }
 
