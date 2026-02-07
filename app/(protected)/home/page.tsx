@@ -3,13 +3,9 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import Button from '@/components/Button'
-import { gsap } from 'gsap'
-import { MotionPathPlugin } from 'gsap/MotionPathPlugin'
 import { useChatBot } from '@/contexts/ChatBotContext'
 import { usePathname } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
-
-gsap.registerPlugin(MotionPathPlugin)
 
 export default function HomePage() {
   const router = useRouter()
@@ -29,224 +25,102 @@ export default function HomePage() {
     setMousePosition({ x: initialX, y: initialY })
 
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({
-        x: e.clientX,
-        y: e.clientY,
-      })
+      setMousePosition({ x: e.clientX, y: e.clientY })
     }
-
     window.addEventListener('mousemove', handleMouseMove)
-    
-    // Small dots animation along path using GSAP
-    const animateDots = () => {
+
+    let timeoutId: ReturnType<typeof setTimeout>
+    let cancelled = false
+
+    const runAnimations = async () => {
       const pathElement = document.getElementById('bigCirclePath') as SVGPathElement | null
       const pathElement2 = document.getElementById('bigCirclePath2') as SVGPathElement | null
-      
-      if (!pathElement || !smallDotRef1.current) {
-        console.log('Elements not ready:', {
-          path: !!pathElement,
-          dot1: !!smallDotRef1.current
-        })
-        return
-      }
-      
-      if (!pathElement2 || !smallDotRef3.current) {
-        console.log('Second path elements not ready:', {
-          path2: !!pathElement2,
-          dot3: !!smallDotRef3.current
-        })
-        // Continue with first path animation even if second is not ready
-      }
-      
-      console.log('Starting GSAP animations')
-      
-      // Get SVG element
+      const dot1 = smallDotRef1.current
+      const dot3 = smallDotRef3.current
+      if (!pathElement || !dot1 || !pathElement2 || !dot3) return false
+
+      const [gsapMod, motionPathMod] = await Promise.all([
+        import('gsap'),
+        import('gsap/MotionPathPlugin'),
+      ])
+      const gsap = gsapMod.default
+      gsap.registerPlugin(motionPathMod.default)
+
+      if (cancelled) return false
+
       const svgElement = pathElement.closest('svg')
-      if (!svgElement) {
-        console.error('SVG element not found')
-        return
-      }
-      
-      // Get path data string - GSAP works better with path string when elements are in different coordinate systems
-      const pathData = pathElement.getAttribute('d')
-      if (!pathData) {
-        console.error('Path data not found')
-        return
-      }
-      
-      // Get container for coordinate reference
-      const container = document.getElementById('bigCircleContainer')
-      if (!container) {
-        console.error('Container not found')
-        return
-      }
-      
-      const containerRect = container.getBoundingClientRect()
-      const svgRect = svgElement.getBoundingClientRect()
-      const viewBox = svgElement.viewBox.baseVal
-      
-      // Function to update dot sizes to maintain 8px
+      if (!svgElement || !pathElement.getAttribute('d') || !document.getElementById('bigCircleContainer')) return false
+
       const updateDotSizes = () => {
-        const svgRect = svgElement.getBoundingClientRect()
-        const viewBox = svgElement.viewBox.baseVal
-        
-        if (svgRect.width === 0 || svgRect.height === 0) return
-        
-        const scaleX = svgRect.width / viewBox.width
-        const scaleY = svgRect.height / viewBox.height
-        const avgScale = (scaleX + scaleY) / 2
-        
-        // To maintain 8px diameter (4px radius) in screen space:
-        // If SVG scales by avgScale, then r * avgScale = 4px
-        // Therefore: r = 4 / avgScale
-        const targetScreenRadius = 4 // 8px diameter
-        const adjustedRadius = targetScreenRadius / avgScale
-        
-        console.log('Updating dot sizes:', {
-          svgRect: { width: svgRect.width, height: svgRect.height },
-          viewBox: { width: viewBox.width, height: viewBox.height },
-          avgScale,
-          adjustedRadius,
-          expectedScreenSize: adjustedRadius * avgScale
-        })
-        
-        // Update circle radius to maintain 8px size
-        if (smallDotRef1.current) {
-          const circle1 = smallDotRef1.current.querySelector('circle')
-          if (circle1) {
-            circle1.setAttribute('r', String(adjustedRadius))
-            console.log('Dot1 radius set to:', adjustedRadius)
-          }
-        }
+        const sr = svgElement.getBoundingClientRect()
+        const vb = svgElement.viewBox.baseVal
+        if (sr.width === 0 || sr.height === 0) return
+        const avgScale = (sr.width / vb.width + sr.height / vb.height) / 2
+        const r = 4 / avgScale
+        const circle1 = smallDotRef1.current?.querySelector('circle')
+        if (circle1) circle1.setAttribute('r', String(r))
       }
-      
-      // Initial size update
       updateDotSizes()
-      
-      // Update on window resize with debounce
-      let resizeTimeout: NodeJS.Timeout
-      const handleResize = () => {
-        clearTimeout(resizeTimeout)
-        resizeTimeout = setTimeout(() => {
-          updateDotSizes()
-        }, 100)
+      const resizeTimeout = { current: null as NodeJS.Timeout | null }
+      const onResize = () => {
+        if (resizeTimeout.current) clearTimeout(resizeTimeout.current)
+        resizeTimeout.current = setTimeout(updateDotSizes, 100)
       }
-      window.addEventListener('resize', handleResize)
-      
-      // Also use ResizeObserver for more accurate detection
-      const resizeObserver = new ResizeObserver(() => {
-        updateDotSizes()
-      })
-      resizeObserver.observe(svgElement)
-      
-      // First dot - starts at 0%, goes forward
-      gsap.to(smallDotRef1.current, {
-        motionPath: {
-          path: pathElement,
-          autoRotate: false,
-          start: 1,
-          end: 0,
-        },
+      window.addEventListener('resize', onResize)
+      const ro = new ResizeObserver(updateDotSizes)
+      ro.observe(svgElement)
+
+      gsap.to(dot1, {
+        motionPath: { path: pathElement, autoRotate: false, start: 1, end: 0 },
         duration: 6,
         ease: 'none',
         repeat: -1,
       })
-      
-      // Second bigCirclePath animations
-      if (pathElement2 && smallDotRef3.current) {
-        const svgElement2 = pathElement2.closest('svg')
-        if (svgElement2) {
-          // Function to update dot sizes for second path
-          const updateDotSizes2 = () => {
-            const svgRect2 = svgElement2.getBoundingClientRect()
-            const viewBox2 = svgElement2.viewBox.baseVal
-            
-            if (svgRect2.width === 0 || svgRect2.height === 0) return
-            
-            const scaleX2 = svgRect2.width / viewBox2.width
-            const scaleY2 = svgRect2.height / viewBox2.height
-            const avgScale2 = (scaleX2 + scaleY2) / 2
-            
-            // To maintain 8px diameter (4px radius) in screen space
-            const targetScreenRadius = 4 // 8px diameter
-            const adjustedRadius2 = targetScreenRadius / avgScale2
-            
-            // Update circle radius to maintain 8px size
-            if (smallDotRef3.current) {
-              const circle3 = smallDotRef3.current.querySelector('circle')
-              if (circle3) circle3.setAttribute('r', String(adjustedRadius2))
-            }
-          }
-          
-          // Initial size update
-          updateDotSizes2()
-          
-          // Update on window resize with debounce
-          let resizeTimeout2: NodeJS.Timeout
-          const handleResize2 = () => {
-            clearTimeout(resizeTimeout2)
-            resizeTimeout2 = setTimeout(() => {
-              updateDotSizes2()
-            }, 100)
-          }
-          window.addEventListener('resize', handleResize2)
-          
-          // Also use ResizeObserver for more accurate detection
-          const resizeObserver2 = new ResizeObserver(() => {
-            updateDotSizes2()
-          })
-          resizeObserver2.observe(svgElement2)
-          
-          // Third dot - starts at 0%, goes forward
-          gsap.to(smallDotRef3.current, {
-            motionPath: {
-              path: pathElement2,
-              autoRotate: false,
-              start: 0,
-              end: 1,
-            },
-            duration: 10,
-            ease: 'none',
-            repeat: -1,
-          })
-        }
-      }
-      
-      console.log('Animations started')
-    }
 
-    // Wait for DOM to be ready - run when center is set after mount
-    const timeoutId = setTimeout(() => {
-      const pathElement = document.getElementById('bigCirclePath')
-      const pathElement2 = document.getElementById('bigCirclePath2')
-      const dot1 = smallDotRef1.current
-      const dot3 = smallDotRef3.current
-      
-      console.log('Checking elements:', {
-        pathElement: !!pathElement,
-        pathElement2: !!pathElement2,
-        dot1: !!dot1,
-        dot3: !!dot3,
-        center,
-      })
-      
-      if (pathElement && dot1 && pathElement2 && dot3) {
-        console.log('All elements ready, starting animation')
-        animateDots()
-      } else {
-        console.error('Elements not ready:', {
-          pathElement: !!pathElement,
-          pathElement2: !!pathElement2,
-          dot1: !!dot1,
-          dot3: !!dot3
+      const svgElement2 = pathElement2.closest('svg')
+      if (svgElement2 && smallDotRef3.current) {
+        const updateDotSizes2 = () => {
+          const sr2 = svgElement2.getBoundingClientRect()
+          const vb2 = svgElement2.viewBox.baseVal
+          if (sr2.width === 0 || sr2.height === 0) return
+          const avgScale2 = (sr2.width / vb2.width + sr2.height / vb2.height) / 2
+          const r2 = 4 / avgScale2
+          const circle3 = smallDotRef3.current?.querySelector('circle')
+          if (circle3) circle3.setAttribute('r', String(r2))
+        }
+        updateDotSizes2()
+        const resizeTimeout2 = { current: null as NodeJS.Timeout | null }
+        const onResize2 = () => {
+          if (resizeTimeout2.current) clearTimeout(resizeTimeout2.current)
+          resizeTimeout2.current = setTimeout(updateDotSizes2, 100)
+        }
+        window.addEventListener('resize', onResize2)
+        const ro2 = new ResizeObserver(updateDotSizes2)
+        ro2.observe(svgElement2)
+        gsap.to(smallDotRef3.current, {
+          motionPath: { path: pathElement2, autoRotate: false, start: 0, end: 1 },
+          duration: 10,
+          ease: 'none',
+          repeat: -1,
         })
       }
-    }, 1000)
+      return true
+    }
+
+    const tryRun = (delay: number, retries = 3) => {
+      timeoutId = setTimeout(async () => {
+        for (let i = 0; i < retries && !cancelled; i++) {
+          if (await runAnimations()) break
+          await new Promise((r) => setTimeout(r, 150))
+        }
+      }, delay)
+    }
+    tryRun(100)
 
     return () => {
+      cancelled = true
       window.removeEventListener('mousemove', handleMouseMove)
       clearTimeout(timeoutId)
-      // Note: resize listeners are added inside animateDots, cleanup would need refs
     }
   }, [center.x, center.y])
 
