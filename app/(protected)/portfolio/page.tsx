@@ -7,6 +7,8 @@ import ProjectChatInput from '@/components/ProjectChatInput'
 import ProjectListSkeleton from '@/components/ProjectListSkeleton'
 import { useLanguage } from '@/contexts/LanguageContext'
 
+const LOAD_TIMEOUT_MS = 8000 // 이 시간 지나면 무조건 로딩 해제 (스켈레톤에 갇힘 방지)
+
 type ProjectField = { label?: string; value?: string; type?: string }
 
 // 현재 언어의 translation을 가져오는 헬퍼 함수
@@ -47,7 +49,7 @@ export default function ProjectsPage() {
 
   const loadProjects = useCallback(async () => {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15초 후 타임아웃 (프로덕션 API 지연 시 스켈레톤에 갇히지 않도록)
+    const timeoutId = setTimeout(() => controller.abort(), 12000)
     try {
       const timestamp = Date.now()
       const response = await fetch(`/api/admin/projects?t=${timestamp}`, {
@@ -80,7 +82,15 @@ export default function ProjectsPage() {
 
   // 초기 로드 및 언어 변경 시 로드
   useEffect(() => {
+    setIsLoading(true)
     loadProjects()
+
+    // 프로덕션: fetch/네트워크 문제로 완료되지 않아도 N초 후 무조건 로딩 해제
+    const safetyTimer = setTimeout(() => {
+      setIsLoading(false)
+    }, LOAD_TIMEOUT_MS)
+
+    return () => clearTimeout(safetyTimer)
   }, [language, loadProjects])
 
   // 주기적으로 프로젝트 데이터 업데이트 확인 (1분마다, 페이지가 보일 때만)
