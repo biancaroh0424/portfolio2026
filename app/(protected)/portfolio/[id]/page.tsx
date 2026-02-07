@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { formatProjectTitle } from '@/lib/utils'
 import ChapterStatus from '@/components/ChapterStatus'
+import ProjectDetailSkeleton from '@/components/ProjectDetailSkeleton'
 import ProjectChatInput from '@/components/ProjectChatInput'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -583,79 +584,8 @@ export default function ProjectDetailPage() {
     }
   }, [currentTranslation?.content, language, isLoading])
 
-  // 스켈레톤 UI
   if (isLoading || !project) {
-    return (
-      <div className="min-h-screen">
-        <div className="flex flex-col md:flex-row">
-          {/* ChapterStatus 스켈레톤 - 모바일에서 숨김 */}
-          <div
-            className="hidden md:block sticky top-[80px] left-0 z-30 self-start"
-            style={{
-              width: '260px',
-              paddingLeft: '16px',
-              paddingRight: '16px',
-              paddingTop: '0',
-              maxHeight: 'calc(100vh - 80px)',
-            }}
-          >
-            <div className="space-y-2">
-              <div className="h-4 bg-gray-700 rounded animate-pulse" style={{ width: '60%' }} />
-              <div className="h-3 bg-gray-700 rounded animate-pulse" style={{ width: '80%', marginLeft: '16px' }} />
-              <div className="h-3 bg-gray-700 rounded animate-pulse" style={{ width: '70%', marginLeft: '16px' }} />
-              <div className="h-3 bg-gray-700 rounded animate-pulse" style={{ width: '90%', marginLeft: '24px' }} />
-              <div className="h-3 bg-gray-700 rounded animate-pulse" style={{ width: '75%', marginLeft: '24px' }} />
-            </div>
-          </div>
-
-          {/* 콘텐츠 스켈레톤 */}
-          <div
-            className="flex-1 w-full max-w-[980px] mx-auto"
-            style={{
-              marginLeft: 'auto',
-              marginRight: 'auto',
-              width: '100%',
-              maxWidth: '980px',
-              paddingLeft: '16px',
-              paddingRight: '16px',
-              paddingTop: '80px',
-              paddingBottom: '80px',
-            }}
-          >
-            <div className="space-y-6">
-              {/* 썸네일 스켈레톤 */}
-              <div className="h-48 md:h-64 bg-gray-700 rounded-lg animate-pulse" style={{ aspectRatio: '9 / 4' }} />
-              
-              {/* 제목 스켈레톤 */}
-              <div className="space-y-2">
-                <div className="h-6 md:h-8 bg-gray-700 rounded animate-pulse" style={{ width: '60%' }} />
-                <div className="h-6 md:h-8 bg-gray-700 rounded animate-pulse" style={{ width: '40%' }} />
-              </div>
-
-              {/* Project Summary 스켈레톤 */}
-              <div className="space-y-2">
-                <div className="h-6 bg-gray-700 rounded animate-pulse" style={{ width: '40%' }} />
-                <div className="space-y-0">
-                  <div className="h-12 md:h-16 bg-gray-700 rounded animate-pulse" />
-                  <div className="h-12 md:h-16 bg-gray-700 rounded animate-pulse" />
-                  <div className="h-12 md:h-16 bg-gray-700 rounded animate-pulse" />
-                </div>
-              </div>
-
-              {/* 콘텐츠 스켈레톤 */}
-              <div className="space-y-4">
-                <div className="h-4 bg-gray-700 rounded animate-pulse" />
-                <div className="h-4 bg-gray-700 rounded animate-pulse" style={{ width: '95%' }} />
-                <div className="h-4 bg-gray-700 rounded animate-pulse" style={{ width: '90%' }} />
-                <div className="h-48 md:h-64 bg-gray-700 rounded-lg animate-pulse" />
-                <div className="h-4 bg-gray-700 rounded animate-pulse" />
-                <div className="h-4 bg-gray-700 rounded animate-pulse" style={{ width: '85%' }} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <ProjectDetailSkeleton />
   }
   
   // 제목과 콘텐츠가 모두 없으면 빈 페이지 표시

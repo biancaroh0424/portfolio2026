@@ -933,21 +933,25 @@ div[data-type="column"],
   outline: none !important;
 }
 
-/* 포트폴리오 상세 페이지: 모바일에서 테이블 고정폭 + 가로 스크롤 */
+/* 포트폴리오 상세 페이지: 테이블 래퍼가 부모 100% 사용 */
 .table-scroll-wrapper {
   display: block;
   width: 100%;
+  max-width: 100%;
   margin: 16px 0;
+  box-sizing: border-box;
 }
-/* 최상위 컨테이너(portfolio max-w-[980px] div) ~743px 이하: 테이블 고정폭 + 가로 스크롤 */
+/* 모바일(~743px): 테이블이 래퍼(최상위 부모 div) 100%로 꽉 차도록 */
 @container portfolio-content (max-width: 743px) {
   .table-scroll-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
   .table-scroll-wrapper .editor-table {
-    min-width: max-content;
-    width: max-content !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
 
