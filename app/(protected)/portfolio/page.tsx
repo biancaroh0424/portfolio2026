@@ -46,24 +46,33 @@ export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   const loadProjects = useCallback(async () => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15초 후 타임아웃 (프로덕션 API 지연 시 스켈레톤에 갇히지 않도록)
     try {
-      // API를 통해 최신 프로젝트 데이터 가져오기 (캐시 없이, 타임스탬프 추가)
       const timestamp = Date.now()
       const response = await fetch(`/api/admin/projects?t=${timestamp}`, {
         cache: 'no-store',
+        signal: controller.signal,
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
         },
       })
+      clearTimeout(timeoutId)
       if (response.ok) {
         const data = await response.json()
-        setProjects(data)
+        setProjects(Array.isArray(data) ? data : [])
       } else {
-        console.error('Failed to load projects')
+        setProjects([])
       }
     } catch (error) {
-      console.error('Error loading projects:', error)
+      clearTimeout(timeoutId)
+      if ((error as Error)?.name === 'AbortError') {
+        console.warn('Projects fetch timeout')
+      } else {
+        console.error('Error loading projects:', error)
+      }
+      setProjects([])
     } finally {
       setIsLoading(false)
     }
