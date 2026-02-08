@@ -73,6 +73,7 @@ export default function ProjectDetailPage() {
   const [projects, setProjects] = useState<any[]>([])
   const [expandedImage, setExpandedImage] = useState<string | null>(null)
   const [expandedVideo, setExpandedVideo] = useState<{ src: string; caption?: string } | null>(null)
+  const modalScrollYRef = useRef(0)
   const [isChapterOpen, setIsChapterOpen] = useState(true)
   const [windowWidth, setWindowWidth] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
@@ -445,6 +446,28 @@ export default function ProjectDetailPage() {
     }
   }, [currentTranslation?.content, language])
 
+  // 모바일: 이미지/비디오 확대 모달 열릴 때 스크롤 위치 고정 → 닫으면 원래 위치 복원
+  useEffect(() => {
+    const isOpen = !!expandedImage || !!expandedVideo
+    if (!isOpen) {
+      // 복원
+      if (typeof window !== 'undefined') {
+        const y = modalScrollYRef.current || 0
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+        window.scrollTo(0, y)
+      }
+      return
+    }
+    if (typeof window === 'undefined') return
+    const y = window.scrollY || window.pageYOffset || 0
+    modalScrollYRef.current = y
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${y}px`
+    document.body.style.width = '100%'
+  }, [expandedImage, expandedVideo])
+
   // 이미지/비디오 클릭 이벤트 추가 (이벤트 위임 사용)
   useEffect(() => {
     if (!currentTranslation?.content) return
@@ -815,7 +838,7 @@ export default function ProjectDetailPage() {
       {/* 이미지 확대 모달 */}
       {expandedImage && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           style={{
             backgroundColor: 'var(--fill-black-10)',
             backdropFilter: 'blur(8px)',
@@ -859,7 +882,7 @@ export default function ProjectDetailPage() {
       {/* 비디오 확대 모달 */}
       {expandedVideo && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           style={{
             backgroundColor: 'var(--fill-black-10)',
             backdropFilter: 'blur(8px)',
