@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useChatBot } from '@/contexts/ChatBotContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { usePathname } from 'next/navigation'
 
 // Chip 컴포넌트 (Figma 디자인에 맞춘 스타일)
@@ -101,6 +102,7 @@ export default function ProjectChatInput() {
   const inputContainerRef = useRef<HTMLDivElement>(null)
   const isSendingRef = useRef(false) // 중복 전송 방지
   const { setChatInputSetter, chatInput, setChatInput, selectedTextChip, setSelectedTextChip, isOpen, openChatBot, sendMessage, width } = useChatBot()
+  const { t } = useLanguage()
   const pathname = usePathname()
 
   // 모바일 여부 확인
@@ -411,7 +413,7 @@ export default function ProjectChatInput() {
                   }
                 }
               }}
-              placeholder="YJ AI Assistant 에게 물어보기"
+              placeholder={t('chatbot.projectPlaceholder')}
               onFocus={() => {
                 setIsFocused(true)
                 if (containerRef.current && !isMobile) {
