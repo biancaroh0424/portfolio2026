@@ -2554,7 +2554,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                   return
                 }
               }}
-              placeholder="노영주가 어떤 것을 작업했는지 물어보세요"
+              placeholder={t('chatbot.placeholder')}
               style={{
                 flex: 1,
                 backgroundColor: 'transparent',

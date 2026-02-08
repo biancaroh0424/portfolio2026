@@ -28,6 +28,7 @@ const translations: Record<Language, Record<string, string>> = {
     'home.button.projects': 'Go to Portfolio',
     'home.button.aiAssistant': 'AI Assistant',
     'chatbot.greeting': '👋 Hi, I\'m YJ Assistant.\n\nI help recruiters and hiring managers quickly understand Youngjoo Roh\'s design work and measurable impact.\n\nWhat would you like to know?',
+    'chatbot.placeholder': 'Ask about what Youngjoo Roh has worked on',
   },
   ko: {
     'nav.project': '포트폴리오',
@@ -42,6 +43,7 @@ const translations: Record<Language, Record<string, string>> = {
     'home.button.projects': '포트폴리오 보기',
     'home.button.aiAssistant': 'AI 어시스턴트',
     'chatbot.greeting': '👋 안녕하세요! 저는 YJ Assistant입니다.\n\n노영주님의 디자인 작업과 측정 가능한 성과를 빠르게 이해할 수 있도록 도와드립니다.\n\n무엇이 궁금하신가요?',
+    'chatbot.placeholder': '노영주가 어떤 것을 작업했는지 물어보세요',
   },
   it: {
     'nav.project': 'Portfolio',
@@ -56,6 +58,7 @@ const translations: Record<Language, Record<string, string>> = {
     'home.button.projects': 'Vai al Portfolio',
     'home.button.aiAssistant': 'Assistente AI',
     'chatbot.greeting': '👋 Ciao! Sono YJ Assistant.\n\nAiuto recruiter e responsabili delle assunzioni a comprendere rapidamente il lavoro di design e l\'impatto misurabile di Youngjoo Roh.\n\nCosa vorresti sapere?',
+    'chatbot.placeholder': 'Chiedimi cosa ha realizzato Youngjoo Roh',
   },
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface ChatEntry {
@@ -65,6 +65,35 @@ export default function AnalyticsPage() {
   const [showModal, setShowModal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
+  const [chartWidth, setChartWidth] = useState<number>(0)
+  const hourChartRef = useRef<HTMLDivElement | null>(null)
+  const setHourChartEl = useCallback((el: HTMLDivElement | null) => {
+    hourChartRef.current = el
+  }, [])
+
+  useEffect(() => {
+    let ro: ResizeObserver | null = null
+    let cancelled = false
+    const init = () => {
+      const el = hourChartRef.current
+      if (!el) {
+        if (!cancelled) requestAnimationFrame(init)
+        return
+      }
+      const update = () => {
+        const w = el.getBoundingClientRect().width
+        if (w > 0) setChartWidth(Math.floor(w))
+      }
+      update()
+      ro = new ResizeObserver(update)
+      ro.observe(el)
+    }
+    init()
+    return () => {
+      cancelled = true
+      ro?.disconnect()
+    }
+  }, [])
 
   useEffect(() => {
     const checkAuth = () => {
@@ -197,6 +226,8 @@ export default function AnalyticsPage() {
 
   const maxCount = Math.max(...hourlyStats.map(s => s.count), 1)
   const chartHeight = 300
+  const chartPaddingX = 20
+  const chartWidthSafe = chartWidth > 0 ? chartWidth : 100
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8" style={{ paddingTop: '120px' }}>
@@ -262,25 +293,32 @@ export default function AnalyticsPage() {
             {/* 시간별 라인 그래프 — viewBox 0 0 100 300 으로 비율 유지, 날짜 차트와 동일하게 보기 좋게 */}
             <div className="bg-gray-800 p-6 rounded-lg mb-8">
               <h2 className="text-xl font-bold mb-4">Questions by Hour (24h)</h2>
-              <div className="relative" style={{ height: `${chartHeight}px`, padding: '0 20px' }}>
-                <svg width="100%" height={chartHeight} viewBox="0 0 100 300" preserveAspectRatio="xMidYMid meet" className="overflow-visible">
+              <div ref={setHourChartEl} className="relative" style={{ height: `${chartHeight}px`, padding: '0 20px' }}>
+                <svg
+                  width="100%"
+                  height={chartHeight}
+                  viewBox={`0 0 ${chartWidthSafe} ${chartHeight}`}
+                  preserveAspectRatio="none"
+                  className="overflow-visible"
+                >
                   {Array.from({ length: 5 }).map((_, i) => {
-                    const y = (300 / 4) * i
+                    const y = (chartHeight / 4) * i
                     return (
-                      <line key={i} x1="0" y1={y} x2="100" y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
+                      <line key={i} x1={0} y1={y} x2={chartWidthSafe} y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
                     )
                   })}
                   {Array.from({ length: 5 }).map((_, i) => {
                     const value = Math.round((maxCount / 4) * (4 - i))
-                    const y = (300 / 4) * i
+                    const y = (chartHeight / 4) * i
                     return (
                       <text key={i} x="2" y={y + 4} fontSize="11" fill="rgba(255,255,255,0.5)" textAnchor="start">{value}</text>
                     )
                   })}
                   <polyline
                     points={hourlyStats.map((stat, index) => {
-                      const x = 5 + (index / 23) * 90
-                      const y = 300 - (stat.count / maxCount) * (300 - 40) - 20
+                      const innerWidth = Math.max(chartWidthSafe - chartPaddingX * 2, 1)
+                      const x = chartPaddingX + (index / 23) * innerWidth
+                      const y = chartHeight - (stat.count / maxCount) * (chartHeight - 40) - 20
                       return `${x},${y}`
                     }).join(' ')}
                     fill="none"
@@ -289,15 +327,16 @@ export default function AnalyticsPage() {
                     className="cursor-pointer"
                   />
                   {hourlyStats.map((stat, index) => {
-                    const x = 5 + (index / 23) * 90
-                    const y = 300 - (stat.count / maxCount) * (300 - 40) - 20
+                    const innerWidth = Math.max(chartWidthSafe - chartPaddingX * 2, 1)
+                    const x = chartPaddingX + (index / 23) * innerWidth
+                    const y = chartHeight - (stat.count / maxCount) * (chartHeight - 40) - 20
                     const showLabel = stat.hour % 2 === 0
                     return (
                       <g key={index}>
                         <circle
                           cx={x}
                           cy={y}
-                          r="1.8"
+                          r="4"
                           fill="#DB6930"
                           className="cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => handleLineClick(stat.hour)}
@@ -388,7 +427,7 @@ export default function AnalyticsPage() {
                                 <circle
                                   cx={x}
                                   cy={y}
-                                  r="5"
+                                  r="4"
                                   fill="#DB6930"
                                   className="cursor-pointer hover:r-7 transition-all"
                                   onClick={() => handleDateClick(stat.date)}

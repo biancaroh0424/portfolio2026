@@ -7,16 +7,28 @@ export default function ProjectListSkeleton() {
     'linear-gradient(to right, var(--greyscale-700, #222424), var(--greyscale-200, #b3b3b3), var(--greyscale-700, #222424))'
 
   return (
-    <div className="min-h-screen projects-page w-full min-w-0 max-w-full overflow-x-hidden">
-      <div className="flex flex-col items-center self-stretch w-full min-w-0 max-w-full pt-[200px] pb-[200px] box-border overflow-x-hidden">
-        <div className="flex flex-col gap-4 self-stretch w-full min-w-0 max-w-full tablet:max-w-[1160px] mx-auto px-4 tablet:px-6 box-border">
+    <div
+      className="min-h-screen projects-page w-full min-w-0 max-w-full overflow-x-hidden"
+      style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}
+    >
+      <div
+        className="flex flex-col items-center self-stretch w-full min-w-0 max-w-full pt-[200px] pb-[200px] box-border overflow-x-hidden"
+        style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}
+      >
+        <div
+          className="flex flex-col gap-4 self-stretch w-full min-w-0 max-w-full tablet:max-w-[1160px] mx-auto px-4 tablet:px-6 box-border"
+          style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+        >
           <div
             className="animate-pulse rounded h-9 tablet:h-12 desktop:h-[67px] w-32 tablet:w-40 desktop:w-[200px] shrink-0"
             style={{ backgroundColor: skeletonBg }}
           />
         </div>
 
-        <div className="flex flex-col justify-center items-start self-stretch w-full min-w-0 max-w-full pt-8 tablet:pt-12 desktop:pt-[49px] box-border overflow-x-hidden">
+        <div
+          className="flex flex-col justify-center items-start self-stretch w-full min-w-0 max-w-full pt-8 tablet:pt-12 desktop:pt-[49px] box-border overflow-x-hidden"
+          style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}
+        >
           {[1, 2, 3].map((i) => (
             <div
               key={i}
