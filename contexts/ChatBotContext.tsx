@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 
 interface ChatBotContextType {
   isOpen: boolean
@@ -22,8 +23,10 @@ const ChatBotContext = createContext<ChatBotContextType | undefined>(undefined)
 
 const CHATBOT_WIDTH_KEY = 'chatbot-width'
 const CHATBOT_IS_OPEN_KEY = 'chatbot-is-open'
+const CHATBOT_IS_OPEN_PORTFOLIO_KEY = 'chatbot-is-open-portfolio'
 
 export function ChatBotProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
   // SSR과 클라이언트 간 hydration mismatch 방지를 위해 초기값은 항상 false
   const [isOpen, setIsOpen] = useState(false)
   // SSR과 클라이언트 간 hydration mismatch 방지를 위해 초기값은 항상 320
@@ -34,9 +37,10 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
   const sendMessageRef = useRef<((message: string) => void) | undefined>(undefined)
   const hasLoadedFromStorage = useRef(false)
 
-  // 클라이언트에서만 localStorage에서 값 불러오기 (한 번만)
+  // 클라이언트에서만 localStorage에서 값 불러오기 (pathname 준비된 뒤 한 번만)
+  // 포트폴리오는 전용 키 사용, 없으면 기본 열림 / 그 외는 기본 닫힘
   useEffect(() => {
-    if (!hasLoadedFromStorage.current && typeof window !== 'undefined') {
+    if (!hasLoadedFromStorage.current && typeof window !== 'undefined' && pathname != null) {
       try {
         // width 불러오기
         const savedWidth = localStorage.getItem(CHATBOT_WIDTH_KEY)
@@ -47,17 +51,20 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
           }
         }
         
-        // isOpen 상태 불러오기
-        const savedIsOpen = localStorage.getItem(CHATBOT_IS_OPEN_KEY)
+        const isPortfolio = pathname.startsWith('/portfolio')
+        const storageKey = isPortfolio ? CHATBOT_IS_OPEN_PORTFOLIO_KEY : CHATBOT_IS_OPEN_KEY
+        const savedIsOpen = localStorage.getItem(storageKey)
         if (savedIsOpen !== null) {
           setIsOpen(savedIsOpen === 'true')
+        } else {
+          setIsOpen(isPortfolio) // 포트폴리오: 기본 열림, 그 외: 기본 닫힘
         }
       } catch (e) {
         console.warn('Failed to load chatbot state from storage:', e)
       }
       hasLoadedFromStorage.current = true
     }
-  }, [])
+  }, [pathname])
 
   // setWidth를 래핑하여 항상 localStorage에 저장
   const setWidthWithStorage = useCallback((newWidth: number) => {
@@ -71,16 +78,34 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // isOpen 상태 변경 시 localStorage에 저장
+  // isOpen 상태 변경 시 현재 경로에 맞는 키로 저장 (포트폴리오 전용 키 / 그 외 공통 키)
   useEffect(() => {
-    if (hasLoadedFromStorage.current && typeof window !== 'undefined') {
+    if (hasLoadedFromStorage.current && typeof window !== 'undefined' && pathname != null) {
       try {
-        localStorage.setItem(CHATBOT_IS_OPEN_KEY, isOpen.toString())
+        const key = pathname.startsWith('/portfolio') ? CHATBOT_IS_OPEN_PORTFOLIO_KEY : CHATBOT_IS_OPEN_KEY
+        localStorage.setItem(key, isOpen.toString())
       } catch (e) {
         console.warn('Failed to save chatbot isOpen state to storage:', e)
       }
     }
-  }, [isOpen])
+  }, [isOpen, pathname])
+
+  // 경로 변경 시 해당 구역 저장값으로 동기화 (포트폴리오 진입 시 기본 열림, 상세↔리스트 동기화)
+  useEffect(() => {
+    if (!hasLoadedFromStorage.current || typeof window === 'undefined' || pathname == null) return
+    try {
+      const isPortfolio = pathname.startsWith('/portfolio')
+      const key = isPortfolio ? CHATBOT_IS_OPEN_PORTFOLIO_KEY : CHATBOT_IS_OPEN_KEY
+      const savedIsOpen = localStorage.getItem(key)
+      if (savedIsOpen !== null) {
+        setIsOpen(savedIsOpen === 'true')
+      } else {
+        setIsOpen(isPortfolio) // 포트폴리오: 저장값 없으면 열림, 그 외: 닫힘
+      }
+    } catch {
+      // 무시
+    }
+  }, [pathname])
 
   const toggleChatBot = () => {
     setIsOpen(prev => !prev)

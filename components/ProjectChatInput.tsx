@@ -318,7 +318,7 @@ export default function ProjectChatInput() {
         width: '100%',
         maxWidth: '980px',
         padding: isMobile ? '0 16px' : '0 24px',
-        pointerEvents: inputVisible ? 'auto' : 'none',
+        pointerEvents: 'none',
         display: 'flex',
         justifyContent: 'center',
         transition: 'transform 0.3s ease-out'
@@ -335,7 +335,8 @@ export default function ProjectChatInput() {
           alignSelf: 'stretch',
           width: isMobile ? '100%' : '380px',
           maxWidth: '100%',
-          transition: 'all 0.15s ease'
+          transition: 'all 0.15s ease',
+          pointerEvents: inputVisible ? 'auto' : 'none'
         }}
       >
         {/* Input Container with rounded capsule design */}
