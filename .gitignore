@@ -41,3 +41,7 @@ next-env.d.ts
 
 # uploaded images
 /public/uploads
+
+# data (로컬/런타임 데이터, 커밋 제외)
+/data/analytics.json
+/data/projects.json
