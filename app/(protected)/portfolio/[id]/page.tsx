@@ -9,6 +9,9 @@ import ChapterStatus from '@/components/ChapterStatus'
 import ProjectDetailSkeleton from '@/components/ProjectDetailSkeleton'
 import ProjectChatInput from '@/components/ProjectChatInput'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useChatBot } from '@/contexts/ChatBotContext'
+
+const CHATBOT_IS_OPEN_PORTFOLIO_KEY = 'chatbot-is-open-portfolio'
 
 // 고정 네비(80px) 아래로 섹션 제목이 보이도록 스크롤 오프셋 (반응형 동일)
 const SCROLL_OFFSET_PX = 100
@@ -69,6 +72,7 @@ export default function ProjectDetailPage() {
   const params = useParams()
   const projectId = params.id as string
   const { language } = useLanguage()
+  const { openChatBot } = useChatBot()
   const [project, setProject] = useState<any>(null)
   const [projects, setProjects] = useState<any[]>([])
   const [expandedImage, setExpandedImage] = useState<string | null>(null)
@@ -98,6 +102,14 @@ export default function ProjectDetailPage() {
     }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  // /portfolio 상세 진입 시 저장된 값이 없거나 열림이면 ChatBot 열기 (리스트에서 껐으면 여기서도 유지)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const saved = localStorage.getItem(CHATBOT_IS_OPEN_PORTFOLIO_KEY)
+    if (saved !== 'false') openChatBot()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // 화면 크기 추적
@@ -628,11 +640,13 @@ export default function ProjectDetailPage() {
         {/* ChapterStatus 사이드바 */}
         {currentTranslation?.content && (
           <ChapterStatus 
+            key={`chapter-${projectId}-${language}`}
             content={currentTranslation.content || ''} 
             title={currentTranslation.title}
             onToggle={setIsChapterOpen}
             contentContainerRef={contentRef}
             collapseWhenNarrow={windowWidth > 0 && windowWidth < 744}
+            contentReady={contentReady}
           />
         )}
         

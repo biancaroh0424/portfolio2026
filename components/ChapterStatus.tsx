@@ -18,9 +18,11 @@ interface ChapterStatusProps {
   contentContainerRef?: React.RefObject<HTMLElement | null>
   /** true이면 본문 영역이 좁을 때(744px 미만) 사이드바 접힘 */
   collapseWhenNarrow?: boolean
+  /** 본문 DOM에 헤딩 id 부여가 끝났을 때 true. 넘기면 새로고침/언어 전환 후 목차·스크롤 위치 표시가 안정적임 */
+  contentReady?: boolean
 }
 
-export default function ChapterStatus({ content, title, onToggle, contentContainerRef, collapseWhenNarrow }: ChapterStatusProps) {
+export default function ChapterStatus({ content, title, onToggle, contentContainerRef, collapseWhenNarrow, contentReady }: ChapterStatusProps) {
   const [chapters, setChapters] = useState<Chapter[]>([])
   const [activeChapter, setActiveChapter] = useState<string | null>(null)
   const [hoveredChapter, setHoveredChapter] = useState<string | null>(null)
@@ -37,51 +39,95 @@ export default function ChapterStatus({ content, title, onToggle, contentContain
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isScrollingRef = useRef(false)
 
-  // HTML 콘텐츠에서 헤딩 추출 (h2~h5)
+  // 헤딩 추출 (호출 시점의 contentContainerRef 사용). id 없으면 순서로 부여하고 DOM에도 설정해 스크롤 위치 표시가 동작
+  const extractChaptersRef = useRef<() => void>(() => {})
+  extractChaptersRef.current = () => {
+    const root =
+      contentContainerRef?.current ??
+      document.querySelector('[data-portfolio-body]') ?? document
+    const selector = 'h2, h3, h4, h5'
+    const headings = root.querySelectorAll(selector)
+    const chaptersList: Chapter[] = []
+    headings.forEach((heading, index) => {
+      const el = heading as HTMLElement
+      let id = el.id
+      const text = el.textContent?.trim() || ''
+      const tagName = heading.tagName.toLowerCase()
+      const level = parseInt(tagName.replace('h', ''), 10)
+      if (!text || level < 2 || level > 5) return
+      if (!id || id === '-' || /^-+$/.test(id)) {
+        id = `heading-${index + 1}`
+        el.id = id
+      }
+      chaptersList.push({ id, text, level })
+    })
+    if (chaptersList.length > 0) setChapters(chaptersList)
+  }
+
+  // HTML 콘텐츠에서 헤딩 추출 (h2~h5) — content/언어/contentReady 변경 시 레이아웃 후 재실행
   useEffect(() => {
     if (!content) return
-
-    const run = () => {
-      // ref가 아직 안 붙었을 수 있으므로 [data-portfolio-body] 폴백 사용
-      const root =
-        contentContainerRef?.current ??
-        document.querySelector('[data-portfolio-body]') ??
-        document
-      const selector = 'h2, h3, h4, h5'
-      const headings = root.querySelectorAll(selector)
-      const chaptersList: Chapter[] = []
-
-      headings.forEach((heading) => {
-        const id = heading.id
-        const text = heading.textContent?.trim() || ''
-        const tagName = heading.tagName.toLowerCase()
-        const level = parseInt(tagName.replace('h', ''), 10)
-
-        // h2~h5만 포함, ID가 있는 경우만 추가 (상세 페이지 useLayoutEffect에서 id 부여)
-        if (text && level >= 2 && level <= 5 && id && id !== '-' && !/^-+$/.test(id)) {
-          chaptersList.push({ id, text, level })
-        }
-      })
-
-      if (chaptersList.length > 0) {
-        setChapters(chaptersList)
-      }
-    }
-
-    run()
-    const t1 = setTimeout(run, 100)
-    const t2 = setTimeout(run, 400)
-    const t3 = setTimeout(run, 900)
-    const t4 = setTimeout(run, 1600)
-    const t5 = setTimeout(run, 2500)
+    const run = () => extractChaptersRef.current()
+    // 레이아웃 적용 직후 실행 (페이지 useLayoutEffect로 id 부여된 뒤)
+    const rafId = requestAnimationFrame(() => {
+      requestAnimationFrame(run)
+    })
+    const t0 = setTimeout(run, 0)
+    const t1 = setTimeout(run, 80)
+    const t2 = setTimeout(run, 200)
+    const t3 = setTimeout(run, 500)
+    const t4 = setTimeout(run, 1000)
+    const t5 = setTimeout(run, 1800)
+    const t6 = setTimeout(run, 2800)
+    // contentReady가 true일 때 추가로 실행 (새로고침/언어 전환 후 목차 확실히 채움)
+    const tReady = contentReady ? setTimeout(run, 50) : null
     return () => {
+      cancelAnimationFrame(rafId)
+      clearTimeout(t0)
       clearTimeout(t1)
       clearTimeout(t2)
       clearTimeout(t3)
       clearTimeout(t4)
       clearTimeout(t5)
+      clearTimeout(t6)
+      if (tReady) clearTimeout(tReady)
     }
-  }, [content, contentContainerRef])
+  }, [content, contentContainerRef, contentReady])
+
+  // 본문 DOM 변경 시 챕터 재추출 (언어 전환, 동적 렌더 등). contentReady 시에도 컨테이너 확보 후 실행
+  useEffect(() => {
+    const root =
+      contentContainerRef?.current ?? document.querySelector('[data-portfolio-body]')
+    if (typeof window === 'undefined') return
+    if (!root) {
+      // ref가 아직 없을 수 있음 → 지연 후 여러 번 시도 (새로고침 시 목차 채우기)
+      const r1 = setTimeout(extractChaptersRef.current, 150)
+      const r2 = setTimeout(extractChaptersRef.current, 400)
+      const r3 = setTimeout(extractChaptersRef.current, 800)
+      return () => {
+        clearTimeout(r1)
+        clearTimeout(r2)
+        clearTimeout(r3)
+      }
+    }
+    let scheduleId: ReturnType<typeof setTimeout> | null = null
+    const scheduleRun = () => {
+      if (scheduleId) clearTimeout(scheduleId)
+      scheduleId = setTimeout(() => {
+        scheduleId = null
+        extractChaptersRef.current()
+      }, 150)
+    }
+    const observer = new MutationObserver(scheduleRun)
+    observer.observe(root, { childList: true, subtree: true })
+    // 연결 직후 이미 바뀐 본문이 있을 수 있으므로 한 번 실행
+    const onceId = setTimeout(extractChaptersRef.current, 80)
+    return () => {
+      clearTimeout(onceId)
+      observer.disconnect()
+      if (scheduleId) clearTimeout(scheduleId)
+    }
+  }, [content, contentContainerRef, contentReady])
 
   // URL hash와 활성 챕터 동기화 (챗봇/링크로 이동 시 즉시 반영)
   useEffect(() => {
@@ -114,8 +160,14 @@ export default function ChapterStatus({ content, title, onToggle, contentContain
       if (activeId) setActiveChapter(activeId)
     }
     syncFromHash()
+    const t1 = setTimeout(syncFromHash, 100)
+    const t2 = setTimeout(syncFromHash, 400)
     window.addEventListener('hashchange', syncFromHash)
-    return () => window.removeEventListener('hashchange', syncFromHash)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      window.removeEventListener('hashchange', syncFromHash)
+    }
   }, [chapters, contentContainerRef])
 
   // 스크롤 위치에 따라 활성 챕터 업데이트
@@ -179,10 +231,18 @@ export default function ChapterStatus({ content, title, onToggle, contentContain
 
     window.addEventListener('scroll', throttledHandleScroll, { passive: true })
     handleScroll()
-    // DOM/레이아웃 안정화 후 한 번 더 실행
-    const t = setTimeout(handleScroll, 200)
+    // DOM/레이아웃 안정화 후 재실행 (새로고침·언어 전환 시 active 정확히 맞추기)
+    const t1 = setTimeout(handleScroll, 100)
+    const t2 = setTimeout(handleScroll, 300)
+    const t3 = setTimeout(handleScroll, 600)
+    const t4 = setTimeout(handleScroll, 400)
+    const t5 = setTimeout(handleScroll, 800)
     return () => {
-      clearTimeout(t)
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+      clearTimeout(t4)
+      clearTimeout(t5)
       window.removeEventListener('scroll', throttledHandleScroll)
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current)
