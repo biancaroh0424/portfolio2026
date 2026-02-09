@@ -104,10 +104,11 @@ export default function ProjectDetailPage() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  // /portfolio 상세 진입 시 ChatBot 열기 (유저가 닫아둔 상태가 아닐 때만. Context pathname sync와 타이밍 이슈 대비해 여러 번 시도)
+  // /portfolio 상세 진입 시 ChatBot 열기 (모바일 744px 이하는 자동 열기 안 함. 유저가 닫아둔 상태가 아닐 때만)
   useEffect(() => {
     if (typeof window === 'undefined') return
     const tryOpen = () => {
+      if (window.innerWidth <= 743) return
       if (localStorage.getItem(CHATBOT_CLOSED_BY_USER_KEY) !== 'true') openChatBot()
     }
     tryOpen()

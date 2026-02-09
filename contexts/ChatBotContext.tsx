@@ -26,6 +26,7 @@ const CHATBOT_IS_OPEN_KEY = 'chatbot-is-open'
 const CHATBOT_IS_OPEN_PORTFOLIO_KEY = 'chatbot-is-open-portfolio'
 /** 유저가 닫기 누르면 true. 어느 페이지에서든 유저가 열 때까지 닫혀 있음 */
 const CHATBOT_CLOSED_BY_USER_KEY = 'chatbot-closed-by-user'
+const MOBILE_MAX_WIDTH = 743 // 이하면 모바일 → 에이전트 자동 열기 안 함
 
 export function ChatBotProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -61,7 +62,8 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
           setIsOpen(false)
         } else {
           const isPortfolio = pathname.startsWith('/portfolio') || pathname.includes('/portfolio')
-          setIsOpen(!!isPortfolio)
+          const isMobile = typeof window !== 'undefined' && window.innerWidth <= MOBILE_MAX_WIDTH
+          setIsOpen(!!(isPortfolio && !isMobile))
         }
       } catch (e) {
         console.warn('Failed to load chatbot state from storage:', e)
@@ -103,7 +105,8 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
         return
       }
       const isPortfolio = pathname.startsWith('/portfolio') || pathname.includes('/portfolio')
-      setIsOpen(!!isPortfolio)
+      const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH
+      setIsOpen(!!(isPortfolio && !isMobile))
     } catch {
       // 무시
     }
