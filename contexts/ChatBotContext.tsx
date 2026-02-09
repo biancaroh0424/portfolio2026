@@ -24,6 +24,8 @@ const ChatBotContext = createContext<ChatBotContextType | undefined>(undefined)
 const CHATBOT_WIDTH_KEY = 'chatbot-width'
 const CHATBOT_IS_OPEN_KEY = 'chatbot-is-open'
 const CHATBOT_IS_OPEN_PORTFOLIO_KEY = 'chatbot-is-open-portfolio'
+/** 유저가 닫기 누르면 true. 어느 페이지에서든 유저가 열 때까지 닫혀 있음 */
+const CHATBOT_CLOSED_BY_USER_KEY = 'chatbot-closed-by-user'
 
 export function ChatBotProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -38,10 +40,13 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
   const hasLoadedFromStorage = useRef(false)
 
   // 클라이언트에서만 localStorage에서 값 불러오기 (pathname 준비된 뒤 한 번만)
-  // 포트폴리오는 전용 키 사용, 없으면 기본 열림 / 그 외는 기본 닫힘
+  // 새로고침 시 "유저가 닫음" 플래그 초기화 → 포트폴리오에서 다시 열림
   useEffect(() => {
     if (!hasLoadedFromStorage.current && typeof window !== 'undefined' && pathname != null) {
       try {
+        // 새로고침 = 풀 페이지 로드이므로 "유저가 닫음" 초기화 (이번 세션 내 라우팅에서만 유지)
+        localStorage.setItem(CHATBOT_CLOSED_BY_USER_KEY, 'false')
+
         // width 불러오기
         const savedWidth = localStorage.getItem(CHATBOT_WIDTH_KEY)
         if (savedWidth) {
@@ -50,14 +55,13 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
             setWidth(parsed)
           }
         }
-        
-        const isPortfolio = pathname.startsWith('/portfolio')
-        const storageKey = isPortfolio ? CHATBOT_IS_OPEN_PORTFOLIO_KEY : CHATBOT_IS_OPEN_KEY
-        const savedIsOpen = localStorage.getItem(storageKey)
-        if (savedIsOpen !== null) {
-          setIsOpen(savedIsOpen === 'true')
+
+        const closedByUser = localStorage.getItem(CHATBOT_CLOSED_BY_USER_KEY) === 'true'
+        if (closedByUser) {
+          setIsOpen(false)
         } else {
-          setIsOpen(isPortfolio) // 포트폴리오: 기본 열림, 그 외: 기본 닫힘
+          const isPortfolio = pathname.startsWith('/portfolio') || pathname.includes('/portfolio')
+          setIsOpen(!!isPortfolio)
         }
       } catch (e) {
         console.warn('Failed to load chatbot state from storage:', e)
@@ -78,46 +82,62 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // isOpen 상태 변경 시 현재 경로에 맞는 키로 저장 (포트폴리오 전용 키 / 그 외 공통 키)
+  // 열림 상태가 되면 "유저가 닫음" 플래그 해제 (경로 sync로 열렸을 때도)
   useEffect(() => {
-    if (hasLoadedFromStorage.current && typeof window !== 'undefined' && pathname != null) {
+    if (typeof window !== 'undefined' && isOpen) {
       try {
-        const key = pathname.startsWith('/portfolio') ? CHATBOT_IS_OPEN_PORTFOLIO_KEY : CHATBOT_IS_OPEN_KEY
-        localStorage.setItem(key, isOpen.toString())
+        localStorage.setItem(CHATBOT_CLOSED_BY_USER_KEY, 'false')
       } catch (e) {
-        console.warn('Failed to save chatbot isOpen state to storage:', e)
+        console.warn('Failed to save chatbot state to storage:', e)
       }
     }
-  }, [isOpen, pathname])
+  }, [isOpen])
 
-  // 경로 변경 시 해당 구역 저장값으로 동기화 (포트폴리오 진입 시 기본 열림, 상세↔리스트 동기화)
+  // pathname 변경 시: 유저가 닫아둔 상태면 항상 닫힘, 아니면 포트폴리오만 열림
   useEffect(() => {
-    if (!hasLoadedFromStorage.current || typeof window === 'undefined' || pathname == null) return
+    if (typeof window === 'undefined' || pathname == null) return
     try {
-      const isPortfolio = pathname.startsWith('/portfolio')
-      const key = isPortfolio ? CHATBOT_IS_OPEN_PORTFOLIO_KEY : CHATBOT_IS_OPEN_KEY
-      const savedIsOpen = localStorage.getItem(key)
-      if (savedIsOpen !== null) {
-        setIsOpen(savedIsOpen === 'true')
-      } else {
-        setIsOpen(isPortfolio) // 포트폴리오: 저장값 없으면 열림, 그 외: 닫힘
+      const closedByUser = localStorage.getItem(CHATBOT_CLOSED_BY_USER_KEY) === 'true'
+      if (closedByUser) {
+        setIsOpen(false)
+        return
       }
+      const isPortfolio = pathname.startsWith('/portfolio') || pathname.includes('/portfolio')
+      setIsOpen(!!isPortfolio)
     } catch {
       // 무시
     }
   }, [pathname])
 
-  const toggleChatBot = () => {
-    setIsOpen(prev => !prev)
-  }
+  const toggleChatBot = useCallback(() => {
+    setIsOpen((prev) => {
+      const next = !prev
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(CHATBOT_CLOSED_BY_USER_KEY, next ? 'false' : 'true')
+        } catch {}
+      }
+      return next
+    })
+  }, [])
 
-  const openChatBot = () => {
+  const openChatBot = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(CHATBOT_CLOSED_BY_USER_KEY, 'false')
+      } catch {}
+    }
     setIsOpen(true)
-  }
+  }, [])
 
-  const closeChatBot = () => {
+  const closeChatBot = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(CHATBOT_CLOSED_BY_USER_KEY, 'true')
+      } catch {}
+    }
     setIsOpen(false)
-  }
+  }, [])
 
   const handleSetChatInput = useCallback((text: string) => {
     setChatInputState(text)

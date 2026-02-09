@@ -11,7 +11,7 @@ import ProjectChatInput from '@/components/ProjectChatInput'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useChatBot } from '@/contexts/ChatBotContext'
 
-const CHATBOT_IS_OPEN_PORTFOLIO_KEY = 'chatbot-is-open-portfolio'
+const CHATBOT_CLOSED_BY_USER_KEY = 'chatbot-closed-by-user'
 
 // 고정 네비(80px) 아래로 섹션 제목이 보이도록 스크롤 오프셋 (반응형 동일)
 const SCROLL_OFFSET_PX = 100
@@ -104,11 +104,19 @@ export default function ProjectDetailPage() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  // /portfolio 상세 진입 시 저장된 값이 없거나 열림이면 ChatBot 열기 (리스트에서 껐으면 여기서도 유지)
+  // /portfolio 상세 진입 시 ChatBot 열기 (유저가 닫아둔 상태가 아닐 때만. Context pathname sync와 타이밍 이슈 대비해 여러 번 시도)
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const saved = localStorage.getItem(CHATBOT_IS_OPEN_PORTFOLIO_KEY)
-    if (saved !== 'false') openChatBot()
+    const tryOpen = () => {
+      if (localStorage.getItem(CHATBOT_CLOSED_BY_USER_KEY) !== 'true') openChatBot()
+    }
+    tryOpen()
+    const t1 = setTimeout(tryOpen, 100)
+    const t2 = setTimeout(tryOpen, 400)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
