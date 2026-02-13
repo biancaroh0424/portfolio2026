@@ -23,10 +23,6 @@ const ChatBotContext = createContext<ChatBotContextType | undefined>(undefined)
 
 const CHATBOT_WIDTH_KEY = 'chatbot-width'
 const CHATBOT_IS_OPEN_KEY = 'chatbot-is-open'
-const CHATBOT_IS_OPEN_PORTFOLIO_KEY = 'chatbot-is-open-portfolio'
-/** 유저가 닫기 누르면 true. 어느 페이지에서든 유저가 열 때까지 닫혀 있음 */
-const CHATBOT_CLOSED_BY_USER_KEY = 'chatbot-closed-by-user'
-const MOBILE_MAX_WIDTH = 743 // 이하면 모바일 → 에이전트 자동 열기 안 함
 
 export function ChatBotProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -41,13 +37,10 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
   const hasLoadedFromStorage = useRef(false)
 
   // 클라이언트에서만 localStorage에서 값 불러오기 (pathname 준비된 뒤 한 번만)
-  // 새로고침 시 "유저가 닫음" 플래그 초기화 → 포트폴리오에서 다시 열림
+  // default 닫힘. 유저가 열어둔 상태만 저장값으로 복원 (언어/경로 변경 시에도 유지)
   useEffect(() => {
     if (!hasLoadedFromStorage.current && typeof window !== 'undefined' && pathname != null) {
       try {
-        // 새로고침 = 풀 페이지 로드이므로 "유저가 닫음" 초기화 (이번 세션 내 라우팅에서만 유지)
-        localStorage.setItem(CHATBOT_CLOSED_BY_USER_KEY, 'false')
-
         // width 불러오기
         const savedWidth = localStorage.getItem(CHATBOT_WIDTH_KEY)
         if (savedWidth) {
@@ -57,14 +50,8 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        const closedByUser = localStorage.getItem(CHATBOT_CLOSED_BY_USER_KEY) === 'true'
-        if (closedByUser) {
-          setIsOpen(false)
-        } else {
-          const isPortfolio = pathname.startsWith('/portfolio') || pathname.includes('/portfolio')
-          const isMobile = typeof window !== 'undefined' && window.innerWidth <= MOBILE_MAX_WIDTH
-          setIsOpen(!!(isPortfolio && !isMobile))
-        }
+        const savedIsOpen = localStorage.getItem(CHATBOT_IS_OPEN_KEY)
+        setIsOpen(savedIsOpen === 'true')
       } catch (e) {
         console.warn('Failed to load chatbot state from storage:', e)
       }
@@ -84,40 +71,23 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // 열림 상태가 되면 "유저가 닫음" 플래그 해제 (경로 sync로 열렸을 때도)
+  // isOpen 변경 시 localStorage에 저장 (언어/경로 변경 시에도 유지)
   useEffect(() => {
-    if (typeof window !== 'undefined' && isOpen) {
+    if (hasLoadedFromStorage.current && typeof window !== 'undefined') {
       try {
-        localStorage.setItem(CHATBOT_CLOSED_BY_USER_KEY, 'false')
+        localStorage.setItem(CHATBOT_IS_OPEN_KEY, isOpen.toString())
       } catch (e) {
         console.warn('Failed to save chatbot state to storage:', e)
       }
     }
   }, [isOpen])
 
-  // pathname 변경 시: 유저가 닫아둔 상태면 항상 닫힘, 아니면 포트폴리오만 열림
-  useEffect(() => {
-    if (typeof window === 'undefined' || pathname == null) return
-    try {
-      const closedByUser = localStorage.getItem(CHATBOT_CLOSED_BY_USER_KEY) === 'true'
-      if (closedByUser) {
-        setIsOpen(false)
-        return
-      }
-      const isPortfolio = pathname.startsWith('/portfolio') || pathname.includes('/portfolio')
-      const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH
-      setIsOpen(!!(isPortfolio && !isMobile))
-    } catch {
-      // 무시
-    }
-  }, [pathname])
-
   const toggleChatBot = useCallback(() => {
     setIsOpen((prev) => {
       const next = !prev
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem(CHATBOT_CLOSED_BY_USER_KEY, next ? 'false' : 'true')
+          localStorage.setItem(CHATBOT_IS_OPEN_KEY, next.toString())
         } catch {}
       }
       return next
@@ -127,7 +97,7 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
   const openChatBot = useCallback(() => {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(CHATBOT_CLOSED_BY_USER_KEY, 'false')
+        localStorage.setItem(CHATBOT_IS_OPEN_KEY, 'true')
       } catch {}
     }
     setIsOpen(true)
@@ -136,7 +106,7 @@ export function ChatBotProvider({ children }: { children: ReactNode }) {
   const closeChatBot = useCallback(() => {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(CHATBOT_CLOSED_BY_USER_KEY, 'true')
+        localStorage.setItem(CHATBOT_IS_OPEN_KEY, 'false')
       } catch {}
     }
     setIsOpen(false)

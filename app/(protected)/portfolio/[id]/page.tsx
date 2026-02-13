@@ -9,9 +9,6 @@ import ChapterStatus from '@/components/ChapterStatus'
 import ProjectDetailSkeleton from '@/components/ProjectDetailSkeleton'
 import ProjectChatInput from '@/components/ProjectChatInput'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useChatBot } from '@/contexts/ChatBotContext'
-
-const CHATBOT_CLOSED_BY_USER_KEY = 'chatbot-closed-by-user'
 
 // 고정 네비(80px) 아래로 섹션 제목이 보이도록 스크롤 오프셋 (반응형 동일)
 const SCROLL_OFFSET_PX = 100
@@ -72,7 +69,6 @@ export default function ProjectDetailPage() {
   const params = useParams()
   const projectId = params.id as string
   const { language } = useLanguage()
-  const { openChatBot } = useChatBot()
   const [project, setProject] = useState<any>(null)
   const [projects, setProjects] = useState<any[]>([])
   const [expandedImage, setExpandedImage] = useState<string | null>(null)
@@ -102,23 +98,6 @@ export default function ProjectDetailPage() {
     }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
-
-  // /portfolio 상세 진입 시 ChatBot 열기 (모바일 744px 이하는 자동 열기 안 함. 유저가 닫아둔 상태가 아닐 때만)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const tryOpen = () => {
-      if (window.innerWidth <= 743) return
-      if (localStorage.getItem(CHATBOT_CLOSED_BY_USER_KEY) !== 'true') openChatBot()
-    }
-    tryOpen()
-    const t1 = setTimeout(tryOpen, 100)
-    const t2 = setTimeout(tryOpen, 400)
-    return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // 화면 크기 추적

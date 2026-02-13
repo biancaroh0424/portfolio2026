@@ -6,9 +6,6 @@ import ProjectCard from '@/components/ProjectCard'
 import ProjectChatInput from '@/components/ProjectChatInput'
 import ProjectListSkeleton from '@/components/ProjectListSkeleton'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useChatBot } from '@/contexts/ChatBotContext'
-
-const CHATBOT_CLOSED_BY_USER_KEY = 'chatbot-closed-by-user'
 
 const LOAD_TIMEOUT_MS = 8000 // 이 시간 지나면 무조건 로딩 해제 (스켈레톤에 갇힘 방지)
 
@@ -48,27 +45,9 @@ export default function ProjectsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { language } = useLanguage()
-  const { openChatBot } = useChatBot()
   const [projects, setProjects] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const forceSkeleton = searchParams?.get('skeleton') === '1'
-
-  // /portfolio 진입 시 ChatBot 열기 (모바일 744px 이하는 자동 열기 안 함. 유저가 닫아둔 상태가 아닐 때만)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const tryOpen = () => {
-      if (window.innerWidth <= 743) return
-      if (localStorage.getItem(CHATBOT_CLOSED_BY_USER_KEY) !== 'true') openChatBot()
-    }
-    tryOpen()
-    const t1 = setTimeout(tryOpen, 100)
-    const t2 = setTimeout(tryOpen, 400)
-    return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const loadProjects = useCallback(async () => {
     const controller = new AbortController()
