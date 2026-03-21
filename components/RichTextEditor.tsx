@@ -18,6 +18,7 @@ import { Figcaption } from '@/lib/tiptap-figcaption'
 import { Columns, Column } from '@/lib/tiptap-columns'
 import { Table, TableRow, TableHeaderCell, TableCell, createDefaultTableNode } from '@/lib/tiptap-table'
 import { VectorOnly } from '@/lib/tiptap-vector-only'
+import { optimizeImageForUpload } from '@/lib/client-image-upload'
 
 const VECTOR_ONLY_PLACEHOLDER =
   '챗봇에만 전달할 내용을 여기에 작성하세요. (포트폴리오 페이지에는 표시되지 않습니다.)'
@@ -646,8 +647,9 @@ export default function RichTextEditor({
   const handleImageUpload = async (file: File) => {
     try {
       setUploadingImage(true)
+      const uploadFile = await optimizeImageForUpload(file)
       const formData = new FormData()
-      formData.append('image', file)
+      formData.append('image', uploadFile)
       formData.append('type', 'editor')
 
       const response = await fetch('/api/admin/upload', {

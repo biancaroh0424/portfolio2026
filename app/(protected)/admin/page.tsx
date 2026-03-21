@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import RichTextEditor from '@/components/RichTextEditor'
 import { formatProjectTitle } from '@/lib/utils'
+import { optimizeImageForUpload } from '@/lib/client-image-upload'
 
 interface ProjectField {
   label: string
@@ -363,9 +364,10 @@ export default function AdminPage() {
     
     try {
       console.log('Uploading file:', file.name, 'Type:', file.type, 'Size:', file.size)
+      const uploadFile = await optimizeImageForUpload(file)
       
       const formData = new FormData()
-      formData.append('image', file)
+      formData.append('image', uploadFile)
       formData.append('type', type)
 
       console.log('FormData entries:', Array.from(formData.entries()).map(([key, value]) => [key, value instanceof File ? `${value.name} (${value.type})` : value]))

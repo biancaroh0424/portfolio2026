@@ -2,6 +2,7 @@ import Image from '@tiptap/extension-image'
 import { mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
 import React, { useState, useEffect, useRef } from 'react'
+import { optimizeImageForUpload } from '@/lib/client-image-upload'
 
 const ResizableImageComponent = ({ node, updateAttributes, selected, getPos, editor }: any) => {
   const [width, setWidth] = useState(node.attrs.width || null)
@@ -92,8 +93,9 @@ const ResizableImageComponent = ({ node, updateAttributes, selected, getPos, edi
       if (!file) return
 
       try {
+        const uploadFile = await optimizeImageForUpload(file)
         const formData = new FormData()
-        formData.append('image', file)
+        formData.append('image', uploadFile)
         formData.append('type', 'editor')
 
         const response = await fetch('/api/admin/upload', {
