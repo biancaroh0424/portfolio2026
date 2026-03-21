@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
+import fs from 'fs/promises'
 import path from 'path'
 import { randomBytes } from 'crypto'
 
 export const runtime = 'nodejs'
+
+/** projects API와 동일: Vercel 프로덕션+토큰 있을 때만 Blob. 로컬은 public/uploads (토큰 불필요) */
+function isBlobStorageEnabled(): boolean {
+  const onVercel = process.env.VERCEL === '1'
+  const hasToken =
+    typeof process.env.BLOB_READ_WRITE_TOKEN === 'string' &&
+    process.env.BLOB_READ_WRITE_TOKEN.length > 0
+  return onVercel && hasToken
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,7 +60,17 @@ export async function POST(request: NextRequest) {
     const pathname = `uploads/${filename}`
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const { url } = await put(pathname, buffer, { access: 'public' })
+
+    if (isBlobStorageEnabled()) {
+      const { url } = await put(pathname, buffer, { access: 'public' })
+      return NextResponse.json({ url, filename })
+    }
+
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+    await fs.mkdir(uploadDir, { recursive: true })
+    const diskPath = path.join(uploadDir, filename)
+    await fs.writeFile(diskPath, buffer)
+    const url = `/${pathname}`
 
     return NextResponse.json({ url, filename })
   } catch (error) {

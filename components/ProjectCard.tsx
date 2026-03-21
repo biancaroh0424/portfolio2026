@@ -6,6 +6,8 @@ interface ProjectCardProps {
   project: {
     id: string
     title: string
+    /** 카드 타이틀 아래 — CMS 배너 서브타이틀(언어별) */
+    subtitle?: string
     period: string
     thumbnail?: string
     tags?: string[]
@@ -126,6 +128,23 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
             >
               {displayTitle}
             </h3>
+            {/* Subtitle — Figma: Pretendard 16px under title */}
+            {project.subtitle && project.subtitle.trim() && (
+              <p
+                style={{
+                  margin: 0,
+                  color: 'rgba(255, 255, 255, 0.76)',
+                  fontFamily: '"Pretendard Variable", Pretendard, system-ui, sans-serif',
+                  fontSize: '16px',
+                  fontStyle: 'normal',
+                  fontWeight: 400,
+                  lineHeight: '160%',
+                  alignSelf: 'stretch',
+                }}
+              >
+                {project.subtitle.trim()}
+              </p>
+            )}
           </div>
           {/* Project Summary - ul 리스트 */}
           {project.summary && project.summary.trim() && (

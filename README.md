@@ -52,7 +52,15 @@ curl -X POST http://localhost:3000/api/embed
 npm run dev
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000)을 열어 확인하세요.
+터미널에 표시된 주소로 접속하세요. (예: `http://localhost:3000`).  
+**3000번이 이미 쓰이면** Next가 3001, 3002… 로 올라갑니다. 그때 예전 탭이 `localhost:3000`을 열고 있으면 **다른 프로세스의 페이지**가 보이거나 `/_next/static/...` **404로 CSS·JS가 깨질 수 있습니다.**
+
+**깨짐·404 대처:**
+
+1. 사용 중인 포트 확인 후 하나만 쓰기: `lsof -nP -iTCP:3000 -sTCP:LISTEN` (3001, 3002도 동일)
+2. 불필요한 `node` dev 서버 종료 후, **이 프로젝트 폴더에서** 다시 `npm run dev`
+3. 브라우저는 **터미널에 찍힌 포트**로 열기 (예: `http://localhost:3002`)
+4. 그래도 이상하면 캐시된 빌드 제거 후 재시작: `npm run dev:clean`
 
 ## 프로젝트 구조
 

@@ -14,6 +14,11 @@ export interface VectorDocument {
 let memoryCache: VectorDocument[] | null = null
 const JSON_PATH = path.join(process.cwd(), 'data', 'embeddings.json')
 
+/** embeddings.json 갱신 후 메모리 캐시 무효화 */
+export function clearVectorStoreMemoryCache(): void {
+  memoryCache = null
+}
+
 // 로드 (메모리 캐싱 사용)
 export async function loadVectorStore(): Promise<VectorDocument[]> {
   if (memoryCache) return memoryCache

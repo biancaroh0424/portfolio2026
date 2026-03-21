@@ -13,6 +13,8 @@ interface ProjectField {
 
 interface ProjectTranslation {
   title: string
+  /** 썸네일 배너용 서브타이틀 (언어별) */
+  bannerSubtitle?: string
   content?: string // HTML 형식의 전체 콘텐츠
   fields?: ProjectField[] // 동적 필드 배열
   tags?: string[] // 언어별 태그 배열
@@ -34,17 +36,22 @@ interface Project {
   content?: string
   fields?: ProjectField[]
   language?: 'en' | 'ko' | 'it'
+  subtitle?: string // 레거시 배너 서브타이틀 (영어 단일 구조)
 }
 
 // 현재 언어의 콘텐츠를 가져오는 헬퍼 함수
 const getCurrentTranslation = (project: Project, language: 'en' | 'ko' | 'it'): ProjectTranslation => {
   // 해당 언어의 translation이 있으면 반환
   if (project.translations?.[language]) {
+    const t = project.translations[language]
     return {
-      title: project.translations[language].title || '',
-      content: project.translations[language].content || '',
-      fields: project.translations[language].fields || [],
-      tags: project.translations[language].tags || []
+      title: t.title || '',
+      bannerSubtitle:
+        t.bannerSubtitle ||
+        (language === 'en' && project.subtitle ? project.subtitle : undefined),
+      content: t.content || '',
+      fields: t.fields || [],
+      tags: t.tags || []
     }
   }
   // 하위 호환성: 기존 프로젝트는 title, content, fields를 사용 (영어로만 저장된 경우)
@@ -53,6 +60,7 @@ const getCurrentTranslation = (project: Project, language: 'en' | 'ko' | 'it'): 
     // 기존 프로젝트의 tags를 영어 translation에 포함 (하위 호환성)
     return {
       title: project.title || '',
+      bannerSubtitle: project.subtitle,
       content: project.content || '',
       fields: project.fields || [],
       tags: project.tags || []
@@ -158,7 +166,13 @@ export default function AdminPage() {
   }
 
   // 벡터 저장소 재초기화 헬퍼 (재시도 포함). 실패 시 API의 error/hint 반환.
-  const initializeVectorStoreWithRetry = async (maxRetries = 3): Promise<{ success: boolean; errorMessage?: string; contentsCount?: number; chunksCount?: number }> => {
+  const initializeVectorStoreWithRetry = async (maxRetries = 3): Promise<{
+    success: boolean
+    errorMessage?: string
+    contentsCount?: number
+    chunksCount?: number
+    storage?: string
+  }> => {
     const timeoutMs = 320_000 // 서버 maxDuration 300초까지 기다림 (504 전에 클라이언트에서 끊지 않도록)
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -169,7 +183,12 @@ export default function AdminPage() {
         clearTimeout(timeoutId)
         const result = await embedResponse.json().catch(() => ({}))
         if (embedResponse.ok && result.success) {
-          return { success: true, contentsCount: result.contentsCount, chunksCount: result.chunksCount }
+          return {
+            success: true,
+            contentsCount: result.contentsCount,
+            chunksCount: result.chunksCount,
+            storage: result.storage,
+          }
         }
         // 504 Gateway Timeout: Vercel 함수 타임아웃 (Hobby 10초, Pro 60초). 재시도해도 동일하면 안내 메시지.
         if (embedResponse.status === 504) {
@@ -316,6 +335,7 @@ export default function AdminPage() {
           translations: {
             [language]: {
               title: project.title || '',
+              bannerSubtitle: project.subtitle,
               content: project.content || '',
               fields: project.fields || []
             }
@@ -433,6 +453,7 @@ export default function AdminPage() {
       // 항상 현재 편집 상태(projectWithTags)만 사용. ref 사용 시 태그/다른 수정 직후 저장에서 예전 title·fields로 덮어써 데이터 유실 방지
       const updatedTranslation: ProjectTranslation = {
         title: baseTranslation.title ?? '',
+        bannerSubtitle: baseTranslation.bannerSubtitle,
         content: latestContent ?? baseTranslation.content ?? '',
         fields: Array.isArray(baseTranslation.fields) ? baseTranslation.fields : [],
         tags: Array.isArray(baseTranslation.tags) ? baseTranslation.tags : []
@@ -488,7 +509,11 @@ export default function AdminPage() {
       initializeVectorStoreWithRetry().then((embedResult) => {
         if (embedResult.success) {
           const detail = embedResult.chunksCount != null ? ` (${embedResult.contentsCount ?? 0}개 콘텐츠, ${embedResult.chunksCount}개 청크)` : ''
-          setMessage(`✅ 벡터 저장소 업데이트 완료!${detail}`)
+          const localNote =
+            embedResult.storage === 'file'
+              ? ' 로컬 data/embeddings.json — Chroma/프로덕션 DB와 분리됨.'
+              : ''
+          setMessage(`✅ 벡터 저장소 업데이트 완료!${detail}${localNote}`)
         } else {
           setMessage(embedResult.errorMessage ?? '⚠️ 벡터 저장소 업데이트에 실패했습니다. Admin에서 다시 시도하거나 챗봇은 이전 인덱스를 사용합니다.')
         }
@@ -548,6 +573,7 @@ export default function AdminPage() {
             ...projectToEdit.translations,
             en: {
               title: project.title || '',
+              bannerSubtitle: project.subtitle,
               content: project.content || '',
               fields: project.fields || [],
               tags: project.tags
@@ -660,6 +686,7 @@ export default function AdminPage() {
                         ...projectToEdit.translations,
                         en: {
                           title: foundProject.title || '',
+                          bannerSubtitle: foundProject.subtitle,
                           content: foundProject.content || '',
                           fields: foundProject.fields || [],
                           tags: foundProject.tags
@@ -768,7 +795,11 @@ export default function AdminPage() {
       initializeVectorStoreWithRetry().then((embedResult) => {
         if (embedResult.success) {
           const detail = embedResult.chunksCount != null ? ` (${embedResult.contentsCount ?? 0}개 콘텐츠, ${embedResult.chunksCount}개 청크)` : ''
-          setMessage(`✅ 벡터 저장소 업데이트 완료!${detail}`)
+          const localNote =
+            embedResult.storage === 'file'
+              ? ' 로컬 data/embeddings.json — Chroma/프로덕션 DB와 분리됨.'
+              : ''
+          setMessage(`✅ 벡터 저장소 업데이트 완료!${detail}${localNote}`)
         } else {
           setMessage(embedResult.errorMessage ?? '⚠️ 벡터 저장소 업데이트에 실패했습니다. 챗봇은 이전 인덱스를 사용합니다.')
         }
@@ -1022,6 +1053,7 @@ export default function AdminPage() {
                     // 현재 언어의 translation 업데이트 (태그 포함)
                     const updatedProject = setCurrentTranslation(editingProject, currentEditLanguage, {
                       title: currentTranslation.title,
+                      bannerSubtitle: currentTranslation.bannerSubtitle,
                       content: currentContent,
                       fields: currentTranslation.fields || [],
                       tags: Array.isArray(currentTranslation.tags) ? currentTranslation.tags : []
@@ -1075,6 +1107,29 @@ export default function AdminPage() {
                   style={{ borderColor: 'var(--fill-white-10)' }}
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">배너 서브타이틀</label>
+                <input
+                  type="text"
+                  value={getCurrentTranslation(editingProject, currentEditLanguage).bannerSubtitle || ''}
+                  onChange={(e) => {
+                    const currentTranslation = getCurrentTranslation(editingProject, currentEditLanguage)
+                    const updatedTranslation: ProjectTranslation = {
+                      ...currentTranslation,
+                      bannerSubtitle: e.target.value
+                    }
+                    currentTranslationRef.current = updatedTranslation
+                    setEditingProject(setCurrentTranslation(editingProject, currentEditLanguage, updatedTranslation))
+                  }}
+                  className="w-full px-4 py-2 border rounded-lg bg-transparent text-white"
+                  style={{ borderColor: 'var(--fill-white-10)' }}
+                  placeholder="썸네일 위 타이틀 아래에 표시 (언어별)"
+                />
+                <p className="text-xs text-gray-400 mt-2">
+                  포트폴리오 배너에 표시되며, 챗봇 검색(벡터 DB)에도 포함됩니다.
+                </p>
               </div>
 
               {/* 동적 필드 섹션 */}

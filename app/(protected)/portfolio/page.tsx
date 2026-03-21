@@ -15,11 +15,15 @@ type ProjectField = { label?: string; value?: string; type?: string }
 const getProjectTranslation = (project: any, language: 'en' | 'ko' | 'it') => {
   // 해당 언어의 translation이 있으면 반환
   if (project.translations?.[language]) {
+    const t = project.translations[language]
     return {
-      title: project.translations[language].title || '',
-      content: project.translations[language].content || '',
-      fields: project.translations[language].fields || [],
-      tags: project.translations[language].tags || []
+      title: t.title || '',
+      bannerSubtitle:
+        t.bannerSubtitle ||
+        (language === 'en' && project.subtitle ? project.subtitle : undefined),
+      content: t.content || '',
+      fields: t.fields || [],
+      tags: t.tags || []
     }
   }
   // 하위 호환성: 기존 프로젝트는 title, content, fields를 사용 (영어로만 저장된 경우)
@@ -27,6 +31,7 @@ const getProjectTranslation = (project: any, language: 'en' | 'ko' | 'it') => {
   if (language === 'en' && (project.title || project.content || project.fields)) {
     return {
       title: project.title || '',
+      bannerSubtitle: project.subtitle,
       content: project.content || '',
       fields: project.fields || [],
       tags: project.tags || [] // 하위 호환성: 기존 tags 필드 사용
@@ -248,6 +253,7 @@ export default function ProjectsPage() {
                   project={{
                     ...project,
                     title: translation.title,
+                    subtitle: translation.bannerSubtitle?.trim() || undefined,
                     period: translation.fields?.find((f: ProjectField) => 
                       f.label?.toLowerCase().includes('period') || 
                       f.label?.toLowerCase().includes('기간') ||

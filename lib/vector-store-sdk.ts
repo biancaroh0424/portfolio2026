@@ -6,6 +6,7 @@
 import { generateEmbedding } from './embeddings'
 import { getAllContent, Content } from './data'
 import { ChromaClient, CloudClient, Collection } from 'chromadb'
+import { getChromaCollectionName } from './chroma-collection'
 
 export interface VectorDocument {
   id: string
@@ -24,7 +25,7 @@ interface SearchResult {
   score: number
 }
 
-const COLLECTION_NAME = 'portfolio_content'
+const COLLECTION_NAME = getChromaCollectionName()
 const CHROMA_DOC_MAX_BYTES = 12 * 1024
 
 function chunkTextByBytes(text: string, maxBytes: number): string[] {

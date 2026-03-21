@@ -948,20 +948,28 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
             data.map((project) => {
               // 다국어 구조 지원: 현재 언어의 translation에서 제목 가져오기
               let title = ''
+              let subtitle = ''
               if (project.translations?.[language]) {
-                title = project.translations[language].title || ''
+                const tr = project.translations[language] as { title?: string; bannerSubtitle?: string }
+                title = tr.title || ''
+                subtitle = (tr.bannerSubtitle || '').trim()
               } else if (language === 'en' && project.title) {
                 // 하위 호환성: 영어일 때 기존 title 사용
                 title = project.title
+                subtitle = (project.subtitle || '').trim()
               } else if (project.translations?.en) {
                 // 현재 언어에 없으면 영어로 fallback
-                title = project.translations.en.title || ''
+                const en = project.translations.en as { title?: string; bannerSubtitle?: string }
+                title = en.title || ''
+                subtitle = (en.bannerSubtitle || project.subtitle || '').trim()
+              } else {
+                subtitle = (project.subtitle || '').trim()
               }
-              
+
               return {
                 id: project.id,
                 title: title,
-                subtitle: project.subtitle,
+                subtitle: subtitle || undefined,
                 thumbnail: project.thumbnail || undefined,
               }
             })

@@ -48,6 +48,8 @@ export async function POST(_request: NextRequest) {
       message: 'Vector store initialized successfully',
       contentsCount: result.contentsCount,
       chunksCount: result.chunksCount,
+      /** 'file' = 로컬 data/embeddings.json (Chroma 미사용) */
+      storage: (result as { storage?: string }).storage,
     })
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error))

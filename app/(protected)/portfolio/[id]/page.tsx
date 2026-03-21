@@ -38,14 +38,25 @@ function applyAnchorHighlight(element: HTMLElement, clearRef?: { timeoutId: Retu
   if (clearRef) clearRef.timeoutId = timeoutId
 }
 
+type ProjectTranslationView = {
+  title: string
+  bannerSubtitle?: string
+  content: string
+  fields: any[]
+}
+
 // 현재 언어의 translation을 가져오는 헬퍼 함수
-const getProjectTranslation = (project: any, language: 'en' | 'ko' | 'it') => {
+const getProjectTranslation = (project: any, language: 'en' | 'ko' | 'it'): ProjectTranslationView => {
   // 해당 언어의 translation이 있으면 반환
   if (project.translations?.[language]) {
+    const t = project.translations[language]
     return {
-      title: project.translations[language].title || '',
-      content: project.translations[language].content || '',
-      fields: project.translations[language].fields || []
+      title: t.title || '',
+      bannerSubtitle:
+        t.bannerSubtitle ||
+        (language === 'en' && project.subtitle ? project.subtitle : undefined),
+      content: t.content || '',
+      fields: t.fields || []
     }
   }
   // 하위 호환성: 기존 프로젝트는 title, content, fields를 사용 (영어로만 저장된 경우)
@@ -53,6 +64,7 @@ const getProjectTranslation = (project: any, language: 'en' | 'ko' | 'it') => {
   if (language === 'en' && (project.title || project.content || project.fields)) {
     return {
       title: project.title || '',
+      bannerSubtitle: project.subtitle,
       content: project.content || '',
       fields: project.fields || []
     }
@@ -662,16 +674,50 @@ export default function ProjectDetailPage() {
                     alt={currentTranslation?.title || ''}
                     className="w-full h-full object-cover"
                   />
-                  {/* Title 오버레이 */}
-                  {currentTranslation?.title && (
-                    <div className="absolute inset-0 flex items-center px-6 pointer-events-none">
-                      <h1 className="text-title-4-bold text-white">{formatProjectTitle(currentTranslation.title)}</h1>
+                  {/* Title + 배너 서브타이틀 (Figma: gap 8px, 서브 20px / 400 / 160% / white 80%) */}
+                  {(currentTranslation?.title || currentTranslation?.bannerSubtitle?.trim()) && (
+                    <div
+                      className="absolute inset-0 flex flex-col justify-center items-start gap-2 pointer-events-none px-4 py-12 min-[744px]:px-[60px] min-[744px]:py-20"
+                    >
+                      {currentTranslation?.title ? (
+                        <h1 className="text-title-4-bold text-white">{formatProjectTitle(currentTranslation.title)}</h1>
+                      ) : null}
+                      {currentTranslation?.bannerSubtitle?.trim() ? (
+                        <p
+                          className="text-white/80 max-w-full"
+                          style={{
+                            fontFamily: '"Pretendard Variable", Pretendard, system-ui, sans-serif',
+                            fontSize: 20,
+                            fontWeight: 400,
+                            lineHeight: '160%',
+                          }}
+                        >
+                          {currentTranslation.bannerSubtitle.trim()}
+                        </p>
+                      ) : null}
                     </div>
                   )}
                 </div>
               ) : (
-                currentTranslation?.title && (
-                  <h1 className="text-title-4-bold text-white mb-6">{formatProjectTitle(currentTranslation.title)}</h1>
+                (currentTranslation?.title || currentTranslation?.bannerSubtitle?.trim()) && (
+                  <div className="mb-6 flex flex-col gap-2">
+                    {currentTranslation?.title ? (
+                      <h1 className="text-title-4-bold text-white">{formatProjectTitle(currentTranslation.title)}</h1>
+                    ) : null}
+                    {currentTranslation?.bannerSubtitle?.trim() ? (
+                      <p
+                        className="text-white/80"
+                        style={{
+                          fontFamily: '"Pretendard Variable", Pretendard, system-ui, sans-serif',
+                          fontSize: 20,
+                          fontWeight: 400,
+                          lineHeight: '160%',
+                        }}
+                      >
+                        {currentTranslation.bannerSubtitle.trim()}
+                      </p>
+                    ) : null}
+                  </div>
                 )
               )}
               

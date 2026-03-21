@@ -120,6 +120,8 @@ export interface ProjectField {
 
 export interface ProjectTranslation {
   title: string
+  /** 썸네일 배너 타이틀 아래 서브타이틀 (언어별, CMS 편집 → RAG/챗봇 검색에 포함) */
+  bannerSubtitle?: string
   content?: string // HTML 형식의 전체 콘텐츠
   fields?: ProjectField[] // 동적 필드 배열
   tags?: string[] // 언어별 태그 배열
@@ -358,6 +360,13 @@ export async function getAllContent(): Promise<Content[]> {
         }
       }
       
+      const banner = (translation.bannerSubtitle || '').trim()
+      if (banner) {
+        projectContent = projectContent.trim()
+          ? `${banner}. ${projectContent.trim()}`
+          : banner
+      }
+
       if (projectContent.trim()) {
         content.push({
           id: `project-${project.id}-${lang}`,
