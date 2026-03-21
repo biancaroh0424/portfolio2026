@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useChatBot } from '@/contexts/ChatBotContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -10,6 +11,7 @@ export default function TextSelectionButton() {
   const [buttonPosition, setButtonPosition] = useState<{ top: number; left: number } | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const { setSelectedTextChip, isOpen, openChatBot } = useChatBot()
+  const { t } = useLanguage()
 
   useEffect(() => {
     const handleSelection = () => {
@@ -284,7 +286,7 @@ export default function TextSelectionButton() {
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
 <path d="M15 3.90909V5.18182H13.7273V5.81818H13.0909V7.09091H11.8182V5.81818H11.1818V5.18182H9.90909V3.90909H11.1818V3.27273H11.8182V2H13.0909V3.27273H13.7273V3.90909H15ZM11.1818 8.36364V9.63636H9.90909V10.2727H8.63636V10.9091H8V11.5455H7.36364V12.8182H6.72727V14.0909H5.45455V12.8182H4.81818V11.5455H4.18182V10.9091H3.54545V10.2727H2.27273V9.63636H1V8.36364H2.27273V7.72727H3.54545V7.09091H4.18182V6.45455H4.81818V5.18182H5.45455V3.90909H6.72727V5.18182H7.36364V6.45455H8V7.09091H8.63636V7.72727H9.90909V8.36364H11.1818Z" fill="#DB6930"/>
 </svg>
-        <span>AI Assistant</span>
+        <span>{t('nav.aiAssistant')}</span>
       </button>
     </div>
   )

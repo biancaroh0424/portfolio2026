@@ -241,11 +241,14 @@ export async function POST(request: NextRequest) {
             (async () => {
               if (!projectRelated) return []
               try {
+                // RAG는 현재 '한국어 CMS' 임베딩 내용을 읽고,
+                // 응답 언어는 detectedLanguage(사용자 질문 언어: en/it/ko)로 생성합니다.
+                const ragSearchLanguage: 'en' | 'ko' | 'it' = 'ko'
                 return await searchRelevantContent(
                   searchQuery,
                   4, // 상위 4개 — 검색 누락 줄이기 (rag-stream top 4 · 12k chars)
                   shouldFilterByProject ? projectId : undefined,
-                  detectedLanguage
+                  ragSearchLanguage
                 )
               } catch (error) {
                 console.error('[Chat API] Error searching:', error)

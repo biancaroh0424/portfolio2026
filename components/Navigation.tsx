@@ -226,7 +226,7 @@ export default function Navigation() {
                   pathname === '/resume' || isResumeDropdownOpen ? 'text-white' : 'text-white/70 hover:text-white'
                 }`}
                 style={{ gap: '16px' }}
-                aria-label="Resume"
+                aria-label={t('nav.resume')}
                 aria-expanded={isResumeDropdownOpen}
               >
                 <span>{t('nav.resume')}</span>
@@ -249,7 +249,7 @@ export default function Navigation() {
                       className="w-full flex items-center justify-between px-3 py-2 text-[13px] text-white/70 hover:text-white transition-colors hover:bg-white/10 rounded-[8px]"
                       style={{ fontFamily: 'galmuri, monospace' }}
                     >
-                      <span>English</span>
+                      <span>{t('nav.language.english')}</span>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M12 14.3333V5M12 14.3333L8.11111 10.4444M12 14.3333L15.8889 10.4444M19 14.3333V17.4444C19 17.857 18.8361 18.2527 18.5444 18.5444C18.2527 18.8361 17.857 19 17.4444 19H6.55556C6.143 19 5.74733 18.8361 5.45561 18.5444C5.16389 18.2527 5 17.857 5 17.4444V14.3333" stroke="white" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -273,7 +273,7 @@ export default function Navigation() {
                       className="w-full flex items-center justify-between px-3 py-2 text-[13px] text-white/70 hover:text-white transition-colors hover:bg-white/10 rounded-[8px]"
                       style={{ fontFamily: 'galmuri, monospace' }}
                     >
-                      <span>Italiano</span>
+                      <span>{t('nav.language.italian')}</span>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none">
                         <path d="M12 14.3333V5M12 14.3333L8.11111 10.4444M12 14.3333L15.8889 10.4444M19 14.3333V17.4444C19 17.857 18.8361 18.2527 18.5444 18.5444C18.2527 18.8361 17.857 19 17.4444 19H6.55556C6.143 19 5.74733 18.8361 5.45561 18.5444C5.16389 18.2527 5 17.857 5 17.4444V14.3333" stroke="white" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -281,7 +281,7 @@ export default function Navigation() {
                   )}
                   {!resumeFiles.en && !resumeFiles.ko && !resumeFiles.it && (
                     <div className="px-3 py-2 text-[13px] text-gray-400 text-center">
-                      No resume available
+                      {t('nav.resume.noResume')}
                     </div>
                   )}
                 </div>
@@ -303,7 +303,7 @@ export default function Navigation() {
                 }
               }}
               className="uppercase flex items-center gap-2 rounded-[24px] border border-none bg-white/5 text-[13px] text-white transition-colors hover:bg-white/10"
-              aria-label="AI Assistant"
+              aria-label={t('nav.aiAssistant')}
               style={{ 
                 padding: '12px',
               }}
@@ -313,7 +313,7 @@ export default function Navigation() {
             <a
               href="mailto:biancaroh0424@gmail.com"
               className="uppercase flex items-center gap-2 rounded-[24px] bg-[#FF6B35] px-4 py-3 text-[13px] text-white transition-colors hover:bg-[#FF7A4A] font-['GalmuriMono9']"
-              aria-label="Contact"
+              aria-label={t('nav.contact')}
               style={{ 
                 padding: '12px 12px 12px 10px',
               }}
@@ -342,7 +342,7 @@ export default function Navigation() {
               }
             }}
             className="uppercase flex items-center gap-2 rounded-[24px] border border-none bg-white/5 text-[11px] text-white transition-colors hover:bg-white/10"
-            aria-label="AI Assistant"
+            aria-label={t('nav.aiAssistant')}
             style={{ 
               padding: '8px',
             }}
@@ -352,7 +352,7 @@ export default function Navigation() {
           <a
             href="mailto:biancaroh0424@gmail.com"
             className="uppercase flex items-center gap-2 rounded-[24px] bg-[#FF6B35] text-[11px] text-white transition-colors hover:bg-[#FF7A4A]"
-            aria-label="Contact"
+            aria-label={t('nav.contact')}
             style={{ 
               padding: '10px 12px 10px 10px',
               fontFamily: 'galmuri, monospace'
@@ -476,7 +476,7 @@ export default function Navigation() {
                         lineHeight: 'normal'
                       }}
                     >
-                      <span>English</span>
+                      <span>{t('nav.language.english')}</span>
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <path d="M12 14.3333V5M12 14.3333L8.11111 10.4444M12 14.3333L15.8889 10.4444M19 14.3333V17.4444C19 17.857 18.8361 18.2527 18.5444 18.5444C18.2527 18.8361 17.857 19 17.4444 19H6.55556C6.143 19 5.74733 18.8361 5.45561 18.5444C5.16389 18.2527 5 17.857 5 17.4444V14.3333" stroke="white" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -518,7 +518,7 @@ export default function Navigation() {
                         lineHeight: 'normal'
                       }}
                     >
-                      <span>Italiano</span>
+                      <span>{t('nav.language.italian')}</span>
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <path d="M12 14.3333V5M12 14.3333L8.11111 10.4444M12 14.3333L15.8889 10.4444M19 14.3333V17.4444C19 17.857 18.8361 18.2527 18.5444 18.5444C18.2527 18.8361 17.857 19 17.4444 19H6.55556C6.143 19 5.74733 18.8361 5.45561 18.5444C5.16389 18.2527 5 17.857 5 17.4444V14.3333" stroke="white" strokeOpacity="0.8" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -526,7 +526,7 @@ export default function Navigation() {
                   )}
                   {!resumeFiles.en && !resumeFiles.ko && !resumeFiles.it && (
                     <div className="px-3 py-2 text-[13px] text-gray-400 text-center">
-                      No resume available
+                      {t('nav.resume.noResume')}
                     </div>
                   )}
                 </div>
@@ -552,7 +552,7 @@ export default function Navigation() {
               <a
                 href="mailto:biancaroh0424@gmail.com"
                 className="uppercase flex items-center justify-center gap-2 rounded-[24px] bg-[#FF6B35] text-white transition-colors hover:bg-[#FF7A4A] w-full"
-                aria-label="Contact"
+                aria-label={t('nav.contact')}
                 style={{ 
                   padding: '14px 16px',
                   fontFamily: 'galmuri, monospace',

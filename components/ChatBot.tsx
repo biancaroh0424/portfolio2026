@@ -595,16 +595,16 @@ function deleteCookie(name: string) {
 // 첫 번째 질문을 요약하는 함수
 function summarizeFirstQuestion(firstMessage: string): string {
   if (!firstMessage || firstMessage.trim().length === 0) {
-    return 'New Chat'
+    return '새 채팅'
   }
   
   // 간단한 요약 매핑
   const summaryMap: { [key: string]: string } = {
     '안녕': '안부 인사',
     '안녕하세요': '안부 인사',
-    'hello': 'Greeting',
-    'hi': 'Greeting',
-    'ciao': 'Saluto',
+    'hello': '안부 인사',
+    'hi': '안부 인사',
+    'ciao': '인사',
   }
   
   const lowerMessage = firstMessage.toLowerCase().trim()
@@ -1748,16 +1748,16 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
           : project.title
         return { title, thumbnail: project.thumbnail || null }
       }
-      return { title: 'Portfolio', thumbnail: null }
+      return { title: t('nav.project'), thumbnail: null }
     }
     
     // 다른 페이지들
-    if (pathname === '/portfolio') return { title: 'Portfolio', thumbnail: null }
-    if (pathname === '/resume') return { title: 'Resume', thumbnail: null }
-    if (pathname.startsWith('/admin')) return { title: 'Admin', thumbnail: null }
+    if (pathname === '/portfolio') return { title: t('nav.project'), thumbnail: null }
+    if (pathname === '/resume') return { title: t('nav.resume'), thumbnail: null }
+    if (pathname.startsWith('/admin')) return { title: t('nav.admin'), thumbnail: null }
     
     return { title: null, thumbnail: null }
-  }, [pathname, projectMap])
+  }, [pathname, projectMap, t])
 
   const getMessageProjects = useCallback((sources?: Message['sources']) => {
     if (!sources || sources.length === 0) return []
@@ -1791,7 +1791,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
         {/* Left side icons */}
         <div className="flex items-center gap-2">
           {/* Layout/View icon - Collapse chatbot */}
-          <Tooltip text="Collapse">
+          <Tooltip text={t('chatbot.tooltip.collapse')}>
             <button
               onClick={closeChatBot}
               className="relative flex items-center justify-center w-6 h-6 rounded hover:bg-white/5 transition-colors group"
@@ -1805,7 +1805,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
           
           {/* Chat History icon with dropdown */}
           <div className="relative inline-flex shrink-0" ref={historyDropdownRef}>
-            <Tooltip text="Chat History">
+            <Tooltip text={t('chatbot.tooltip.chatHistory')}>
               <button
                 onClick={() => setIsHistoryOpen(!isHistoryOpen)}
                 className="inline-flex shrink-0 items-center justify-center w-6 h-6 rounded hover:bg-white/5 transition-colors group"
@@ -1840,7 +1840,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                 <div style={{ width: '100%' }}>
                   {chatHistory.length === 0 ? (
                     <div className="px-4 py-8 text-center">
-                      <span className="text-sm text-white/70">No chat history</span>
+                      <span className="text-sm text-white/70">{t('chatbot.noChatHistory')}</span>
                     </div>
                   ) : (
                     chatHistory.map((history) => (
@@ -1860,7 +1860,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
           </div>
           
           {/* New Chat button */}
-          <Tooltip text="New Chat">
+          <Tooltip text={t('chatbot.tooltip.newChat')}>
             <button
               onClick={handleNewChat}
               className="flex items-center justify-center w-6 h-6 rounded hover:bg-white/5 transition-colors"
@@ -1876,7 +1876,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
         {/* Right side icons */}
         <div className="flex items-center gap-2">
           {/* Close button */}
-          <Tooltip text="Close" position="bottom">
+          <Tooltip text={t('chatbot.tooltip.close')} position="bottom">
             <button
               onClick={closeChatBot}
               className="flex items-center justify-center w-6 h-6 rounded hover:bg-white/5 transition-colors"
@@ -2116,7 +2116,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                         {message.content}
                       </div>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-start', width: 'fit-content', marginLeft: 'auto' }}>
-                        <Tooltip text="Edit">
+                        <Tooltip text={t('chatbot.tooltip.edit')}>
                           <button
                             onClick={() => {
                               setEditingMessageId(message.id)
@@ -2134,7 +2134,7 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                               padding: '4px',
                               color: 'var(--text-primary, #FFF)'
                             }}
-                            aria-label="Edit"
+                            aria-label={t('chatbot.tooltip.edit')}
                           >
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                               <path d="M11.05 3.00002L4.20835 10.2417C3.95002 10.5167 3.70002 11.0584 3.65002 11.4334L3.34169 14.1334C3.23335 15.1084 3.93335 15.775 4.90002 15.6084L7.58335 15.15C7.95835 15.0834 8.48335 14.8084 8.74169 14.525L15.5834 7.28335C16.7667 6.03335 17.3 4.60835 15.4584 2.86668C13.625 1.14168 12.2334 1.75002 11.05 3.00002Z" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
@@ -2142,7 +2142,13 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                             </svg>
                           </button>
                         </Tooltip>
-                        <Tooltip text={copiedMessageId === message.id ? "Copied" : "Copy"}>
+                        <Tooltip
+                          text={
+                            copiedMessageId === message.id
+                              ? t('chatbot.tooltip.copied')
+                              : t('chatbot.tooltip.copy')
+                          }
+                        >
                           <button
                             onClick={async () => {
                               try {
@@ -2188,7 +2194,11 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
                               padding: '4px',
                               color: 'var(--text-primary, #FFF)'
                             }}
-                            aria-label={copiedMessageId === message.id ? "Copied" : "Copy"}
+                            aria-label={
+                              copiedMessageId === message.id
+                                ? t('chatbot.tooltip.copied')
+                                : t('chatbot.tooltip.copy')
+                            }
                           >
                             {copiedMessageId === message.id ? (
                               // 체크 아이콘

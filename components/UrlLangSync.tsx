@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -9,10 +9,16 @@ export default function UrlLangSync() {
   const searchParams = useSearchParams()
   const { setLanguage } = useLanguage()
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const lang = searchParams.get('lang')
-    if (lang === 'en' || lang === 'ko' || lang === 'it') {
-      setLanguage(lang)
+    if (lang === 'ko') {
+      setLanguage('ko')
+      return
+    }
+    // 현 시점에서는 EN/IT UI를 비활성화(영어 브라우저에서도 한국어로 강제)하므로
+    // URL의 ?lang=en|it 가 있어도 UI 언어는 유지(한국어)합니다.
+    if (lang === 'en' || lang === 'it') {
+      setLanguage('ko')
     }
   }, [searchParams, setLanguage])
 
