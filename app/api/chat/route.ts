@@ -9,6 +9,7 @@ import {
 import { ensureVectorStoreInitialized } from '@/lib/vector-store'
 import { generateAIResponseStream } from '@/lib/rag-stream'
 import { getProjects, getProject } from '@/lib/data'
+import { getProjectOnPageForChat } from '@/lib/project-chat-meta'
 import { detectLanguage, getCountryFromIP, getGreeting, type SupportedLanguage } from '@/lib/language'
 
 export const runtime = 'nodejs'
@@ -288,10 +289,9 @@ export async function POST(request: NextRequest) {
 
           // /portfolio 리스트 페이지일 때: 이 페이지에 있는 프로젝트 이름만 말하도록 목록 전달
           const projectsOnPage = isProjectListPage && Array.isArray(allProjects)
-            ? allProjects.map((p: any) => ({
-                id: p.id,
-                title: (p.translations?.[projectListLanguage]?.title ?? p.title) || p.id
-              }))
+            ? allProjects
+                .map((p: Record<string, unknown>) => getProjectOnPageForChat(p, projectListLanguage))
+                .filter((x): x is NonNullable<typeof x> => x != null)
             : undefined
 
           const availableResumeLangs = await getAvailableResumeLangs()

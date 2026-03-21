@@ -1,6 +1,20 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { SearchResult } from './rag'
 
+/** /portfolio 리스트에서 챗봇에 넘기는 프로젝트 한 줄 (기간·요약은 CMS 필드) */
+export type ProjectOnPageRow = { id: string; title: string; duration?: string; summary?: string }
+
+function formatProjectsOnPageForPrompt(projects: ProjectOnPageRow[]): string {
+  return projects
+    .map((p) => {
+      const lines = [`- "${p.title}" (id: ${p.id})`]
+      if (p.duration) lines.push(`  Duration: ${p.duration}`)
+      if (p.summary) lines.push(`  Summary: ${p.summary}`)
+      return lines.join('\n')
+    })
+    .join('\n\n')
+}
+
 export async function* generateAIResponseStream(
   query: string,
   context: SearchResult[],
@@ -9,7 +23,7 @@ export async function* generateAIResponseStream(
   userLanguage: string = 'en',
   greeting?: string,
   isProjectListPage?: boolean,
-  projectsOnPage?: { id: string; title: string }[],
+  projectsOnPage?: ProjectOnPageRow[],
   fallbackProjectContent?: string,
   pendingOpen?: { projectId: string; anchor?: string },
   currentAnchor?: string,
@@ -86,9 +100,8 @@ export async function* generateAIResponseStream(
         // /portfolio/[id] 페이지: RAG 결과 없으면 현재 프로젝트 본문을 [Portfolio Content]로 사용
         contextText = `[Current project page content — "${currentProject.title}" (id: ${currentProject.id}). Use this as the only source. Do NOT say content was not loaded.]\n\n${fallbackProjectContent}`
       } else if (projectsOnPage && projectsOnPage.length > 0) {
-        // /portfolio 페이지이고 프로젝트 목록이 있으면: 이 목록을 반드시 언급하라고 명시
-        const names = projectsOnPage.map((p) => p.title).join(', ')
-        contextText = `(No detailed references were retrieved. However, the user is on /portfolio and this page shows these projects: ${names}.\nYou MUST list or mention these project names in your answer. Say e.g. "This page shows: [list]. Click a project for details or ask me about a specific one." Do NOT say you have no project information — you have the list above. Do NOT invent any other project name.)`
+        const listBlock = formatProjectsOnPageForPrompt(projectsOnPage)
+        contextText = `(No detailed references were retrieved. The user is on /portfolio. Use ONLY these projects (with CMS Duration/Summary when shown):\n\n${listBlock}\n\nYou may compare durations, answer recency/longest questions from this text, and summarize each project using Summary lines. Do NOT invent other projects or dates not present above.)`
       } else {
         contextText = '(No references were retrieved. Do NOT invent or recommend any project names. Say that they can browse the portfolio list on this page to see available projects, or ask again after a moment.)'
       }
@@ -97,10 +110,10 @@ export async function* generateAIResponseStream(
     // 언어 설정 - 간단하고 명확하게
     const langName = userLanguage === 'ko' ? 'Korean' : userLanguage === 'it' ? 'Italian' : 'English'
 
-    // /portfolio 리스트 페이지일 때: 이 페이지에 보이는 프로젝트 이름만 쓸 수 있다고 명시
+    // /portfolio 리스트: 제목·id·Duration·Summary (CMS) — 이름만이 아니라 기간 비교·요약에 사용
     const pageProjectsBlock =
       projectsOnPage && projectsOnPage.length > 0
-        ? `\n[Current page — Projects on this portfolio list]\nThe user is on /portfolio. This page shows exactly ${projectsOnPage.length} project(s): ${projectsOnPage.map((p) => `"${p.title}"`).join(', ')}.\nYou MUST only recommend or mention these projects by name. When the user asks what is on this page or what projects exist, LIST these names. Do NOT invent or assume any other project name.\n`
+        ? `\n[Current page — Projects on this portfolio list]\nThe user is on /portfolio. Exactly ${projectsOnPage.length} project(s). Only these projects may be discussed (by id/title):\n\n${formatProjectsOnPageForPrompt(projectsOnPage)}\n\n[Rules for this list]\n- Do NOT invent other project names or dates.\n- When the user only asks what is on the page / what projects exist, LIST titles (and ids if helpful).\n- When they ask to **summarize each project** / **프로젝트마다 요약** / **전체 요약**: give a **short summary per project** (1–3 sentences each) using **Summary** and **Duration** lines above plus [Portfolio Content] references. Cite [Source: EXACT_TITLE] where useful.\n`
         : ''
 
     // /portfolio/[id] 상세 페이지일 때: 사용자가 지금 보고 있는 프로젝트 명시 (AI가 반드시 인지하도록)
@@ -136,8 +149,17 @@ ${langVersionBlock}
 [Instructions]
 1. ALWAYS use <thinking> tag first — keep it very brief (1–2 sentences only). Then use <answer> tag immediately.
 2. Use <answer> tag for your full response. Never truncate: give a complete answer.
-3. Use ONLY [Portfolio Content] below. If the user asks about a term (e.g. 게이미피케이션, gamification), look in ALL references — it may appear in related sections (해결, Solution, 온보딩, 결과 등). Do not say "not found" unless you have searched every block.
-4. CRITICAL — NO HALLUCINATION: Only mention project names, titles, metrics, and facts that EXPLICITLY appear in [Portfolio Content], in [Current page — Project detail], or in [Current page — Projects on this portfolio list] above. Do NOT invent or assume any other project name or detail. When the user is on a project detail page, you MUST assume they are asking about THAT project.
+3. Use [Portfolio Content] below. On /portfolio, you MAY also use **Duration** and **Summary** lines in [Current page — Projects on this portfolio list] (same CMS data). If the user asks about a term (e.g. 게이미피케이션, gamification), look in ALL references — it may appear in related sections (해결, Solution, 온보딩, 결과 등). Do not say "not found" unless you have searched every block.
+4. CRITICAL — NO HALLUCINATION: Only mention project names, titles, metrics, dates, and facts that EXPLICITLY appear in [Portfolio Content], in [Current page — Project detail], or in [Current page — Projects on this portfolio list] above. Do NOT invent or assume any other project name or detail. When the user is on a project detail page, you MUST assume they are asking about THAT project.
+
+[Duration & project timeline — ONLY from list + Portfolio Content]
+- Each project's **Duration** (기간) may look like "Jan 2023 – Mar 2024", "2023.01 – 2024.06", "6 months", "2년", "6개월", "진행 중", "present", "~ ing", etc. Parse ONLY text that appears in the list or references.
+- **가장 오래 작업한 프로젝트 / longest / longest engagement**: For every project that has a parseable duration, estimate **length in months** (convert years × 12 when needed). The project with the **largest span** wins. In your answer, name the project and quote the **Duration** string you used, and state **approximate months** (use "~" if ambiguous). If Duration is missing for some projects, say which lack data and compare only those with data.
+- **가장 최근에 작업한 프로젝트 / most recently worked**: Prefer the project whose duration **ends latest** (including "ongoing/진행 중/now" as ending at present). In the answer, state both **시작 시점(월 또는 문구에 나온 시작)** and **종료 시점(또는 진행 중)** as shown in Duration. If the user explicitly asks to rank **only by start month** (시작한 월 기준), rank by **latest start date** among projects and say clearly that you used start dates.
+- Never invent calendar dates that are not implied by the stored text.
+
+[/portfolio — summarize all projects on the list]
+- If the user on /portfolio asks to summarize **each** / **every** / **all** projects (e.g. "각각 요약", "프로젝트마다 요약", "한 줄씩", "summarize each"): output **one short summary per listed project** (not only names). Use **Summary** + **Duration** from the list and expand with [Portfolio Content] when available.
 5. Be professional and friendly - respond naturally to light jokes, but maintain appropriate formality.
 6. CRITICAL: Your <answer> must be written entirely in ${langName}. If user wrote in Korean, answer ONLY in Korean. If user wrote in English, answer ONLY in English. Do not mix languages in your response.
 
