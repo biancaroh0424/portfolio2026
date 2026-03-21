@@ -290,7 +290,7 @@ export async function POST(request: NextRequest) {
           // /portfolio 리스트 페이지일 때: 이 페이지에 있는 프로젝트 이름만 말하도록 목록 전달
           const projectsOnPage = isProjectListPage && Array.isArray(allProjects)
             ? allProjects
-                .map((p: Record<string, unknown>) => getProjectOnPageForChat(p, projectListLanguage))
+                .map((p) => getProjectOnPageForChat(p, projectListLanguage))
                 .filter((x): x is NonNullable<typeof x> => x != null)
             : undefined
 

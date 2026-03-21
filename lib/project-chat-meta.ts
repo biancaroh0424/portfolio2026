@@ -3,6 +3,8 @@
  * 카드 UI(`app/(protected)/portfolio/page.tsx`)와 동일한 필드 해석.
  */
 
+import type { Project, ProjectField } from '@/lib/data'
+
 export type ProjectListLanguage = 'en' | 'ko' | 'it'
 
 export type ProjectOnPageForChat = {
@@ -14,31 +16,29 @@ export type ProjectOnPageForChat = {
   summary?: string
 }
 
-type Field = { label?: string; value?: string; type?: string }
-
-function getProjectTranslation(project: Record<string, unknown>, language: ProjectListLanguage) {
-  const translations = project.translations as Record<string, { title?: string; fields?: Field[] }> | undefined
+function getProjectTranslation(project: Project, language: ProjectListLanguage) {
+  const translations = project.translations
   if (translations?.[language]) {
-    const t = translations[language]
+    const t = translations[language]!
     return {
       title: t.title || '',
-      fields: t.fields || [],
+      fields: (t.fields || []) as ProjectField[],
     }
   }
   if (
     language === 'en' &&
-    (project.title || project.content || (project.fields as Field[] | undefined)?.length)
+    (project.title || project.content || (project.fields && project.fields.length > 0))
   ) {
     return {
-      title: (project.title as string) || '',
-      fields: (project.fields as Field[]) || [],
+      title: project.title || '',
+      fields: project.fields || [],
     }
   }
-  return { title: '', fields: [] as Field[] }
+  return { title: '', fields: [] as ProjectField[] }
 }
 
 export function getProjectOnPageForChat(
-  project: Record<string, unknown>,
+  project: Project,
   language: ProjectListLanguage
 ): ProjectOnPageForChat | null {
   const { title, fields } = getProjectTranslation(project, language)
@@ -55,7 +55,7 @@ export function getProjectOnPageForChat(
   const summary = summaryField?.value?.trim() || ''
 
   return {
-    id: String(project.id ?? ''),
+    id: project.id,
     title,
     ...(duration ? { duration } : {}),
     ...(summary ? { summary } : {}),
