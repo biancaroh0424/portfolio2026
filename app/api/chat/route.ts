@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
           logAI('컨텍스트 fetch 시작 (프로젝트·벡터검색·리스트)', { projectRelated })
           const contextStart = Date.now()
           const [fullProjectOrFallback, relevantContent, allProjects] = await Promise.all([
-            (async (): Promise<{ id: string; title: string; content?: string } | undefined> => {
+            (async (): Promise<{ id: string; title: string; subtitle?: string; content?: string } | undefined> => {
               if (!projectId) return undefined
               try {
                 const project = await getProject(projectId)
@@ -227,11 +227,23 @@ export async function POST(request: NextRequest) {
                                             projectListLanguage === 'ko' ? translations.ko :
                                             projectListLanguage === 'it' ? translations.it : undefined)
                   const title = currentTranslation?.title || project.title || project.id
+                  let subtitle: string | undefined
+                  if (currentTranslation) {
+                    const s =
+                      currentTranslation.bannerSubtitle ||
+                      (projectListLanguage === 'en' && project.subtitle ? project.subtitle : undefined)
+                    subtitle = s?.trim() || undefined
+                  } else if (
+                    projectListLanguage === 'en' &&
+                    (project.title || project.content || project.fields?.length)
+                  ) {
+                    subtitle = project.subtitle?.trim() || undefined
+                  }
                   const rawContent = currentTranslation?.content || project.content || ''
                   const contentForFallback = typeof rawContent === 'string'
                     ? rawContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 12_000)
                     : ''
-                  return { id: project.id, title, content: contentForFallback }
+                  return { id: project.id, title, subtitle, content: contentForFallback }
                 }
                 return { id: projectId, title: projectId }
               } catch (error) {
@@ -271,7 +283,11 @@ export async function POST(request: NextRequest) {
 
           const finalContent = relevantContent
           const currentProject = fullProjectOrFallback
-            ? { id: fullProjectOrFallback.id, title: fullProjectOrFallback.title }
+            ? {
+                id: fullProjectOrFallback.id,
+                title: fullProjectOrFallback.title,
+                subtitle: fullProjectOrFallback.subtitle,
+              }
             : undefined
           // 상세 페이지에서는 RAG 결과와 관계없이 전체 프로젝트 본문을 전달 (result 등 누락 방지)
           const fallbackProjectContent =

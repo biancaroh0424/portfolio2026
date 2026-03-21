@@ -1,13 +1,21 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { SearchResult } from './rag'
+import { formatProjectTitleForSpeech } from './project-chat-meta'
 
-/** /portfolio 리스트에서 챗봇에 넘기는 프로젝트 한 줄 (기간·요약은 CMS 필드) */
-export type ProjectOnPageRow = { id: string; title: string; duration?: string; summary?: string }
+/** /portfolio 리스트에서 챗봇에 넘기는 프로젝트 한 줄 (부제·기간·요약은 CMS) */
+export type ProjectOnPageRow = {
+  id: string
+  title: string
+  subtitle?: string
+  duration?: string
+  summary?: string
+}
 
 function formatProjectsOnPageForPrompt(projects: ProjectOnPageRow[]): string {
   return projects
     .map((p) => {
-      const lines = [`- "${p.title}" (id: ${p.id})`]
+      const display = formatProjectTitleForSpeech(p.title, p.subtitle)
+      const lines = [`- "${display}" (id: ${p.id})`]
       if (p.duration) lines.push(`  Duration: ${p.duration}`)
       if (p.summary) lines.push(`  Summary: ${p.summary}`)
       return lines.join('\n')
@@ -19,7 +27,7 @@ export async function* generateAIResponseStream(
   query: string,
   context: SearchResult[],
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
-  currentProject?: { id: string; title: string },
+  currentProject?: { id: string; title: string; subtitle?: string },
   userLanguage: string = 'en',
   greeting?: string,
   isProjectListPage?: boolean,
@@ -38,9 +46,13 @@ export async function* generateAIResponseStream(
   deltaThinking?: string
   thinkingDone?: boolean
 }> {
-  const startTime = Date.now()
-  
-  try {
+    const startTime = Date.now()
+
+    const currentProjectDisplay = currentProject
+      ? formatProjectTitleForSpeech(currentProject.title, currentProject.subtitle)
+      : ''
+
+    try {
     const apiKey = process.env.GEMINI_API_KEY?.trim()
     if (!apiKey) {
       const isDev = process.env.NODE_ENV === 'development'
@@ -91,14 +103,14 @@ export async function* generateAIResponseStream(
       // 상세 페이지일 때: 참조 청크에 답이 없을 수 있으므로 전체 본문을 함께 전달
       if (fallbackProjectContent && fallbackProjectContent.length > 0 && currentProject) {
         const fallbackCap = 10_000
-        const fallbackBlock = `\n\n[Full project page content — "${currentProject.title}". Use this if the references above do not contain the answer.]\n\n${fallbackProjectContent.slice(0, fallbackCap)}${fallbackProjectContent.length > fallbackCap ? '...[truncated]' : ''}`
+        const fallbackBlock = `\n\n[Full project page content — "${currentProjectDisplay}". Use this if the references above do not contain the answer.]\n\n${fallbackProjectContent.slice(0, fallbackCap)}${fallbackProjectContent.length > fallbackCap ? '...[truncated]' : ''}`
         contextText = contextText + fallbackBlock
       }
     } else {
       // 검색 0건일 때
       if (fallbackProjectContent && fallbackProjectContent.length > 0 && currentProject) {
         // /portfolio/[id] 페이지: RAG 결과 없으면 현재 프로젝트 본문을 [Portfolio Content]로 사용
-        contextText = `[Current project page content — "${currentProject.title}" (id: ${currentProject.id}). Use this as the only source. Do NOT say content was not loaded.]\n\n${fallbackProjectContent}`
+        contextText = `[Current project page content — "${currentProjectDisplay}" (id: ${currentProject.id}). Use this as the only source. Do NOT say content was not loaded.]\n\n${fallbackProjectContent}`
       } else if (projectsOnPage && projectsOnPage.length > 0) {
         const listBlock = formatProjectsOnPageForPrompt(projectsOnPage)
         contextText = `(No detailed references were retrieved. The user is on /portfolio. Use ONLY these projects (with CMS Duration/Summary when shown):\n\n${listBlock}\n\nYou may compare durations, answer recency/longest questions from this text, and summarize each project using Summary lines. Do NOT invent other projects or dates not present above.)`
@@ -113,13 +125,13 @@ export async function* generateAIResponseStream(
     // /portfolio 리스트: 제목·id·Duration·Summary (CMS) — 이름만이 아니라 기간 비교·요약에 사용
     const pageProjectsBlock =
       projectsOnPage && projectsOnPage.length > 0
-        ? `\n[Current page — Projects on this portfolio list]\nThe user is on /portfolio. Exactly ${projectsOnPage.length} project(s). Only these projects may be discussed (by id/title):\n\n${formatProjectsOnPageForPrompt(projectsOnPage)}\n\n[Rules for this list]\n- Do NOT invent other project names or dates.\n- When the user only asks what is on the page / what projects exist, LIST titles (and ids if helpful).\n- When they ask to **summarize each project** / **프로젝트마다 요약** / **전체 요약**: give a **short summary per project** (1–3 sentences each) using **Summary** and **Duration** lines above plus [Portfolio Content] references. Cite [Source: EXACT_TITLE] where useful.\n`
+        ? `\n[Current page — Projects on this portfolio list]\nThe user is on /portfolio. Exactly ${projectsOnPage.length} project(s). Only these projects may be discussed (by id/title):\n\n${formatProjectsOnPageForPrompt(projectsOnPage)}\n\n[Rules for this list]\n- Do NOT invent other project names or dates.\n- **Display name**: Each line shows the project as **"Title (Subtitle)"** when a subtitle exists — use that **exact display string** whenever you mention a project in your <answer> (natural language). If there is no parenthetical part, use the title only.\n- When the user only asks what is on the page / what projects exist, LIST those display names (and ids if helpful).\n- When they ask to **summarize each project** / **프로젝트마다 요약** / **전체 요약**: give a **short summary per project** (1–3 sentences each) using **Summary** and **Duration** lines above plus [Portfolio Content] references. Still use the display name when naming each project. Cite [Source: EXACT_TITLE] where useful (use the bare **title** from Reference headers for [Source:], not the parenthetical subtitle — see [Project naming] below).\n`
         : ''
 
     // /portfolio/[id] 상세 페이지일 때: 사용자가 지금 보고 있는 프로젝트 명시 (AI가 반드시 인지하도록)
     const currentProjectBlock =
       currentProject && currentProject.title
-        ? `\n[Current page — Project detail]\nThe user is NOW VIEWING the project detail page: **"${currentProject.title}"** (id: ${currentProject.id}). They are reading this project's content. You MUST assume their questions refer to THIS project unless they explicitly ask about another. When relevant, acknowledge which project they are viewing (e.g. "In this project [${currentProject.title}]..."). Do NOT say you don't know which project they mean — they are on /portfolio/${currentProject.id}.\n`
+        ? `\n[Current page — Project detail]\nThe user is NOW VIEWING the project detail page: **"${currentProjectDisplay}"** (id: ${currentProject.id}). They are reading this project's content. You MUST assume their questions refer to THIS project unless they explicitly ask about another. When relevant, acknowledge which project they are viewing using that **full display name** (title + subtitle in parentheses when applicable), e.g. "In this project [${currentProjectDisplay}]...". Do NOT say you don't know which project they mean — they are on /portfolio/${currentProject.id}.\n`
         : currentProject && currentProject.id
           ? `\n[Current page — Project detail]\nThe user is on a project detail page: /portfolio/${currentProject.id}. Assume their questions refer to THIS project. Do NOT say you don't know which project they are viewing.\n`
           : ''
@@ -151,6 +163,10 @@ ${langVersionBlock}
 2. Use <answer> tag for your full response. Never truncate: give a complete answer.
 3. Use [Portfolio Content] below. On /portfolio, you MAY also use **Duration** and **Summary** lines in [Current page — Projects on this portfolio list] (same CMS data). If the user asks about a term (e.g. 게이미피케이션, gamification), look in ALL references — it may appear in related sections (해결, Solution, 온보딩, 결과 등). Do not say "not found" unless you have searched every block.
 4. CRITICAL — NO HALLUCINATION: Only mention project names, titles, metrics, dates, and facts that EXPLICITLY appear in [Portfolio Content], in [Current page — Project detail], or in [Current page — Projects on this portfolio list] above. Do NOT invent or assume any other project name or detail. When the user is on a project detail page, you MUST assume they are asking about THAT project.
+
+[Project naming — title + subtitle in natural language]
+- When a project has a **subtitle** (parenthetical part in the list or on the detail page), you MUST refer to it in your <answer> as **"Title (Subtitle)"** — the same pattern as the site banner (e.g. Korean title + English subtitle in parentheses). Do this every time you name that project in running text, lists, and comparisons.
+- **Exception for citations**: In **[Source: ...]** only, use the **exact title string from the Reference block header** (usually the short title without the parenthetical subtitle) so the client can match sources. In all other sentences, prefer the full **"Title (Subtitle)"** form.
 
 [Duration & project timeline — ONLY from list + Portfolio Content]
 - Each project's **Duration** (기간) may look like "Jan 2023 – Mar 2024", "2023.01 – 2024.06", "6 months", "2년", "6개월", "진행 중", "present", "~ ing", etc. Parse ONLY text that appears in the list or references.

@@ -115,6 +115,22 @@ curl -X POST http://localhost:3000/api/embed
 
 ## 5. 문제 해결
 
+### 개발 서버에서 스타일이 깨지거나 Tailwind가 일부만 적용될 때
+
+Next.js는 HMR·캐시 때문에 가끔 CSS 번들이 꼬일 수 있습니다. 아래 순서로 시도해 보세요.
+
+1. **캐시 삭제 후 재시작** (가장 효과적)
+   ```bash
+   npm run dev:clean
+   ```
+   (`rm -rf .next` 후 `next dev` — `package.json`에 이미 정의됨)
+
+2. **브라우저 강력 새로고침** (캐시 비우기) 또는 시크릿 창에서 `http://localhost:3000` 접속
+
+3. **지금 열린 폴더가 맞는지 확인** — Cursor 워크트리(`worktrees/.../tcr`)와 `Documents/portfolio_2026` 등 **다른 클론**에서 각각 `npm run dev`를 켜 두면, 수정한 파일과 보는 서버가 달라 “스타일이 이상하다”처럼 느껴질 수 있습니다.
+
+4. **`app/globals.css`만 고친 뒤** 스타일이 안 바뀌면 한 번 전체 새로고침(F5) — 글로벌 CSS는 HMR이 완벽하지 않을 때가 있습니다.
+
 ### 벡터 저장소가 비어있음
 
 벡터 저장소를 초기화하세요:

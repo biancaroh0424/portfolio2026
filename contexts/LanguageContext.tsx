@@ -65,7 +65,7 @@ const translations: Record<Language, Record<string, string>> = {
     'home.button.aiAssistant': 'AI 어시스턴트',
     'chatbot.greeting': '안녕하세요!👋\n\n저는 바이브 코딩으로 만들어진 YJ Assistant예요. \n\n노영주님의 디자인 작업과 측정 가능한 성과를 빠르게 이해할 수 있도록 도와릴게요!\n\n무엇이 궁금하신가요? 😄',
     'chatbot.placeholder': '노영주가 어떤 것을 작업했는지 물어보세요',
-    'chatbot.projectPlaceholder': '이 프로젝트를 YJ AI 어시스턴트에게 물어보세요',
+    'chatbot.projectPlaceholder': 'YJ Assistant에게 프로젝트를 물어보세요',
     'chatbot.tooltip.collapse': '접기',
     'chatbot.tooltip.chatHistory': '채팅 기록',
     'chatbot.tooltip.newChat': '새 채팅',
