@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { generateEmbedding } from './embeddings'
 import { searchVectorStore } from './vector-store'
-import { Content } from './data'
+import { Content, getAllContent } from './data'
 
 export interface SearchResult {
   content: Content
@@ -25,6 +25,52 @@ export async function searchRelevantContent(
   projectId?: string,
   language?: 'en' | 'ko' | 'it'
 ): Promise<SearchResult[]> {
+  const runDevCmsFallback = async (): Promise<SearchResult[]> => {
+    try {
+      const q = (query || '').trim().toLowerCase()
+      if (!q) return []
+
+      // 임베딩 없이 대충이라도 "관련성 있는" 청크를 뽑기 위한 키워드 토큰
+      const terms = q
+        .split(/\s+/g)
+        .map((t) => t.replace(/[^\p{L}\p{N}]/gu, '').trim())
+        .filter((t) => t.length >= 2)
+        .slice(0, 30)
+
+      if (terms.length === 0) return []
+
+      const all = await getAllContent()
+
+      const candidates = all
+        .filter((c) => {
+          if (projectId) {
+            if (!c.projectId || c.projectId !== projectId) return false
+          }
+          if (language) {
+            if (c.type === 'resume') return true
+            if (!c.language || c.language !== language) return false
+          }
+          return true
+        })
+        .map((c) => {
+          const haystack = `${c.title}\n${c.content}`.toLowerCase()
+          let hits = 0
+          for (const term of terms) {
+            if (term && haystack.includes(term)) hits += 1
+          }
+          return { content: c, score: hits }
+        })
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit)
+
+      return candidates.map((x) => ({ content: x.content, score: x.score }))
+    } catch (fallbackError) {
+      console.error('[RAG] dev fallback failed:', fallbackError)
+      return []
+    }
+  }
+
   try {
     // 임베딩 입력 길이 상한 — 드래그된 긴 텍스트가 들어와도 짧게 잘라서 빠르게
     const q = (query && query.trim()) ? query.trim().slice(0, EMBED_QUERY_MAX_LEN) : ''
@@ -41,6 +87,9 @@ export async function searchRelevantContent(
     logAI('벡터검색 완료', { results: results.length })
     
     if (results.length === 0) {
+      if (process.env.NODE_ENV === 'development') {
+        return await runDevCmsFallback()
+      }
       return []
     }
     
@@ -59,6 +108,10 @@ export async function searchRelevantContent(
         return true
       })
     }
+
+    if (process.env.NODE_ENV === 'development' && filteredResults.length === 0) {
+      return await runDevCmsFallback()
+    }
     
     // SearchResult 형식으로 변환 (content.type은 'project'|'about'|'general'|'resume')
     return filteredResults.map(result => ({
@@ -67,7 +120,10 @@ export async function searchRelevantContent(
     })) as SearchResult[]
   } catch (error) {
     console.error('[RAG] Error searching:', error)
-    return []
+    // dev에서만: 임베딩/벡터검색이 실패해도 챗봇이 답할 수 있게
+    // CMS contents를 직접 컨텍스트로 사용 (프로덕션/스테이징은 Chroma 유지).
+    if (process.env.NODE_ENV !== 'development') return []
+    return await runDevCmsFallback()
   }
 }
 
