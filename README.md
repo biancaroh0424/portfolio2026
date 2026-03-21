@@ -23,7 +23,9 @@ npm install
 
 ### 환경 변수 설정
 
-`.env.local` 파일을 생성하고 다음을 추가하세요:
+**로컬에서는 `.env.local` 하나만** 두고 관리하면 됩니다. (`.env.example`은 저장소용 주석 예시라서 커밋·수정할 필요 없음.)
+
+`.env.local` 파일을 프로젝트 루트에 만들고 예를 들어 다음을 넣으세요:
 
 ```env
 # Portfolio Password (CV에 적힌 비밀번호)

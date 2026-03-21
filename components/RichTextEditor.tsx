@@ -1,5 +1,6 @@
 'use client'
 
+import type { Editor } from '@tiptap/core'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { ResizableImage } from '@/lib/tiptap-image-resize'
@@ -16,6 +17,29 @@ import { Figure } from '@/lib/tiptap-figure'
 import { Figcaption } from '@/lib/tiptap-figcaption'
 import { Columns, Column } from '@/lib/tiptap-columns'
 import { Table, TableRow, TableHeaderCell, TableCell, createDefaultTableNode } from '@/lib/tiptap-table'
+import { VectorOnly } from '@/lib/tiptap-vector-only'
+
+const VECTOR_ONLY_PLACEHOLDER =
+  '챗봇에만 전달할 내용을 여기에 작성하세요. (포트폴리오 페이지에는 표시되지 않습니다.)'
+
+/** 가능하면 선택 블록을 vectorOnly로 감싸고, 불가하면 새 블록 삽입 */
+function insertVectorOnlyBlock(editor: Editor) {
+  const wrapped = editor.chain().focus().wrapIn('vectorOnly').run()
+  if (wrapped) return
+  editor
+    .chain()
+    .focus()
+    .insertContent({
+      type: 'vectorOnly',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: VECTOR_ONLY_PLACEHOLDER }],
+        },
+      ],
+    })
+    .run()
+}
 
 interface RichTextEditorProps {
   value: string
@@ -228,6 +252,20 @@ export default function RichTextEditor({
       },
     },
     {
+      id: 'vectorOnly',
+      label: '챗봇·RAG 전용 블록 (사이트 비표시)',
+      icon: '🤖',
+      /** 슬래시 검색용 (라벨 외 키워드) */
+      slashSearch: 'rag chatbot 챗봇 벡터 비공개',
+      action: () => {
+        if (editor) {
+          const { from } = editor.state.selection
+          editor.chain().focus().deleteRange({ from: from - slashMenuQuery.length - 1, to: from }).run()
+          insertVectorOnlyBlock(editor)
+        }
+      },
+    },
+    {
       id: 'spacing',
       label: 'Spacing',
       icon: '⬍',
@@ -273,9 +311,15 @@ export default function RichTextEditor({
     },
   ]
 
-  const filteredSlashOptions = slashMenuOptions.filter(option =>
-    option.label.toLowerCase().includes(slashMenuQuery.toLowerCase())
-  )
+  const filteredSlashOptions = slashMenuOptions.filter((option) => {
+    const q = slashMenuQuery.toLowerCase().trim()
+    if (!q) return true
+    const extra = 'slashSearch' in option && typeof (option as { slashSearch?: string }).slashSearch === 'string'
+      ? (option as { slashSearch: string }).slashSearch
+      : ''
+    const hay = `${option.label} ${option.id} ${extra}`.toLowerCase()
+    return hay.includes(q)
+  })
 
   // 자동저장을 위한 debounced onChange
   const handleAutoSave = React.useCallback((content: string) => {
@@ -353,6 +397,7 @@ export default function RichTextEditor({
       TableRow,
       TableHeaderCell,
       TableCell,
+      VectorOnly,
     ],
     parseOptions: {
       preserveWhitespace: 'full',
@@ -1039,6 +1084,17 @@ export default function RichTextEditor({
             >
               &quot;
             </button>
+            <div className="w-px h-4 bg-gray-600 mx-1" />
+            <button
+              type="button"
+              onClick={() => insertVectorOnlyBlock(editor)}
+              className={`px-2 py-1 rounded text-sm ${
+                editor.isActive('vectorOnly') ? 'bg-purple-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-white'
+              }`}
+              title="챗봇·RAG 전용 블록 — 포트폴리오에 안 보임, 벡터·챗봇에만 포함"
+            >
+              🤖
+            </button>
             {(() => {
               const { $anchor } = editor.state.selection
               const node = $anchor.parent
@@ -1340,6 +1396,16 @@ export default function RichTextEditor({
           title="열 추가 (오른쪽)"
         >
           열+
+        </button>
+        <button
+          type="button"
+          onClick={() => insertVectorOnlyBlock(editor)}
+          className={`px-2 py-1 rounded text-sm ${
+            editor.isActive('vectorOnly') ? 'bg-purple-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-white'
+          }`}
+          title="챗봇·RAG 전용 블록 — 사이트 비표시, 벡터·챗봇에만 포함"
+        >
+          🤖
         </button>
         <button
           onClick={() => {

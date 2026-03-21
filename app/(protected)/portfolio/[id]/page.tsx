@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useState, useRef } from 'react'
+import { useEffect, useLayoutEffect, useState, useRef, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { formatProjectTitle } from '@/lib/utils'
+import { stripPortfolioVectorOnlyHtml } from '@/lib/strip-portfolio-vector-only'
 import ChapterStatus from '@/components/ChapterStatus'
 import ProjectDetailSkeleton from '@/components/ProjectDetailSkeleton'
 import ProjectChatInput from '@/components/ProjectChatInput'
@@ -157,6 +158,12 @@ export default function ProjectDetailPage() {
 
   // 현재 언어의 translation 가져오기 (없어도 빈값으로 반환됨)
   const currentTranslation = project ? getProjectTranslation(project, language) : null
+
+  /** 챗봇(RAG) 전용 블록 — 저장된 HTML에는 있으나 공개 페이지에는 렌더하지 않음 */
+  const portfolioDisplayHtml = useMemo(
+    () => stripPortfolioVectorOnlyHtml(currentTranslation?.content || ''),
+    [currentTranslation?.content]
+  )
 
   // hash가 있을 때 전용 스크롤: 콘텐츠 로드 후에도 재시도 (챗봇에서 섹션 이동 시)
   // targetHash + 콘텐츠 준비 시점(project/content) 모두 의존 → URL hash로 진입해도 로드 후 스크롤
@@ -641,7 +648,7 @@ export default function ProjectDetailPage() {
         {currentTranslation?.content && (
           <ChapterStatus 
             key={`chapter-${projectId}-${language}`}
-            content={currentTranslation.content || ''} 
+            content={portfolioDisplayHtml} 
             title={currentTranslation.title}
             onToggle={setIsChapterOpen}
             contentContainerRef={contentRef}
@@ -839,7 +846,7 @@ export default function ProjectDetailPage() {
                   overflowWrap: 'break-word',
                   wordBreak: 'break-word'
                 }}
-                dangerouslySetInnerHTML={{ __html: currentTranslation.content }}
+                dangerouslySetInnerHTML={{ __html: portfolioDisplayHtml }}
               />
             ) : (
               /* 하위 호환성: 섹션 기반 표시 */

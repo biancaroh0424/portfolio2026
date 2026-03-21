@@ -2133,3 +2133,27 @@ a h1.projects-page-title {
   }
 }
 
+/* Admin Rich Text: 챗봇(RAG) 전용 블록 — 저장 HTML에만 존재, 공개 포트폴리오에서는 strip 됨 */
+.portfolio-vector-only-block {
+  position: relative;
+  border: 1px dashed rgba(196, 181, 253, 0.75);
+  border-radius: 8px;
+  padding: 12px 12px 12px 14px;
+  margin: 12px 0;
+  background: rgba(88, 28, 135, 0.22);
+}
+.portfolio-vector-only-block::before {
+  content: '챗봇(RAG) 전용 · 사이트 비표시';
+  display: block;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(233, 213, 255, 0.95);
+  margin-bottom: 10px;
+  text-transform: none;
+}
+.ProseMirror .portfolio-vector-only-block p:first-of-type {
+  margin-top: 0;
+}
+

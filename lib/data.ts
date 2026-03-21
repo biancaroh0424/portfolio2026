@@ -2,6 +2,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { list } from '@vercel/blob'
+import { stripPortfolioVectorOnlyHtml } from '@/lib/strip-portfolio-vector-only'
 
 const PROJECTS_FILE = path.join(process.cwd(), 'data', 'projects.json')
 const BLOB_PROJECTS_PATH = 'data/projects.json'
@@ -414,6 +415,10 @@ export async function getAllContent(): Promise<Content[]> {
         if (useFallback && fallback && typeof fallback === 'string') contentToProcess = fallback
       }
       if (!contentToProcess || !contentToProcess.trim()) return
+
+      // RAG 전용 블록(data-portfolio-vector-only) 안의 헤딩은 공개 목차/앵커에 쓰이지 않도록 제외
+      contentToProcess = stripPortfolioVectorOnlyHtml(contentToProcess)
+      if (!contentToProcess.trim()) return
       
       // fields 정보를 텍스트로 변환 (heading 콘텐츠에도 포함)
       const fields = translation?.fields || (lang === 'en' ? project.fields : [])

@@ -1362,6 +1362,10 @@ export default function AdminPage() {
                 />
                 <p className="text-xs text-gray-400 mt-2">
                   💡 툴바를 사용하여 텍스트 포맷팅, 제목, 리스트 등을 추가할 수 있습니다. 마크다운도 지원됩니다.
+                  {' '}
+                  <span className="text-purple-300/90">
+                    🤖 RAG 전용 블록은 포트폴리오 페이지에 보이지 않고, 저장 후 벡터 DB·챗봇 검색에만 포함됩니다.
+                  </span>
                 </p>
               </div>
             </div>

@@ -27,9 +27,18 @@ export async function* generateAIResponseStream(
   const startTime = Date.now()
   
   try {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set')
-    
+    const apiKey = process.env.GEMINI_API_KEY?.trim()
+    if (!apiKey) {
+      const isDev = process.env.NODE_ENV === 'development'
+      yield {
+        type: 'error',
+        content: isDev
+          ? '로컬(dev)에서 AI를 쓰려면 프로젝트 루트에 .env.local 파일을 만들고 GEMINI_API_KEY=발급받은_키 를 넣은 뒤 개발 서버(npm run dev)를 다시 시작해 주세요. 키: https://aistudio.google.com/apikey'
+          : '서버에 GEMINI_API_KEY가 설정되어 있지 않습니다. 배포 환경 변수(Vercel 등)를 확인해 주세요.',
+      }
+      return
+    }
+
     const genAI = new GoogleGenerativeAI(apiKey)
     
     // ✅ [요청 반영] 모델을 'gemini-3-pro-preview'로 유지! (지능형 모델)
