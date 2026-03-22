@@ -282,6 +282,36 @@ export default function AdminPage() {
     }
   }
 
+  const handleResumeDelete = async (language: 'en' | 'ko' | 'it') => {
+    if (
+      !window.confirm(
+        `${language.toUpperCase()} 이력서 PDF를 삭제할까요?\n파일(스토리지)과 목록이 함께 제거됩니다.`
+      )
+    ) {
+      return
+    }
+    setMessage('')
+    try {
+      const response = await fetch(`/api/admin/resume?lang=${language}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error || 'Delete failed')
+      }
+      const data = await response.json()
+      if (data.resume) {
+        setResumeFiles({
+          en: data.resume.en || '',
+          ko: data.resume.ko || '',
+          it: data.resume.it || '',
+        })
+      }
+      setMessage(`✅ ${language.toUpperCase()} 이력서가 삭제되었습니다.`)
+    } catch (error) {
+      console.error('Error deleting resume:', error)
+      setMessage('❌ 삭제 중 오류가 발생했습니다.')
+    }
+  }
+
   const handleLogin = () => {
     const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin2026'
     if (password === adminPassword) {
@@ -1449,8 +1479,23 @@ export default function AdminPage() {
                       {uploadingResume.en ? '업로드 중...' : resumeFiles.en ? '파일 변경' : 'PDF 업로드'}
                     </label>
                     {resumeFiles.en && (
-                      <span className="text-sm text-gray-400">
-                        현재: <a href={resumeFiles.en} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{resumeFiles.en}</a>
+                      <span className="text-sm text-gray-400 flex flex-wrap items-center gap-2">
+                        현재:{' '}
+                        <a
+                          href={resumeFiles.en}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:underline break-all"
+                        >
+                          {resumeFiles.en}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleResumeDelete('en')}
+                          className="px-2 py-1 text-xs rounded border border-red-500/60 text-red-300 hover:bg-red-950/50"
+                        >
+                          삭제
+                        </button>
                       </span>
                     )}
                   </div>
@@ -1482,8 +1527,23 @@ export default function AdminPage() {
                       {uploadingResume.ko ? '업로드 중...' : resumeFiles.ko ? '파일 변경' : 'PDF 업로드'}
                     </label>
                     {resumeFiles.ko && (
-                      <span className="text-sm text-gray-400">
-                        현재: <a href={resumeFiles.ko} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{resumeFiles.ko}</a>
+                      <span className="text-sm text-gray-400 flex flex-wrap items-center gap-2">
+                        현재:{' '}
+                        <a
+                          href={resumeFiles.ko}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:underline break-all"
+                        >
+                          {resumeFiles.ko}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleResumeDelete('ko')}
+                          className="px-2 py-1 text-xs rounded border border-red-500/60 text-red-300 hover:bg-red-950/50"
+                        >
+                          삭제
+                        </button>
                       </span>
                     )}
                   </div>
@@ -1515,8 +1575,23 @@ export default function AdminPage() {
                       {uploadingResume.it ? '업로드 중...' : resumeFiles.it ? '파일 변경' : 'PDF 업로드'}
                     </label>
                     {resumeFiles.it && (
-                      <span className="text-sm text-gray-400">
-                        현재: <a href={resumeFiles.it} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{resumeFiles.it}</a>
+                      <span className="text-sm text-gray-400 flex flex-wrap items-center gap-2">
+                        현재:{' '}
+                        <a
+                          href={resumeFiles.it}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:underline break-all"
+                        >
+                          {resumeFiles.it}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleResumeDelete('it')}
+                          className="px-2 py-1 text-xs rounded border border-red-500/60 text-red-300 hover:bg-red-950/50"
+                        >
+                          삭제
+                        </button>
                       </span>
                     )}
                   </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs/promises'
 import path from 'path'
-import { put, list } from '@vercel/blob'
+import { put, list, del } from '@vercel/blob'
 
 const RESUME_FILE = path.join(process.cwd(), 'data', 'resume.json')
 const BLOB_RESUME_PATH = 'data/resume.json'
@@ -44,6 +44,48 @@ async function writeResumeToBlob(resume: { en: string; ko: string; it: string })
     addRandomSuffix: false,
     allowOverwrite: true,
   })
+}
+
+function isVercelBlobFileUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' && u.hostname.endsWith('.blob.vercel-storage.com')
+  } catch {
+    return false
+  }
+}
+
+/** 업로드된 PDF 제거 (Blob 또는 public/uploads) */
+async function deleteResumePdfFile(url: string): Promise<void> {
+  const trimmed = url.trim()
+  if (!trimmed) return
+
+  if (isBlobStorageEnabled() && isVercelBlobFileUrl(trimmed)) {
+    try {
+      await del(trimmed)
+    } catch (e) {
+      console.error('[admin/resume] Blob delete failed (continuing to clear JSON):', e)
+    }
+    return
+  }
+
+  if (trimmed.startsWith('/uploads/')) {
+    const rel = trimmed.replace(/^\//, '')
+    const full = path.join(process.cwd(), 'public', rel)
+    const resolved = path.resolve(full)
+    const base = path.resolve(path.join(process.cwd(), 'public', 'uploads'))
+    if (!resolved.startsWith(base)) {
+      console.warn('[admin/resume] Skip local delete: path outside uploads', trimmed)
+      return
+    }
+    try {
+      await fs.unlink(resolved)
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+        console.error('[admin/resume] Local file delete failed:', e)
+      }
+    }
+  }
 }
 
 /** 로컬 fs에서 resume 읽기 */
@@ -102,5 +144,49 @@ export async function PUT(request: NextRequest) {
       { error: 'Failed to save resume' },
       { status: 500 }
     )
+  }
+}
+
+const RESUME_LANGS = ['en', 'ko', 'it'] as const
+type ResumeLang = (typeof RESUME_LANGS)[number]
+
+function isResumeLang(s: string | null): s is ResumeLang {
+  return s !== null && (RESUME_LANGS as readonly string[]).includes(s)
+}
+
+/** 특정 언어 이력서 PDF 제거 + resume.json 반영 */
+export async function DELETE(request: NextRequest) {
+  try {
+    const lang = new URL(request.url).searchParams.get('lang')
+    if (!isResumeLang(lang)) {
+      return NextResponse.json({ error: 'Invalid or missing lang (en, ko, it)' }, { status: 400 })
+    }
+
+    let current: { en: string; ko: string; it: string }
+    if (isBlobStorageEnabled()) {
+      current = (await readResumeFromBlob()) ?? { en: '', ko: '', it: '' }
+    } else {
+      current = await readResumeFromFs()
+    }
+
+    const oldUrl = (current[lang] ?? '').trim()
+    if (oldUrl) {
+      await deleteResumePdfFile(oldUrl)
+    }
+
+    const normalized = { ...current, [lang]: '' }
+
+    if (isBlobStorageEnabled()) {
+      await writeResumeToBlob(normalized)
+    } else {
+      const dir = path.dirname(RESUME_FILE)
+      await fs.mkdir(dir, { recursive: true })
+      await fs.writeFile(RESUME_FILE, JSON.stringify(normalized, null, 2))
+    }
+
+    return NextResponse.json({ success: true, resume: normalized })
+  } catch (error) {
+    console.error('Error deleting resume entry:', error)
+    return NextResponse.json({ error: 'Failed to delete resume file' }, { status: 500 })
   }
 }
