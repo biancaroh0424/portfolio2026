@@ -68,9 +68,11 @@ const nextConfig = {
     const scriptSrcClarity = 'https://www.clarity.ms https://*.clarity.ms'
     // frame-src: Clarity + iframe 임베드(YouTube, Figma, Vimeo, CodePen 등)
     const frameSrc = "'self' https://www.clarity.ms https://*.clarity.ms https://www.youtube.com https://www.youtube-nocookie.com https://embed.figma.com https://www.figma.com https://player.vimeo.com https://codepen.io https://*.codesandbox.io"
+    // img-src blob: — CMS 이미지 업로드 시 createObjectURL(blob:) 미리보기·클라이언트 리사이즈(Image/canvas)에 필요
+    const imgSrc = "'self' data: https: blob:"
     const cspValue = isDev
-      ? `script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.googleapis.com https://*.google.com ${scriptSrcClarity}; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src ${connectSrc}; frame-src ${frameSrc};`
-      : `script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.google.com ${scriptSrcClarity}; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src ${connectSrc}; frame-src ${frameSrc};`
+      ? `script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.googleapis.com https://*.google.com ${scriptSrcClarity}; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src ${imgSrc}; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src ${connectSrc}; frame-src ${frameSrc};`
+      : `script-src 'self' 'unsafe-inline' https://*.googleapis.com https://*.google.com ${scriptSrcClarity}; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src ${imgSrc}; font-src 'self' data: https://r2cdn.perplexity.ai; connect-src ${connectSrc}; frame-src ${frameSrc};`
     
     return [
       {
