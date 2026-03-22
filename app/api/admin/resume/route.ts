@@ -15,10 +15,10 @@ function isBlobStorageEnabled(): boolean {
   )
 }
 
-/** Blob에서 resume.json 읽기 (프로덕션용) */
+/** Blob에서 resume.json 읽기 (프로덕션용) — data/ 아래 파일이 많으면 limit 20이면 resume.json을 놓칠 수 있어 넉넉히 조회 */
 async function readResumeFromBlob(): Promise<{ en: string; ko: string; it: string } | null> {
   try {
-    const { blobs } = await list({ prefix: 'data/', limit: 20 })
+    const { blobs } = await list({ prefix: 'data/', limit: 1000 })
     const pathnameOf = (b: { pathname?: string; name?: string }) => (b.pathname ?? b.name ?? '') as string
     const blob =
       blobs.find((b) => pathnameOf(b) === BLOB_RESUME_PATH) ??
@@ -27,10 +27,15 @@ async function readResumeFromBlob(): Promise<{ en: string; ko: string; it: strin
       blobs.find((b) => pathnameOf(b).includes('resume.json'))
     if (!blob?.url) return null
     const url = String(blob.url) + (String(blob.url).includes('?') ? '&' : '?') + '_=' + Date.now()
-    const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } })
-    if (!res.ok) return null
-    const json = await res.json()
-    return { en: json.en ?? '', ko: json.ko ?? '', it: json.it ?? '' }
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } })
+      if (res.ok) {
+        const json = await res.json()
+        return { en: json.en ?? '', ko: json.ko ?? '', it: json.it ?? '' }
+      }
+      await new Promise((r) => setTimeout(r, 200 * (attempt + 1)))
+    }
+    return null
   } catch {
     return null
   }
@@ -164,17 +169,39 @@ export async function DELETE(request: NextRequest) {
 
     let current: { en: string; ko: string; it: string }
     if (isBlobStorageEnabled()) {
-      current = (await readResumeFromBlob()) ?? { en: '', ko: '', it: '' }
+      const fromBlob = await readResumeFromBlob()
+      // null이면 빈 객체로 쓰면 다른 언어 URL까지 전부 지워짐 → 절대 덮어쓰지 않음
+      if (!fromBlob) {
+        console.error('[admin/resume] DELETE: readResumeFromBlob returned null')
+        return NextResponse.json(
+          {
+            error:
+              '이력서 설정을 불러오지 못했습니다. data/ Blob 목록 또는 네트워크 문제일 수 있습니다. 잠시 후 다시 시도해 주세요.',
+          },
+          { status: 503 }
+        )
+      }
+      current = fromBlob
     } else {
       current = await readResumeFromFs()
     }
 
     const oldUrl = (current[lang] ?? '').trim()
+    // 같은 PDF URL을 두 언어가 공유하면: 한쪽만 지울 때 파일을 지우면 다른 언어도 깨짐 → 다른 언어가 같은 URL을 쓰는 동안은 스토리지 삭제 생략
     if (oldUrl) {
-      await deleteResumePdfFile(oldUrl)
+      const otherLangs = RESUME_LANGS.filter((l) => l !== lang)
+      const stillReferenced = otherLangs.some((l) => (current[l] ?? '').trim() === oldUrl)
+      if (!stillReferenced) {
+        await deleteResumePdfFile(oldUrl)
+      }
     }
 
-    const normalized = { ...current, [lang]: '' }
+    const normalized: { en: string; ko: string; it: string } = {
+      en: current.en ?? '',
+      ko: current.ko ?? '',
+      it: current.it ?? '',
+      [lang]: '',
+    }
 
     if (isBlobStorageEnabled()) {
       await writeResumeToBlob(normalized)

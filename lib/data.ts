@@ -5,7 +5,9 @@ import { list } from '@vercel/blob'
 import { stripPortfolioVectorOnlyHtml } from '@/lib/strip-portfolio-vector-only'
 
 const PROJECTS_FILE = path.join(process.cwd(), 'data', 'projects.json')
+const RESUME_FILE = path.join(process.cwd(), 'data', 'resume.json')
 const BLOB_PROJECTS_PATH = 'data/projects.json'
+const BLOB_RESUME_PATH = 'data/resume.json'
 
 let cachedProjects: any[] | null = null
 
@@ -78,6 +80,26 @@ async function readProjectsFromApi(): Promise<any[] | null> {
     return Array.isArray(json) ? json : null
   } catch (e) {
     if (process.env.VERCEL === '1') console.warn('[data] production readProjectsFromApi error:', e instanceof Error ? e.message : String(e), url)
+    return null
+  }
+}
+
+/** Blob에서 resume.json (PDF URL 맵 등) — 동적 import(JSON) 대신 사용해 webpack 청크 오류 방지 */
+async function readResumeFromBlob(): Promise<Resume | null> {
+  try {
+    const { blobs } = await list({ prefix: 'data/', limit: 20 })
+    const pathnameOf = (b: { pathname?: string; name?: string }) => (b.pathname ?? b.name ?? '') as string
+    const blob =
+      blobs.find((b) => pathnameOf(b) === BLOB_RESUME_PATH) ??
+      blobs.find((b) => pathnameOf(b) === `/${BLOB_RESUME_PATH}`) ??
+      blobs.find((b) => pathnameOf(b).endsWith('resume.json')) ??
+      blobs.find((b) => pathnameOf(b).includes('resume.json'))
+    if (!blob?.url) return null
+    const url = String(blob.url) + (String(blob.url).includes('?') ? '&' : '?') + '_=' + Date.now()
+    const res = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } })
+    if (!res.ok) return null
+    return (await res.json()) as Resume
+  } catch {
     return null
   }
 }
@@ -200,9 +222,15 @@ export async function getProject(id: string): Promise<Project | null> {
 
 export async function getResume(): Promise<Resume | null> {
   try {
-    const resumeData = await import('@/data/resume.json')
-    return resumeData.default || null
+    if (isBlobStorageEnabled()) {
+      const fromBlob = await readResumeFromBlob()
+      if (fromBlob) return fromBlob
+    }
+    const raw = await fs.readFile(RESUME_FILE, 'utf-8')
+    return JSON.parse(raw) as Resume
   } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (code === 'ENOENT') return null
     console.warn('Resume data not found:', error)
     return null
   }
