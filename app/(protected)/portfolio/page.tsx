@@ -161,7 +161,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="min-h-screen projects-page">
+    <div className="min-h-screen projects-page" id="portfolio-list-main">
       {/* Main container - padding: 200px 0, flex-direction: column, align-items: center */}
       <div style={{ 
         display: 'flex',

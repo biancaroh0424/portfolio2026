@@ -105,6 +105,9 @@ export default function ProjectChatInput() {
   const { t } = useLanguage()
   const pathname = usePathname()
 
+  const isPortfolioListPage =
+    pathname === '/portfolio' || pathname === '/portfolio/'
+
   // 모바일 여부 확인
   useEffect(() => {
     const checkMobile = () => {
@@ -115,64 +118,58 @@ export default function ProjectChatInput() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Portfolio content div의 위치를 찾아서 중앙 정렬
+  // 데스크톱: 본문 컬럼 중앙에 맞춤. 목록(/portfolio)은 #portfolio-list-main, 상세는 .portfolio-content-container만 사용
+  // (예전: [style*="max-width: 980px"] 는 본인 입력창 래퍼만 걸려 자기 자신 기준으로 left가 꼬임 → 줌/스크롤 시 사라짐)
   useEffect(() => {
-    let animationFrameId: number | null = null
     let resizeObserver: ResizeObserver | null = null
-    let intervalId: NodeJS.Timeout | null = null
-    
+
+    const resolveAnchor = (): HTMLElement | null => {
+      if (isPortfolioListPage) {
+        return document.getElementById('portfolio-list-main')
+      }
+      return document.querySelector('.portfolio-content-container') as HTMLElement | null
+    }
+
     const updatePosition = () => {
-      // portfolio content div 찾기 (max-w-[980px] 클래스 또는 max-width: 980px 스타일)
-      const portfolioContent = document.querySelector('[class*="max-w-[980px]"], [style*="max-width: 980px"]') as HTMLElement
+      const portfolioContent = resolveAnchor()
       if (portfolioContent) {
         const rect = portfolioContent.getBoundingClientRect()
         const centerX = rect.left + rect.width / 2
         setLeftPosition(`${centerX}px`)
+      } else {
+        setLeftPosition('50%')
       }
     }
 
-    // 즉시 실행
     updatePosition()
-    
-    // ResizeObserver로 portfolio content div의 크기 변경 감지
-    const portfolioContent = document.querySelector('[class*="max-w-[980px]"], [style*="max-width: 980px"]') as HTMLElement
+
+    const portfolioContent = resolveAnchor()
     if (portfolioContent && typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => {
-        updatePosition()
-      })
+      resizeObserver = new ResizeObserver(updatePosition)
       resizeObserver.observe(portfolioContent)
-      // 부모 요소도 관찰 (margin 변경 감지)
       if (portfolioContent.parentElement) {
         resizeObserver.observe(portfolioContent.parentElement)
       }
     }
-    
-    // 빠른 주기로 위치 업데이트 (60fps = 16ms)
-    intervalId = setInterval(() => {
-      updatePosition()
-    }, 16)
-    
-    // window resize 이벤트 - 즉시 반응
-    const handleResize = () => {
-      updatePosition()
-    }
-    
-    window.addEventListener('resize', handleResize, { passive: true })
+
+    window.addEventListener('resize', updatePosition, { passive: true })
     window.addEventListener('scroll', updatePosition, { passive: true })
 
     return () => {
-      if (animationFrameId) cancelAnimationFrame(animationFrameId)
-      if (intervalId) clearInterval(intervalId)
-      if (resizeObserver) {
-        resizeObserver.disconnect()
-      }
-      window.removeEventListener('resize', handleResize)
+      if (resizeObserver) resizeObserver.disconnect()
+      window.removeEventListener('resize', updatePosition)
       window.removeEventListener('scroll', updatePosition)
     }
-  }, [pathname, width, isOpen])
+  }, [pathname, width, isOpen, isPortfolioListPage])
 
-  // 스크롤 방향 감지 — nav와 반대: scroll down → 표시, scroll up → 숨김
+  // 스크롤 방향 감지 — scroll down → 표시, scroll up → 숨김
+  // /portfolio 목록: 스크롤·줌·주소창 등으로 숨김이 자주 오작동 → 목록에서는 스크롤 숨김 전면 비활성화
   useEffect(() => {
+    if (isPortfolioListPage) {
+      setInputVisible(true)
+      return
+    }
+
     const handleScroll = () => {
       const y = window.scrollY
       if (y <= 60) {
@@ -184,9 +181,14 @@ export default function ProjectChatInput() {
       }
       lastScrollY.current = y
     }
+
     window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+    handleScroll()
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [pathname, isPortfolioListPage])
 
 
   // Context에 setInput 함수 등록 (하위 호환성)
