@@ -2,6 +2,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { SearchResult } from './rag'
 import { formatProjectTitleForSpeech } from './project-chat-meta'
 
+/** gemini-3-pro-preview 등 API deprecated 시 여기만 변경 */
+const GEMINI_CHAT_MODEL = 'gemini-2.5-pro'
+
 /** /portfolio 리스트에서 챗봇에 넘기는 프로젝트 한 줄 (부제·기간·요약은 CMS) */
 export type ProjectOnPageRow = {
   id: string
@@ -67,9 +70,8 @@ export async function* generateAIResponseStream(
 
     const genAI = new GoogleGenerativeAI(apiKey)
     
-    // ✅ [요청 반영] 모델을 'gemini-3-pro-preview'로 유지! (지능형 모델)
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-3-pro-preview',
+      model: GEMINI_CHAT_MODEL,
         generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 4096, // 답 잘림 방지 (이전 2048에서 증가)
@@ -236,10 +238,10 @@ If asked "Who created you?" or "Who made you?" or similar questions about your c
 When the user asks about the tech stack, what this chatbot is built with, "기술 스택이 뭐야?", "what did you use to build this?", "what's the stack?", answer with the following (in the same language as the user):
 - Frontend: Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, React Markdown + remark-gfm, Mixpanel.
 - Backend: Next.js API Routes, Node.js.
-- LLM & Embeddings: Google Gemini — chatbot replies use gemini-3-pro-preview (streaming, thinking + answer); embeddings use text-embedding-004; fast classification uses gemini-1.5-flash.
+- LLM & Embeddings: Google Gemini — chatbot replies use gemini-2.5-pro (streaming, thinking + answer); embeddings use text-embedding-004; fast classification uses gemini-2.5-flash.
 - RAG & Vector DB: Chroma (Chroma Cloud in production, chromadb SDK locally). Portfolio content is chunked, embedded, stored in Chroma; queries are embedded and top similar chunks are sent to Gemini as context.
 - Storage: Vercel Blob for projects, resume, and analytics JSON in production; local data/ in development.
-- One-line summary: Next.js 14 + React + Google Gemini (gemini-3-pro-preview / text-embedding-004) + Chroma (RAG) + Vercel Blob.
+- One-line summary: Next.js 14 + React + Google Gemini (gemini-2.5-pro / text-embedding-004) + Chroma (RAG) + Vercel Blob.
 
 [UX — 사용자 경험]
 When the user asks about UX, what UX was considered, "UX는 어떤 걸 신경 썼어?", "what UX did you consider?", "how was the UX designed?", answer along these lines (in the same language as the user):
@@ -459,11 +461,15 @@ ${contextText}`;
       hasThinking: finalThinking.length > 0
     })
 
-  } catch (error: any) {
-    console.error('[Stream Error]', error)
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error)
+    console.error('[Stream Error]', errMsg, error)
+    const isDev = process.env.NODE_ENV === 'development'
     yield { 
       type: 'error',
-      content: 'AI가 깊게 생각하다가 길을 잃었어요 🤯 잠시 후 다시 질문해 주세요.'
+      content: isDev
+        ? `AI 응답 생성 실패: ${errMsg.slice(0, 240)}`
+        : 'AI가 깊게 생각하다가 길을 잃었어요 🤯 잠시 후 다시 질문해 주세요.'
     }
   }
 }

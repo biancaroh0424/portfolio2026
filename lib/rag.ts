@@ -155,9 +155,8 @@ export async function isProjectRelated(query: string): Promise<boolean> {
     if (!apiKey) return isProjectRelatedByKeywords(q)
 
     const genAI = new GoogleGenerativeAI(apiKey)
-    // 빠른 분류용 (미지원 시 gemini-1.5-flash 등으로 변경 가능)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: { maxOutputTokens: 4, temperature: 0 }
     })
     const result = await model.generateContent(`${PROJECT_RELATED_PROMPT}\n\nUser: ${q}\nAnswer:`)
