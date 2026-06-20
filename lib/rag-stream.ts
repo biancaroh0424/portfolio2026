@@ -3,7 +3,7 @@ import { SearchResult } from './rag'
 import { formatProjectTitleForSpeech } from './project-chat-meta'
 
 /** gemini-3-pro-preview 등 API deprecated 시 여기만 변경 */
-const GEMINI_CHAT_MODEL = 'gemini-2.5-pro'
+const GEMINI_CHAT_MODEL = 'gemini-3.5-flash'
 
 /** /portfolio 리스트에서 챗봇에 넘기는 프로젝트 한 줄 (부제·기간·요약은 CMS) */
 export type ProjectOnPageRow = {
