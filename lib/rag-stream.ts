@@ -3,7 +3,7 @@ import { SearchResult } from './rag'
 import { formatProjectTitleForSpeech } from './project-chat-meta'
 
 /** gemini-3-pro-preview 등 API deprecated 시 여기만 변경 */
-const GEMINI_CHAT_MODEL = 'gemini-2.5-pro'
+const GEMINI_CHAT_MODEL = 'gemini-2.5-flash'
 
 /** /portfolio 리스트에서 챗봇에 넘기는 프로젝트 한 줄 (부제·기간·요약은 CMS) */
 export type ProjectOnPageRow = {
@@ -70,7 +70,7 @@ export async function* generateAIResponseStream(
 
     const genAI = new GoogleGenerativeAI(apiKey)
     
-    const model = genAI.getGenerativeModel({ 
+    const model = genAI.getGenerativeModel({
       model: GEMINI_CHAT_MODEL,
         generationConfig: {
         temperature: 0.7,
@@ -238,10 +238,10 @@ If asked "Who created you?" or "Who made you?" or similar questions about your c
 When the user asks about the tech stack, what this chatbot is built with, "기술 스택이 뭐야?", "what did you use to build this?", "what's the stack?", answer with the following (in the same language as the user):
 - Frontend: Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, React Markdown + remark-gfm, Mixpanel.
 - Backend: Next.js API Routes, Node.js.
-- LLM & Embeddings: Google Gemini — chatbot replies use gemini-2.5-pro (streaming, thinking + answer); embeddings use text-embedding-004; fast classification uses gemini-2.5-flash.
+- LLM & Embeddings: Google Gemini — chatbot replies use gemini-2.5-flash (streaming); embeddings use text-embedding-004; fast classification uses gemini-2.5-flash.
 - RAG & Vector DB: Chroma (Chroma Cloud in production, chromadb SDK locally). Portfolio content is chunked, embedded, stored in Chroma; queries are embedded and top similar chunks are sent to Gemini as context.
 - Storage: Vercel Blob for projects, resume, and analytics JSON in production; local data/ in development.
-- One-line summary: Next.js 14 + React + Google Gemini (gemini-2.5-pro / text-embedding-004) + Chroma (RAG) + Vercel Blob.
+- One-line summary: Next.js 14 + React + Google Gemini (gemini-2.5-flash / text-embedding-004) + Chroma (RAG) + Vercel Blob.
 
 [UX — 사용자 경험]
 When the user asks about UX, what UX was considered, "UX는 어떤 걸 신경 썼어?", "what UX did you consider?", "how was the UX designed?", answer along these lines (in the same language as the user):
