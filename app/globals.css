@@ -440,14 +440,6 @@ body {
   pointer-events: none;
 }
 
-/* Admin only 마크 - 에디터에서 관리자 전용 텍스트 표시 (유저 페이지에서는 stripAdminOnlyFromHtml로 제거) */
-.ProseMirror .admin-only-mark,
-.ProseMirror span[data-admin-only] {
-  background: rgba(245, 158, 11, 0.2);
-  border-bottom: 1px dashed rgb(245, 158, 11);
-  padding: 0 2px;
-}
-
 /* 모든 제목 스타일 리셋 - 기본값: font-weight 400 */
 .ProseMirror h1,
 div[contenteditable="true"].prose h1,
@@ -1521,18 +1513,6 @@ div[contenteditable="true"].prose-lg blockquote p {
 /* thumbnail 컨테이너 내부의 이미지는 포인터 제거 */
 .project-thumbnail-container img {
   cursor: default !important;
-}
-
-/* iframe 임베드 스타일 (YouTube, Figma 등) */
-.prose iframe,
-.prose-lg iframe,
-.ProseMirror iframe {
-  width: 100% !important;
-  max-width: 100% !important;
-  border: none !important;
-  border-radius: 8px !important;
-  margin: 16px 0 !important;
-  display: block !important;
 }
 
 /* 동영상 스타일 */

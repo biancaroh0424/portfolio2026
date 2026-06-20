@@ -20,8 +20,6 @@ import { Table, TableRow, TableHeaderCell, TableCell, createDefaultTableNode } f
 import { VectorOnly } from '@/lib/tiptap-vector-only'
 import { optimizeImageForUpload } from '@/lib/client-image-upload'
 import { uploadFileToVercelBlob } from '@/lib/browser-blob-upload'
-import { AdminOnly } from '@/lib/tiptap-admin-only'
-import { Iframe, parseIframeEmbed } from '@/lib/tiptap-iframe'
 
 const VECTOR_ONLY_PLACEHOLDER =
   '챗봇에만 전달할 내용을 여기에 작성하세요. (포트폴리오 페이지에는 표시되지 않습니다.)'
@@ -73,8 +71,6 @@ export default function RichTextEditor({
   const [isManualSaving, setIsManualSaving] = useState(false)
   const [showCaptionModal, setShowCaptionModal] = useState(false)
   const [captionInput, setCaptionInput] = useState('')
-  const [showIframeModal, setShowIframeModal] = useState(false)
-  const [iframeInput, setIframeInput] = useState('')
   const [pendingMediaUrl, setPendingMediaUrl] = useState<string | null>(null)
   const [pendingMediaType, setPendingMediaType] = useState<'image' | 'video' | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -199,30 +195,6 @@ export default function RichTextEditor({
           const { from } = editor.state.selection
           editor.chain().focus().deleteRange({ from: from - slashMenuQuery.length - 1, to: from }).run()
           videoInputRef.current?.click()
-        }
-      },
-    },
-    {
-      id: 'iframe',
-      label: 'Iframe (임베드)',
-      icon: '📺',
-      action: () => {
-        if (editor) {
-          const { from } = editor.state.selection
-          editor.chain().focus().deleteRange({ from: from - slashMenuQuery.length - 1, to: from }).run()
-          setIframeInput('')
-          setShowIframeModal(true)
-        }
-      },
-    },
-    {
-      id: 'adminOnly',
-      label: 'Admin only (관리자만 보기)',
-      icon: '🔒',
-      action: () => {
-        if (editor) {
-          const { from } = editor.state.selection
-          editor.chain().focus().deleteRange({ from: from - slashMenuQuery.length - 1, to: from }).toggleMark('adminOnly').run()
         }
       },
     },
@@ -428,8 +400,6 @@ export default function RichTextEditor({
       TableHeaderCell,
       TableCell,
       VectorOnly,
-      AdminOnly,
-      Iframe,
     ],
     parseOptions: {
       preserveWhitespace: 'full',
@@ -766,24 +736,6 @@ export default function RichTextEditor({
     }
   }
 
-  const handleInsertIframe = () => {
-    if (!editor || !iframeInput.trim()) return
-    const parsed = parseIframeEmbed(iframeInput.trim())
-    if (!parsed) {
-      alert('올바른 iframe embed 코드 또는 URL을 입력해주세요. (예: https://www.youtube.com/embed/xxx 또는 <iframe ...></iframe>)')
-      return
-    }
-    editor.chain().focus().setIframe({
-      src: parsed.src,
-      width: parsed.width || '100%',
-      height: parsed.height || '400',
-      allow: parsed.allow,
-      allowfullscreen: parsed.allowfullscreen,
-    }).run()
-    setShowIframeModal(false)
-    setIframeInput('')
-  }
-
   const handleInsertMediaWithCaption = () => {
     if (!editor || !pendingMediaUrl || !pendingMediaType) return
 
@@ -1118,16 +1070,6 @@ export default function RichTextEditor({
             </button>
             <div className="w-px h-4 bg-gray-600 mx-1" />
             <button
-              onClick={() => editor.chain().focus().toggleMark('adminOnly').run()}
-              className={`px-2 py-1 rounded text-sm ${
-                editor.isActive('adminOnly') ? 'bg-amber-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-white'
-              }`}
-              title="Admin only (관리자만 보기)"
-            >
-              🔒
-            </button>
-            <div className="w-px h-4 bg-gray-600 mx-1" />
-            <button
               onClick={() => {
                 if (editor.isActive('link')) {
                   editor.chain().focus().unsetLink().run()
@@ -1393,16 +1335,6 @@ export default function RichTextEditor({
           disabled={uploadingVideo}
         >
           🎥
-        </button>
-        <button
-          onClick={() => {
-            setIframeInput('')
-            setShowIframeModal(true)
-          }}
-          className="px-2 py-1 rounded text-sm bg-gray-700 hover:bg-gray-600 text-white"
-          title="Insert Iframe (YouTube, Figma 등 임베드)"
-        >
-          📺
         </button>
         <button
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
@@ -1690,52 +1622,6 @@ export default function RichTextEditor({
         }}
         className="hidden"
       />
-
-      {/* Iframe embed 입력 모달 */}
-      {showIframeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 w-full max-w-lg">
-            <h3 className="text-white text-lg font-semibold mb-4">Iframe 임베드</h3>
-            <p className="text-sm text-gray-400 mb-3">
-              YouTube, Figma, CodePen 등 embed URL 또는 iframe 코드를 붙여넣으세요.
-            </p>
-            <textarea
-              value={iframeInput}
-              onChange={(e) => setIframeInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleInsertIframe()
-                } else if (e.key === 'Escape') {
-                  setShowIframeModal(false)
-                  setIframeInput('')
-                }
-              }}
-              placeholder={'예: https://www.youtube.com/embed/VIDEO_ID\n또는 <iframe src="..." width="560" height="315" ...></iframe>'}
-              rows={5}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 mb-4 font-mono text-sm"
-              autoFocus
-            />
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => {
-                  setShowIframeModal(false)
-                  setIframeInput('')
-                }}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleInsertIframe}
-                className="px-4 py-2 bg-white hover:bg-gray-100 text-black rounded text-sm"
-              >
-                삽입
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Caption 입력 모달 */}
       {showCaptionModal && (
