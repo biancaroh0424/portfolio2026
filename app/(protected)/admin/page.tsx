@@ -24,6 +24,7 @@ interface ProjectTranslation {
 interface Project {
   id: string
   thumbnail?: string
+  detailImage?: string // 상세 페이지(/portfolio/[id]) 배너 전용 이미지 (없으면 thumbnail 사용)
   currentLanguage?: 'en' | 'ko' | 'it' // 현재 편집 중인 언어 (기본값: 'en')
   updatedAt?: string // ISO 8601 형식의 업데이트 시간
   tags?: string[] // 프로젝트 태그 배열
@@ -389,8 +390,8 @@ export default function AdminPage() {
     }
   }
 
-  const handleImageUpload = async (file: File, type: 'thumbnail' | 'section', sectionIndex?: number) => {
-    setUploadingImage(type === 'thumbnail' ? 'thumbnail' : `section-${sectionIndex}`)
+  const handleImageUpload = async (file: File, type: 'thumbnail' | 'detail' | 'section', sectionIndex?: number) => {
+    setUploadingImage(type === 'thumbnail' ? 'thumbnail' : type === 'detail' ? 'detail' : `section-${sectionIndex}`)
     
     try {
       console.log('Uploading file:', file.name, 'Type:', file.type, 'Size:', file.size)
@@ -419,6 +420,13 @@ export default function AdminPage() {
         setEditingProject({
           ...editingProject,
           thumbnail: imageUrl,
+        })
+      }
+
+      if (type === 'detail' && editingProject) {
+        setEditingProject({
+          ...editingProject,
+          detailImage: imageUrl,
         })
       }
 
@@ -1358,6 +1366,61 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* 상세 페이지 배너 이미지 (선택) */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">상세 페이지 배너 이미지</label>
+                <p className="text-xs text-gray-400 mb-3">
+                  이 이미지는 /portfolio/[id] 상세 페이지 상단 배너에만 표시됩니다. 비워두면 위 썸네일이 사용됩니다.
+                </p>
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="detail-image-upload"
+                    className="px-4 py-2 border rounded-lg cursor-pointer hover:bg-gray-800 text-white text-sm"
+                    style={{
+                      borderColor: 'var(--fill-white-10)',
+                      display: 'inline-block'
+                    }}
+                  >
+                    {uploadingImage === 'detail' ? '업로드 중...' : editingProject.detailImage ? '이미지 변경' : '이미지 업로드'}
+                  </label>
+                  <input
+                    id="detail-image-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        handleImageUpload(file, 'detail')
+                      }
+                    }}
+                    disabled={uploadingImage === 'detail'}
+                    className="hidden"
+                  />
+                  {editingProject.detailImage && (
+                    <button
+                      onClick={() => {
+                        setEditingProject({
+                          ...editingProject,
+                          detailImage: undefined
+                        })
+                      }}
+                      className="px-4 py-2 border border-red-500 rounded-lg hover:bg-red-900 text-red-500 text-sm"
+                    >
+                      이미지 제거
+                    </button>
+                  )}
+                </div>
+                {editingProject.detailImage && (
+                  <div className="mt-3">
+                    <img
+                      src={editingProject.detailImage}
+                      alt="Detail Banner Preview"
+                      className="max-w-xs h-32 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>

@@ -674,10 +674,10 @@ export default function ProjectDetailPage() {
           {/* Project Content */}
           <div>
             <div className="mb-8">
-              {project.thumbnail ? (
+              {(project.detailImage || project.thumbnail) ? (
                 <div className="relative mb-6 rounded-lg overflow-hidden project-thumbnail-container" style={{ aspectRatio: '9 / 4' }}>
                   <img
-                    src={project.thumbnail}
+                    src={project.detailImage || project.thumbnail}
                     alt={currentTranslation?.title || ''}
                     className="w-full h-full object-cover"
                   />

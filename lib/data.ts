@@ -153,6 +153,7 @@ export interface ProjectTranslation {
 export interface Project {
   id: string
   thumbnail?: string
+  detailImage?: string // 상세 페이지(/portfolio/[id]) 배너 전용 이미지 (없으면 thumbnail 사용)
   currentLanguage?: 'en' | 'ko' | 'it' // 현재 편집 중인 언어 (기본값: 'en')
   updatedAt?: string // ISO 8601 형식의 업데이트 시간
   tags?: string[] // 프로젝트 태그 배열
