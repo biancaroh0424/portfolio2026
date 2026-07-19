@@ -60,7 +60,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.language.italian': '이탈리아어',
     'nav.resume.noResume': '사용 가능한 이력서가 없습니다',
     'home.title': 'Designing Intuitive,\nHuman-centered Experiences',
-    'home.description': '데이터를 직관적인 경험으로 전환하는\n프로덕트 디자이너 노영주입니다. \n진행한 프로젝트에 대해 무엇이든 물어보세요!',
+    'home.description': '데이터를 직관적인 경험으로 전환하는\n프로덕트 메이커 노영주입니다. \n진행한 프로젝트에 대해 무엇이든 물어보세요!',
     'home.button.projects': '포트폴리오 보기',
     'home.button.aiAssistant': 'AI 어시스턴트',
     'chatbot.greeting': '안녕하세요!👋\n\n저는 바이브 코딩으로 만들어진 YJ Assistant예요. \n\n노영주님의 디자인 작업과 측정 가능한 성과를 빠르게 이해할 수 있도록 도와릴게요!\n\n무엇이 궁금하신가요? 😄',
