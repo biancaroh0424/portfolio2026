@@ -1275,13 +1275,16 @@ export default function ChatBot({ projectId, autoSummarize = false }: ChatBotPro
       const contentType = response.headers.get('content-type') || ''
       if (contentType.includes('application/json')) {
         const jsonData = await response.json()
+        flushStreamQueue(streamingMessageId)
         console.log('Received JSON response:', jsonData)
         setMessages(prev => prev.map(msg => 
           msg.id === streamingMessageId 
             ? { 
                 ...msg, 
                 content: jsonData.message || '응답을 받지 못했습니다.',
-                sources: jsonData.sources || []
+                sources: jsonData.sources || [],
+                thinking: '',
+                thinkingDone: true,
               }
             : msg
         ))

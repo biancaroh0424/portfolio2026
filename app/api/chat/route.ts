@@ -65,7 +65,17 @@ export async function POST(request: NextRequest) {
     // Private documents are never sent to the chatbot, even for an admin preview.
     const requestedProjectId = typeof currentPath === 'string' ? currentPath.match(/^\/portfolio\/([^/?#]+)/)?.[1] : undefined
     if (requestedProjectId && !(await getProject(requestedProjectId))) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      const noticeLanguage: SupportedLanguage = typeof message === 'string' && message.trim()
+        ? detectLanguage(message)
+        : pageLanguage === 'ko' || pageLanguage === 'it' ? pageLanguage : 'en'
+      const notices = {
+        ko: '이 페이지에서는 챗봇을 사용할 수 없어요. 공개 포트폴리오에서 질문해 주세요.',
+        en: 'Chat is unavailable on this page. Please ask from the public portfolio.',
+        it: 'La chat non è disponibile in questa pagina. Fai una domanda dal portfolio pubblico.',
+      }
+      return NextResponse.json({
+        code: 'PROJECT_CHAT_UNAVAILABLE', message: notices[noticeLanguage], sources: [],
+      }, { headers: { 'Cache-Control': 'no-store' } })
     }
     logAI('파싱 완료', {
       msgLen: message?.length,

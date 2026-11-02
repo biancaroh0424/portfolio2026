@@ -16,6 +16,8 @@ process.env.PROJECT_CONTENT_ENCRYPTION_KEY = 'test-only-encryption-key-32-charac
 process.env.VECTOR_STORE_MODE = 'file'
 delete process.env.VERCEL
 const cache = new Map()
+let chatExternalCalls = 0
+const unexpectedChatCall = () => { chatExternalCalls++; throw new Error('Private content must not reach AI services') }
 function load(relative) {
   const filename = path.resolve(__dirname, '..', relative)
   if (cache.has(filename)) return cache.get(filename).exports
@@ -24,6 +26,11 @@ function load(relative) {
   loaded.paths = module.paths
   cache.set(filename, loaded)
   loaded.require = id => {
+    if (filename.endsWith('/app/api/chat/route.ts')) {
+      if (id === '@/lib/rag') return { isProjectRelated: unexpectedChatCall, searchRelevantContent: unexpectedChatCall }
+      if (id === '@/lib/vector-store') return { ensureVectorStoreInitialized: unexpectedChatCall }
+      if (id === '@/lib/rag-stream') return { generateAIResponseStream: unexpectedChatCall }
+    }
     if (id === './vector-store-file') return { searchVectorStore: async () => [
       { id: 'old-private-index', content: { type: 'project', projectId: 'draft', title: 'Secret', content: 'Secret' }, score: 1 },
       { id: 'public-index', content: { type: 'project', projectId: 'legacy', title: 'Public', content: 'Public' }, score: 0.9 },
@@ -55,6 +62,7 @@ const mediaApi = load('app/api/admin/media/[id]/route.ts')
 const mediaRegisterApi = load('app/api/admin/media/route.ts')
 const data = load('lib/data.ts')
 const vector = load('lib/vector-store.ts')
+const chatApi = load('app/api/chat/route.ts')
 const { getAdminProjectTitle } = load('lib/utils.ts')
 const origin = 'http://127.0.0.1:3000'
 const adminCookie = `portfolio_admin_session=${session.createAdminSession('admin2026')}`
@@ -152,6 +160,27 @@ test('new project attachments are protected, then follow document publication st
   await api.POST(request('/api/admin/projects', { admin: true, method: 'POST', body: { ...project, visibility: 'private' } }))
   assert.equal((await mediaApi.GET(request(url), { params })).status, 404)
   assert.equal((await mediaApi.GET(request('/api/admin/media/../../secret'), { params: { id: '../../secret' } })).status, 404)
+})
+
+test('chat on private or unavailable pages returns a normal notice without AI calls or document disclosure', async () => {
+  const projects = await storage.readStoredProjects(true)
+  await storage.writeStoredProjects([...projects, {
+    id: 'private-chat-test', visibility: 'private', translations: translation('PRIVATE_CHAT_SECRET'),
+  }])
+  for (const admin of [false, true]) {
+    for (const currentPath of ['/portfolio/private-chat-test', '/portfolio/missing-chat-project']) {
+      const response = await chatApi.POST(request('/api/chat', { admin, method: 'POST', body: {
+        message: '이 문서 설명해 줘', currentPath, conversationHistory: [], pageLanguage: 'ko',
+      } }))
+      assert.equal(response.status, 200)
+      const notice = await response.json()
+      assert.equal(notice.code, 'PROJECT_CHAT_UNAVAILABLE')
+      assert.match(notice.message, /공개 포트폴리오/)
+      assert.deepEqual(notice.sources, [])
+      assert.equal(JSON.stringify(notice).includes('PRIVATE_CHAT_SECRET'), false)
+    }
+  }
+  assert.equal(chatExternalCalls, 0)
 })
 
 test('direct browser video uploads stay encrypted and decrypt only through the authorized media API', async () => {
