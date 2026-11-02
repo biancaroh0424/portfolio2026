@@ -6,6 +6,7 @@ import ProjectCard from '@/components/ProjectCard'
 import ProjectChatInput from '@/components/ProjectChatInput'
 import ProjectListSkeleton from '@/components/ProjectListSkeleton'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { isPublicProject } from '@/lib/project-visibility'
 
 const LOAD_TIMEOUT_MS = 8000 // 이 시간 지나면 무조건 로딩 해제 (스켈레톤에 갇힘 방지)
 
@@ -61,6 +62,7 @@ export default function ProjectsPage() {
       const timestamp = Date.now()
       const response = await fetch(`/api/admin/projects?t=${timestamp}`, {
         cache: 'no-store',
+        credentials: 'omit',
         signal: controller.signal,
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -70,7 +72,7 @@ export default function ProjectsPage() {
       clearTimeout(timeoutId)
       if (response.ok) {
         const data = await response.json()
-        setProjects(Array.isArray(data) ? data : [])
+        setProjects(Array.isArray(data) ? data.filter(isPublicProject) : [])
       } else {
         setProjects([])
       }
@@ -160,6 +162,8 @@ export default function ProjectsPage() {
     return <ProjectListSkeleton />
   }
 
+  const publicProjects = projects.filter(isPublicProject)
+
   return (
     <div className="min-h-screen projects-page" id="portfolio-list-main">
       {/* Main container - padding: 200px 0, flex-direction: column, align-items: center */}
@@ -222,7 +226,7 @@ export default function ProjectsPage() {
           alignItems: 'flex-start',
           alignSelf: 'stretch'
         }}>
-          {projects
+          {publicProjects
             .filter((project) => {
               // 해당 언어의 제목이 있는 프로젝트만 표시
               const translation = getProjectTranslation(project, language)
@@ -268,7 +272,7 @@ export default function ProjectsPage() {
                 />
               )
             })}
-          {projects.length === 0 && (
+          {publicProjects.length === 0 && (
             <div className="text-center py-12 text-gray-500" style={{ alignSelf: 'stretch' }}>
               프로젝트가 없습니다.
             </div>

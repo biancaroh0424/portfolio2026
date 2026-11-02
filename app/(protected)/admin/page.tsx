@@ -312,7 +312,7 @@ export default function AdminPage() {
     try {
       // API를 통해 최신 프로젝트 데이터 가져오기 (캐시 없이, 타임스탬프 추가)
       const timestamp = Date.now()
-      const response = await fetch(`/api/admin/projects?t=${timestamp}`, {
+      const response = await fetch(`/api/admin/projects?scope=admin&t=${timestamp}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -671,7 +671,7 @@ export default function AdminPage() {
         const loadProject = async () => {
           try {
             const timestamp = Date.now()
-            const response = await fetch(`/api/admin/projects?t=${timestamp}`, {
+            const response = await fetch(`/api/admin/projects?scope=admin&t=${timestamp}`, {
               cache: 'no-store',
               headers: {
                 'Cache-Control': 'no-cache, no-store, must-revalidate',

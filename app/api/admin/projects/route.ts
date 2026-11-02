@@ -1,13 +1,19 @@
-import { isAdminRequest, requireAdmin } from '@/lib/admin-auth'
+import { requireAdmin } from '@/lib/admin-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { readStoredProjects, writeStoredProjects } from '@/lib/project-storage'
 
 export const dynamic = 'force-dynamic'
 
-// Public visitors receive only published documents. Admin cookies are checked on the server.
+// The portfolio list always contains published documents, including for admins.
+// Only the explicitly requested, authenticated CMS scope includes private records.
 export async function GET(request: NextRequest) {
+  const adminScope = request.nextUrl.searchParams.get('scope') === 'admin'
+  if (adminScope) {
+    const authError = requireAdmin(request)
+    if (authError) return authError
+  }
   try {
-    const projects = await readStoredProjects(isAdminRequest(request))
+    const projects = await readStoredProjects(adminScope)
     return NextResponse.json(projects, {
       headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' },
     })

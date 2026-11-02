@@ -132,20 +132,23 @@ export default function ProjectDetailPage() {
       try {
         // API를 통해 최신 프로젝트 데이터 가져오기 (캐시 없이, 타임스탬프 추가)
         const timestamp = Date.now()
-        const response = await fetch(`/api/admin/projects?t=${timestamp}`, {
+        const fetchOptions: RequestInit = {
           cache: 'no-store',
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
           },
-        })
-        if (response.ok) {
-          const projectsData = await response.json()
-          setProjects(projectsData)
-          const projectData = projectsData.find((p: any) => p.id === projectId)
-          setProject(projectData || null)
+        }
+        const [listResponse, projectResponse] = await Promise.all([
+          fetch(`/api/admin/projects?t=${timestamp}`, fetchOptions),
+          fetch(`/api/admin/projects/${encodeURIComponent(projectId)}?t=${timestamp}`, fetchOptions),
+        ])
+        if (listResponse.ok) setProjects(await listResponse.json())
+        if (projectResponse.ok) {
+          setProject(await projectResponse.json())
         } else {
-          console.error('Failed to load projects')
+          setProject(null)
+          console.error('Failed to load project')
         }
       } catch (error) {
         console.error('Error loading project:', error)
