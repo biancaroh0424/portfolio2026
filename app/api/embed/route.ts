@@ -1,3 +1,4 @@
+import { requireAdmin } from '@/lib/admin-auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -5,7 +6,9 @@ export const runtime = 'nodejs'
 export const maxDuration = 300
 
 // 벡터 저장소 초기화 API (Admin 저장 등 CMS 데이터 변경 시 호출 — 항상 전체 재구성)
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
+  const authError = requireAdmin(request)
+  if (authError) return authError
   try {
     const { initializeVectorStore } = await import('@/lib/vector-store')
     const result = await initializeVectorStore(true) // force: Admin 저장 시 Chroma 전부 갱신
@@ -73,7 +76,9 @@ export async function POST(_request: NextRequest) {
 }
 
 // 벡터 저장소 상태 확인
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = requireAdmin(request)
+  if (authError) return authError
   try {
     const { listVectorStoreDocuments } = await import('@/lib/vector-store')
     const documents = await listVectorStoreDocuments()

@@ -57,6 +57,7 @@ git push origin main
 3. **환경 변수**: `Settings → Environment Variables`
    - 민감한 값은 **Production**과 **Preview**를 나눠서 넣기 (스테이징용 키 / 프로덕션용 키)
    - `NEXT_PUBLIC_*`도 필요하면 Preview용 별도 값 설정
+   - **`ADMIN_PASSWORD` 필수**: 길고 고유한 관리자 비밀번호를 서버 환경 변수로 설정. `NEXT_PUBLIC_ADMIN_PASSWORD`는 제거하고 새 값 사용. 환경 변수 변경 후 재배포해야 적용되며, 미설정 시 관리자 페이지와 변경 API는 잠깁니다.
 
 ---
 

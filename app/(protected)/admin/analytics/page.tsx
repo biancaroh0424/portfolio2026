@@ -49,8 +49,6 @@ interface LocationStat {
 
 export default function AnalyticsPage() {
   const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [entries, setEntries] = useState<ChatEntry[]>([])
   const [hourlyStats, setHourlyStats] = useState<HourlyStat[]>([])
   const [dateStats, setDateStats] = useState<DateStat[]>([])
@@ -95,22 +93,7 @@ export default function AnalyticsPage() {
     }
   }, [])
 
-  useEffect(() => {
-    const checkAuth = () => {
-      const savedAuth = localStorage.getItem('admin_authenticated')
-      if (savedAuth === 'true') {
-        setIsAuthenticated(true)
-      }
-      setIsCheckingAuth(false)
-    }
-    checkAuth()
-  }, [])
-
-  useEffect(() => {
-    if (isAuthenticated) loadAnalytics()
-  }, [isAuthenticated, dateRange])
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     setIsLoading(true)
     try {
       const url = dateRange === 'all' ? '/api/admin/analytics' : `/api/admin/analytics?range=${dateRange}`
@@ -130,7 +113,11 @@ export default function AnalyticsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [dateRange])
+
+  useEffect(() => {
+    loadAnalytics()
+  }, [loadAnalytics])
 
   const handleDateClick = async (date: string) => {
     setSelectedDate(date)
@@ -213,15 +200,6 @@ export default function AnalyticsPage() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-  }
-
-  if (isCheckingAuth) {
-    return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>
-  }
-
-  if (!isAuthenticated) {
-    router.push('/admin')
-    return null
   }
 
   const maxCount = Math.max(...hourlyStats.map(s => s.count), 1)

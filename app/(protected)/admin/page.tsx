@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import RichTextEditor from '@/components/RichTextEditor'
 import { formatProjectTitle } from '@/lib/utils'
 import { optimizeImageForUpload } from '@/lib/client-image-upload'
+import { isPublicProject, type ProjectVisibility } from '@/lib/project-visibility'
 
 interface ProjectField {
   label: string
@@ -23,6 +24,7 @@ interface ProjectTranslation {
 
 interface Project {
   id: string
+  visibility?: ProjectVisibility
   thumbnail?: string
   detailImage?: string // 상세 페이지(/portfolio/[id]) 배너 전용 이미지 (없으면 thumbnail 사용)
   currentLanguage?: 'en' | 'ko' | 'it' // 현재 편집 중인 언어 (기본값: 'en')
@@ -97,9 +99,6 @@ const setCurrentTranslation = (
 export default function AdminPage() {
   const router = useRouter()
   const pathname = usePathname()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
   const [projects, setProjects] = useState<Project[]>([])
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [currentEditLanguage, setCurrentEditLanguage] = useState<'en' | 'ko' | 'it'>('en')
@@ -107,7 +106,6 @@ export default function AdminPage() {
   const [isInitializing, setIsInitializing] = useState(false)
   const [message, setMessage] = useState('')
   const [uploadingImage, setUploadingImage] = useState<string | null>(null)
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [activeTab, setActiveTab] = useState<'projects' | 'resume' | 'analytics'>('projects')
   const [resumeFiles, setResumeFiles] = useState<{ en?: string; ko?: string; it?: string }>({})
   const [isLoadingResume, setIsLoadingResume] = useState(false)
@@ -120,24 +118,11 @@ export default function AdminPage() {
   /** 현재 언어의 title/fields 등 최신값 (필드 삭제 후 저장 시 클로저보다 이걸 우선 사용) */
   const currentTranslationRef = useRef<ProjectTranslation | null>(null)
 
-  // 페이지 로드 시 로그인 상태 확인
+  // The server layout only renders this component for an authenticated admin.
   useEffect(() => {
-    const checkAuth = () => {
-      const savedAuth = localStorage.getItem('admin_authenticated')
-      if (savedAuth === 'true') {
-        setIsAuthenticated(true)
-      }
-      setIsCheckingAuth(false)
-    }
-    checkAuth()
+    loadProjects()
+    loadResume()
   }, [])
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadProjects()
-      loadResume()
-    }
-  }, [isAuthenticated])
 
   // 저장 시 사용하는 ref: 태그/필드 추가·삭제 시에도 최신 translation 반영되도록 editingProject 전체 의존
   useEffect(() => {
@@ -313,21 +298,14 @@ export default function AdminPage() {
     }
   }
 
-  const handleLogin = () => {
-    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin2026'
-    if (password === adminPassword) {
-      setIsAuthenticated(true)
-      setError('')
-      // 로컬 스토리지에 로그인 상태 저장
-      localStorage.setItem('admin_authenticated', 'true')
-    } else {
-      setError('비밀번호가 올바르지 않습니다.')
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/admin/auth', { method: 'DELETE' })
+      if (!response.ok) throw new Error('Logout failed')
+      window.location.reload()
+    } catch {
+      setMessage('로그아웃하지 못했습니다. 다시 시도해 주세요.')
     }
-  }
-
-  const handleLogout = () => {
-    setIsAuthenticated(false)
-    localStorage.removeItem('admin_authenticated')
   }
 
   const loadProjects = async () => {
@@ -400,6 +378,7 @@ export default function AdminPage() {
       const formData = new FormData()
       formData.append('image', uploadFile)
       formData.append('type', type)
+      formData.append('scope', 'project')
 
       console.log('FormData entries:', Array.from(formData.entries()).map(([key, value]) => [key, value instanceof File ? `${value.name} (${value.type})` : value]))
 
@@ -570,6 +549,7 @@ export default function AdminPage() {
   const handleAddNew = () => {
     const newProject: Project = {
       id: '', // 사용자가 직접 입력하도록 빈값으로 시작
+      visibility: 'private',
       currentLanguage: 'en',
       tags: [], // 태그를 빈 배열로 명시적으로 초기화
       translations: {
@@ -663,7 +643,7 @@ export default function AdminPage() {
 
   // URL 변경 감지하여 편집 모드 관리
   useEffect(() => {
-    if (pathname === '/admin') {
+    if (pathname === '/admin' || pathname === '/admin/edit') {
       // 메인 admin 페이지로 돌아왔을 때 편집 모드 종료
       setEditingProject(null)
       setActiveTab('projects')
@@ -671,6 +651,7 @@ export default function AdminPage() {
       // 새 프로젝트 페이지 — 편집 중인 내용 있으면 덮어쓰지 않음 (저장 직후에도 저장된 프로젝트가 그대로 보이도록)
       const emptyNewProject: Project = {
         id: '',
+        visibility: 'private',
         currentLanguage: 'en',
         tags: [],
         translations: {
@@ -851,85 +832,6 @@ export default function AdminPage() {
   }
 
 
-  // 로그인 상태 확인 중
-  if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen p-8" style={{ paddingTop: '80px' }}>
-        <div className="max-w-7xl mx-auto">
-          {/* Header skeleton */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="animate-pulse h-9 w-48 bg-gray-700 rounded"></div>
-            <div className="flex gap-2">
-              <div className="animate-pulse h-10 w-24 bg-gray-700 rounded-lg"></div>
-              <div className="animate-pulse h-10 w-32 bg-gray-700 rounded-lg"></div>
-            </div>
-          </div>
-          {/* Tabs skeleton */}
-          <div className="flex gap-2 mb-6 border-b" style={{ borderColor: 'var(--fill-white-10)' }}>
-            <div className="animate-pulse h-10 w-24 bg-gray-700 rounded"></div>
-            <div className="animate-pulse h-10 w-24 bg-gray-700 rounded"></div>
-            <div className="animate-pulse h-10 w-24 bg-gray-700 rounded"></div>
-          </div>
-          {/* Content skeleton */}
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse p-6 bg-gray-800 rounded-lg">
-                <div className="h-6 w-3/4 bg-gray-700 rounded mb-4"></div>
-                <div className="h-4 w-full bg-gray-700 rounded mb-2"></div>
-                <div className="h-4 w-5/6 bg-gray-700 rounded"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // 로그인 페이지
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="p-8 rounded-lg shadow-md w-full max-w-md">
-          <h1 className="text-2xl font-bold mb-6 text-center text-white">Admin Access</h1>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              handleLogin()
-            }}
-            className="space-y-4"
-          >
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2 text-white">
-                관리자 비밀번호를 입력하세요
-              </label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  setError('')
-                }}
-                className="w-full px-4 py-2 border rounded-md bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-white"
-                style={{ borderColor: 'var(--fill-white-10)' }}
-                placeholder="관리자 비밀번호"
-              />
-            </div>
-            {error && (
-              <p className="text-red-500 text-sm">{error}</p>
-            )}
-            <button
-              type="submit"
-              className="w-full bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 transition-colors"
-            >
-              로그인
-            </button>
-          </form>
-        </div>
-      </div>
-    )
-  }
-
   // 편집 모드
   if (editingProject) {
     return (
@@ -973,6 +875,24 @@ export default function AdminPage() {
             )}
 
             <div className="space-y-6">
+              <div className="rounded-lg border border-gray-700 p-4">
+                <label htmlFor="project-visibility" className="block text-sm font-medium mb-2 text-white">공개 범위</label>
+                <select
+                  id="project-visibility"
+                  value={isPublicProject(editingProject) ? 'public' : 'private'}
+                  onChange={(event) => setEditingProject({ ...editingProject, visibility: event.target.value as ProjectVisibility })}
+                  className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-2 text-white"
+                  aria-describedby="project-visibility-description"
+                >
+                  <option value="private">관리자만 보기</option>
+                  <option value="public">전체 공개</option>
+                </select>
+                <p id="project-visibility-description" className="mt-2 text-sm text-gray-400">
+                  {isPublicProject(editingProject)
+                    ? '저장하면 방문자에게 공개됩니다.'
+                    : '저장 후 관리자 로그인 상태에서만 볼 수 있습니다. 외부 목록과 챗봇 검색에는 표시되지 않습니다.'}
+                </p>
+              </div>
               <div>
                 <label className="block text-sm font-medium mb-2 text-white">프로젝트 ID *</label>
                 <input
@@ -1767,6 +1687,9 @@ export default function AdminPage() {
                         <h2 className="text-lg font-semibold text-white truncate">
                           {formatProjectTitle(projectTitle)}
                         </h2>
+                        <span className="shrink-0 rounded bg-gray-800 px-2 py-1 text-xs text-gray-300">
+                          {isPublicProject(project) ? '전체 공개' : '관리자만 보기'}
+                        </span>
                         <div className="flex gap-1 flex-shrink-0">
                           {project.translations ? (
                             <>
@@ -1820,6 +1743,9 @@ export default function AdminPage() {
                       )}
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
+                      <a href={`/portfolio/${project.id}`} target="_blank" rel="noreferrer" className="px-4 py-2 border border-gray-600 rounded-lg text-sm text-white">
+                        미리보기
+                      </a>
                       <button
                         onClick={() => handleEdit(project)}
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm"

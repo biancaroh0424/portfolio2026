@@ -62,6 +62,11 @@ export async function POST(request: NextRequest) {
   logAI('요청 수신')
   try {
     const { message, conversationHistory, currentPath, currentHash, pageLanguage, pendingOpen } = await request.json()
+    // Private documents are never sent to the chatbot, even for an admin preview.
+    const requestedProjectId = typeof currentPath === 'string' ? currentPath.match(/^\/portfolio\/([^/?#]+)/)?.[1] : undefined
+    if (requestedProjectId && !(await getProject(requestedProjectId))) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
     logAI('파싱 완료', {
       msgLen: message?.length,
       path: currentPath,

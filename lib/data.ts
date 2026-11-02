@@ -3,13 +3,12 @@ import fs from 'fs/promises'
 import path from 'path'
 import { list } from '@vercel/blob'
 import { stripPortfolioVectorOnlyHtml } from '@/lib/strip-portfolio-vector-only'
+import { readStoredProjects } from './project-storage'
+import type { ProjectVisibility } from './project-visibility'
 
-const PROJECTS_FILE = path.join(process.cwd(), 'data', 'projects.json')
 const RESUME_FILE = path.join(process.cwd(), 'data', 'resume.json')
-const BLOB_PROJECTS_PATH = 'data/projects.json'
 const BLOB_RESUME_PATH = 'data/resume.json'
 
-let cachedProjects: any[] | null = null
 
 /** 프로덕션(Vercel)에서 Blob 저장소 사용 여부 */
 function isBlobStorageEnabled(): boolean {
@@ -18,70 +17,6 @@ function isBlobStorageEnabled(): boolean {
     typeof process.env.BLOB_READ_WRITE_TOKEN === 'string' &&
     process.env.BLOB_READ_WRITE_TOKEN.length > 0
   )
-}
-
-/** Vercel Blob에서 projects.json 읽기 (프로덕션 전용 — pathname 변형 모두 허용) */
-async function readProjectsFromBlob(): Promise<any[] | null> {
-  try {
-    const { blobs } = await list({ prefix: 'data/', limit: 20 })
-    const pathnames = blobs.map((b) => (b as { pathname?: string }).pathname ?? '').filter(Boolean)
-    if (process.env.VERCEL === '1') console.log('[data] production Blob list:', blobs.length, 'blob(s), pathnames:', pathnames.slice(0, 5).join(', ') || '(none)')
-    const blob =
-      blobs.find((b) => (b as { pathname?: string }).pathname === BLOB_PROJECTS_PATH) ??
-      blobs.find((b) => (b as { pathname?: string }).pathname === `/${BLOB_PROJECTS_PATH}`) ??
-      blobs.find((b) => (b as { pathname?: string }).pathname?.endsWith?.('projects.json')) ??
-      blobs.find((b) => (b as { pathname?: string }).pathname?.includes?.('projects.json'))
-    if (!blob?.url) {
-      if (process.env.VERCEL === '1') console.warn('[data] production: no projects.json blob in data/. Save a project from Admin first so Blob has data/projects.json.')
-      return null
-    }
-    const url = (blob.url as string) + ((blob.url as string).includes('?') ? '&' : '?') + '_=' + Date.now()
-    const res = await fetch(url)
-    if (!res.ok) {
-      if (process.env.VERCEL === '1') console.warn('[data] production Blob fetch not ok:', res.status)
-      return null
-    }
-    const json = await res.json()
-    return Array.isArray(json) ? json : null
-  } catch (e) {
-    if (process.env.VERCEL === '1') console.warn('[data] production readProjectsFromBlob error:', e instanceof Error ? e.message : String(e))
-    return null
-  }
-}
-
-/** 프로덕션에서만 사용: 같은 앱의 GET /api/admin/projects 호출 (Blob 실패 시 fallback) */
-async function readProjectsFromApi(): Promise<any[] | null> {
-  // 프로덕션에서는 VERCEL_URL만 사용 (localhost 제외)
-  const base =
-    process.env.VERCEL === '1'
-      ? (process.env.VERCEL_URL && `https://${String(process.env.VERCEL_URL).replace(/^https?:\/\//, '')}`) ||
-        process.env.NEXT_PUBLIC_VERCEL_URL ||
-        process.env.NEXT_PUBLIC_APP_URL
-      : process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000'
-  if (!base) {
-    if (process.env.VERCEL === '1') console.warn('[data] production: no base URL for API (VERCEL_URL / NEXT_PUBLIC_VERCEL_URL)')
-    return null
-  }
-  const url = `${base.replace(/\/$/, '')}/api/admin/projects`
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 15000)
-    const res = await fetch(url, {
-      cache: 'no-store',
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    })
-    clearTimeout(timeout)
-    if (!res.ok) {
-      if (process.env.VERCEL === '1') console.warn('[data] production readProjectsFromApi failed:', res.status, url)
-      return null
-    }
-    const json = await res.json()
-    return Array.isArray(json) ? json : null
-  } catch (e) {
-    if (process.env.VERCEL === '1') console.warn('[data] production readProjectsFromApi error:', e instanceof Error ? e.message : String(e), url)
-    return null
-  }
 }
 
 /** Blob에서 resume.json (PDF URL 맵 등) — 동적 import(JSON) 대신 사용해 webpack 청크 오류 방지 */
@@ -104,37 +39,6 @@ async function readResumeFromBlob(): Promise<Resume | null> {
   }
 }
 
-async function loadProjectsData(): Promise<any[]> {
-  // 프로덕션(Vercel+Blob): Blob 우선(같은 서버에서 토큰 사용), 실패 시 API. 파일 fallback 금지.
-  if (isBlobStorageEnabled()) {
-    let data = await readProjectsFromBlob()
-    if (data === null) data = await readProjectsFromApi()
-    if (data !== null) {
-      if (process.env.VERCEL === '1') console.log('[data] loadProjectsData: loaded', data.length, 'projects (Blob or API)')
-      return data
-    }
-    if (process.env.VERCEL === '1') {
-      console.error(
-        '[data] CRITICAL (production): Blob and API both failed. Set BLOB_READ_WRITE_TOKEN in Vercel env, then save at least one project from Admin so data/projects.json exists in Blob.'
-      )
-    }
-    return []
-  }
-
-  if (cachedProjects) {
-    return cachedProjects
-  }
-
-  try {
-    const data = await fs.readFile(PROJECTS_FILE, 'utf-8')
-    cachedProjects = JSON.parse(data)
-    return Array.isArray(cachedProjects) ? cachedProjects : []
-  } catch (error) {
-    console.error('Error loading projects.json:', error)
-    return []
-  }
-}
-
 export interface ProjectField {
   label: string
   value: string
@@ -152,6 +56,7 @@ export interface ProjectTranslation {
 
 export interface Project {
   id: string
+  visibility?: ProjectVisibility
   thumbnail?: string
   detailImage?: string // 상세 페이지(/portfolio/[id]) 배너 전용 이미지 (없으면 thumbnail 사용)
   currentLanguage?: 'en' | 'ko' | 'it' // 현재 편집 중인 언어 (기본값: 'en')
@@ -201,10 +106,10 @@ export interface Content {
   language?: 'en' | 'ko' | 'it' // 콘텐츠 언어
 }
 
-export async function getProjects(): Promise<Project[]> {
+export async function getProjects(includePrivate = false): Promise<Project[]> {
   // 실제로는 API 호출이나 파일 읽기
   // thumbnail과 image가 null인 경우 undefined로 변환
-  const projectsData = await loadProjectsData()
+  const projectsData = await readStoredProjects(includePrivate)
   type SectionShape = { id: string; title: string; content: string | string[]; image?: string | null }
   return projectsData.map((project: Record<string, unknown>) => ({
     ...project,
@@ -216,8 +121,8 @@ export async function getProjects(): Promise<Project[]> {
   })) as Project[]
 }
 
-export async function getProject(id: string): Promise<Project | null> {
-  const projects = await getProjects()
+export async function getProject(id: string, includePrivate = false): Promise<Project | null> {
+  const projects = await getProjects(includePrivate)
   return projects.find(p => p.id === id) || null
 }
 

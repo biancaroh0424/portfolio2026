@@ -1,3 +1,4 @@
+import { requireAdmin } from '@/lib/admin-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs/promises'
 import path from 'path'
@@ -130,6 +131,8 @@ export async function GET() {
 
 // Resume 저장
 export async function PUT(request: NextRequest) {
+  const authError = requireAdmin(request)
+  if (authError) return authError
   try {
     const resume = await request.json()
     const normalized = { en: resume.en ?? '', ko: resume.ko ?? '', it: resume.it ?? '' }
@@ -161,6 +164,8 @@ function isResumeLang(s: string | null): s is ResumeLang {
 
 /** 특정 언어 이력서 PDF 제거 + resume.json 반영 */
 export async function DELETE(request: NextRequest) {
+  const authError = requireAdmin(request)
+  if (authError) return authError
   try {
     const lang = new URL(request.url).searchParams.get('lang')
     if (!isResumeLang(lang)) {

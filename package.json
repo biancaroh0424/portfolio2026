@@ -7,7 +7,9 @@
     "dev:clean": "rm -rf .next && next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:admin-auth": "node --test tests/admin-auth.test.cjs",
+    "test:project-privacy": "node --test tests/project-privacy.test.cjs"
   },
   "dependencies": {
     "@chroma-core/default-embed": "^0.1.9",

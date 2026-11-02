@@ -1,3 +1,4 @@
+import { requireAdmin } from '@/lib/admin-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { promises as fs } from 'fs'
 import path from 'path'
@@ -134,6 +135,8 @@ export async function POST(request: NextRequest) {
 
 // 질문 데이터 조회 (시간별 통계 포함)
 export async function GET(request: NextRequest) {
+  const authError = requireAdmin(request)
+  if (authError) return authError
   try {
     const entries: ChatEntry[] = isBlobStorageEnabled()
       ? await readAnalyticsFromBlob()

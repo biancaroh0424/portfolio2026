@@ -31,6 +31,9 @@ npm install
 # Portfolio Password (CV에 적힌 비밀번호)
 NEXT_PUBLIC_PORTFOLIO_PASSWORD=your_password_here
 
+# Admin password (server only, never use a NEXT_PUBLIC_ prefix)
+ADMIN_PASSWORD=use_a_long_unique_password
+
 # Gemini API Key (필수)
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
@@ -42,11 +45,11 @@ Gemini API 키는 [Google AI Studio](https://makersuite.google.com/app/apikey)�
 CMS 데이터를 벡터 임베딩으로 변환하기 위해 다음 API를 호출하세요:
 
 ```bash
-curl -X POST http://localhost:3000/api/embed
+# /admin 에서 로그인 후 '벡터 저장소 초기화' 버튼 사용
 ```
 
 또는 브라우저에서 직접 접속:
-- http://localhost:3000/api/embed
+- 관리자 로그인 후 http://localhost:3000/api/embed 에서 상태 확인 (초기화는 관리자 화면에서 실행)
 
 ### 개발 서버 실행
 
@@ -118,7 +121,7 @@ portfolio_2026/
 1. `data/projects.json` 파일 수정
 2. 벡터 저장소 재생성:
    ```bash
-   curl -X POST http://localhost:3000/api/embed
+   # /admin 에서 로그인 후 '벡터 저장소 초기화' 버튼 사용
    ```
 
 ## AI 모델

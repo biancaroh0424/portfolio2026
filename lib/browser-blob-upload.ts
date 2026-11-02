@@ -28,3 +28,20 @@ export async function uploadFileToVercelBlob(file: File, pathnamePrefix = 'uploa
     contentType: file.type || undefined,
   })
 }
+
+/** Encrypt before a direct upload, so the public Blob URL contains no viewable media. */
+export async function uploadProtectedProjectFile(file: File): Promise<{ url: string }> {
+  const key = crypto.getRandomValues(new Uint8Array(32))
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const cryptoKey = await crypto.subtle.importKey('raw', key, 'AES-GCM', false, ['encrypt'])
+  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, cryptoKey, await file.arrayBuffer())
+  const encryptedFile = new File([encrypted], 'media.bin', { type: 'application/octet-stream' })
+  const blob = await uploadFileToVercelBlob(encryptedFile, 'protected-uploads')
+  const toBase64 = (value: Uint8Array) => btoa(String.fromCharCode(...value))
+  const response = await fetch('/api/admin/media', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blobUrl: blob.url, clientKey: toBase64(key), clientIv: toBase64(iv), contentType: file.type, filename: file.name }),
+  })
+  if (!response.ok) throw new Error('Failed to register protected media')
+  return response.json()
+}

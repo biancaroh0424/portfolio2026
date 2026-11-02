@@ -1,8 +1,10 @@
+import { requireAdmin } from '@/lib/admin-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
 import fs from 'fs/promises'
 import path from 'path'
 import { randomBytes } from 'crypto'
+import { saveProjectMedia } from '@/lib/project-media'
 
 export const runtime = 'nodejs'
 
@@ -16,6 +18,8 @@ function isBlobStorageEnabled(): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  const authError = requireAdmin(request)
+  if (authError) return authError
   try {
     const formData = await request.formData()
     const imageFile = formData.get('image') as File | null
@@ -60,6 +64,11 @@ export async function POST(request: NextRequest) {
     const pathname = `uploads/${filename}`
 
     const buffer = Buffer.from(await file.arrayBuffer())
+
+    if (formData.get('scope') === 'project') {
+      const url = await saveProjectMedia({ contentType: file.type, filename: file.name, body: buffer.toString('base64') })
+      return NextResponse.json({ url, filename }, { headers: { 'Cache-Control': 'no-store' } })
+    }
 
     if (isBlobStorageEnabled()) {
       const { url } = await put(pathname, buffer, { access: 'public' })

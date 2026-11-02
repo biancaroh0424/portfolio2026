@@ -8,13 +8,27 @@
 
 ```env
 NEXT_PUBLIC_PORTFOLIO_PASSWORD=your_password_here
-NEXT_PUBLIC_ADMIN_PASSWORD=admin2026
+ADMIN_PASSWORD=use_a_long_unique_password
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 ### 비밀번호 설정
 - `NEXT_PUBLIC_PORTFOLIO_PASSWORD`: 포트폴리오 접근 비밀번호 (CV에 적힌 비밀번호)
-- `NEXT_PUBLIC_ADMIN_PASSWORD`: 관리자 페이지 접근 비밀번호 (기본값: admin2026)
+- `ADMIN_PASSWORD`: 관리자 페이지 전용 비밀번호. 길고 고유한 값을 사용하세요. 기본 비밀번호는 없으며, 미설정 시 관리자 접근이 잠깁니다.
+- 이전 `NEXT_PUBLIC_ADMIN_PASSWORD`는 삭제하세요. `NEXT_PUBLIC_` 값은 브라우저에 공개되므로 관리자 인증에 사용하지 않습니다. 이전에 사용하던 값과 다른 비밀번호를 설정하세요.
+- `/admin`, `/admin/edit/`, `/admin/edit/[id]`, `/admin/new`, `/admin/analytics`는 로그인 후 접근할 수 있습니다. 로그인은 HttpOnly 쿠키로 8시간 유지됩니다. 로그아웃 시 쿠키를 삭제하며 비밀번호 변경 후에는 기존 세션도 무효가 됩니다.
+- Vercel의 **Settings → Environment Variables**에도 `ADMIN_PASSWORD`를 Production / Preview 각각 설정하고 재배포해야 운영 사이트에 적용됩니다. `.env.local`은 로컬 개발에만 적용됩니다.
+- 프로젝트 저장·삭제, 이력서 수정·삭제, 업로드, 분석 조회, 임베딩 API는 서버에서 관리자 인증을 검사합니다. 공개 포트폴리오에서 사용하는 프로젝트·이력서 GET 및 분석 수집 POST는 계속 공개입니다.
+- 로그인 실패는 서버 인스턴스별로 IP당 15분 동안 10회까지 허용합니다. 배포 인스턴스 전체에 걸친 제한이 필요하면 Vercel Firewall에서 `/api/admin/auth` 제한을 추가하세요.
+
+### CMS 문서 공개 범위
+
+- `/admin/new`에서 새 문서는 **관리자만 보기**가 기본값입니다. **전체 공개**로 바꾸고 저장하면 방문자에게 공개됩니다. 기존 문서의 공개 상태는 유지됩니다.
+- 관리자 로그인 후 문서 목록의 **미리보기**로 비공개 문서를 볼 수 있습니다. 외부 방문자의 목록·문서 API·직접 주소에는 비공개 문서가 표시되지 않습니다.
+- 비공개 문서는 챗봇 입력·인덱싱에서 제외합니다. 이전 검색 인덱스가 남아 있어도 현재 공개 상태를 다시 확인합니다.
+- 새로 올리는 프로젝트 첨부파일은 보호된 API를 통해 전달합니다. 공개 문서에서 참조하는 파일만 방문자가 볼 수 있고, 비공개 문서·저장 전 파일은 관리자만 볼 수 있습니다. 기존 외부 이미지·영상·임베드 URL은 원래 호스팅 서비스의 공개 범위를 따릅니다. 이미 공개했던 콘텐츠를 비공개로 바꿔도 이전에 다운로드한 사본까지 회수하지는 못합니다.
+- Vercel Blob에 저장하는 비공개 문서와 보호 첨부파일은 AES-256-GCM으로 암호화합니다. 키는 서버의 `PROJECT_CONTENT_ENCRYPTION_KEY`(32자 이상), 미설정 시 `BLOB_READ_WRITE_TOKEN`에서 유도합니다. **관리자 비밀번호와는 별개**이므로 비밀번호 변경으로 문서가 사라지지 않습니다.
+- **암호화 키를 분실·교체하면 기존 비공개 데이터는 읽을 수 없습니다.** Blob 토큰을 교체할 때 별도 키가 없었다면, 기존 토큰 값을 `PROJECT_CONTENT_ENCRYPTION_KEY`에 유지한 뒤 토큰을 교체하세요. 공개 저장소나 브라우저용 환경 변수에는 키를 넣지 마세요.
 
 ### Gemini API 키 발급 방법
 
@@ -59,13 +73,12 @@ CMS 데이터를 벡터 임베딩으로 변환해야 합니다.
 ### 방법 1: API 호출
 
 ```bash
-curl -X POST http://localhost:3000/api/embed
+# 관리자 화면에서 로그인 후 '벡터 저장소 초기화' 버튼을 사용하세요.
 ```
 
 ### 방법 2: 브라우저에서 접속
 
-개발 서버 실행 후:
-- http://localhost:3000/api/embed
+개발 서버 실행 후 관리자 로그인 상태에서 http://localhost:3000/api/embed 에 접속하면 상태를 확인할 수 있습니다. 초기화는 관리자 화면의 버튼을 사용하세요.
 
 ### 방법 3: 자동 초기화 (선택사항)
 
@@ -99,7 +112,7 @@ curl -X POST http://localhost:3000/api/embed
 프로젝트 데이터를 수정한 후에는 반드시 벡터 저장소를 재생성하세요:
 
 ```bash
-curl -X POST http://localhost:3000/api/embed
+# 관리자 화면에서 로그인 후 '벡터 저장소 초기화' 버튼을 사용하세요.
 ```
 
 ## 4. Gemini 모델 설정

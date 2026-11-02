@@ -19,7 +19,7 @@ import { Columns, Column } from '@/lib/tiptap-columns'
 import { Table, TableRow, TableHeaderCell, TableCell, createDefaultTableNode } from '@/lib/tiptap-table'
 import { VectorOnly } from '@/lib/tiptap-vector-only'
 import { optimizeImageForUpload } from '@/lib/client-image-upload'
-import { uploadFileToVercelBlob } from '@/lib/browser-blob-upload'
+import { uploadProtectedProjectFile } from '@/lib/browser-blob-upload'
 
 const VECTOR_ONLY_PLACEHOLDER =
   '챗봇에만 전달할 내용을 여기에 작성하세요. (포트폴리오 페이지에는 표시되지 않습니다.)'
@@ -652,6 +652,7 @@ export default function RichTextEditor({
       const formData = new FormData()
       formData.append('image', uploadFile)
       formData.append('type', 'editor')
+      formData.append('scope', 'project')
 
       const response = await fetch('/api/admin/upload', {
         method: 'POST',
@@ -693,13 +694,14 @@ export default function RichTextEditor({
       let data: { url?: string }
 
       try {
-        const blob = await uploadFileToVercelBlob(file)
+        const blob = await uploadProtectedProjectFile(file)
         data = { url: blob.url }
       } catch (blobErr) {
         console.warn('[video upload] Blob client upload failed, falling back to API:', blobErr)
         const formData = new FormData()
         formData.append('video', file)
         formData.append('type', 'editor')
+        formData.append('scope', 'project')
 
         const response = await fetch('/api/admin/upload', {
           method: 'POST',

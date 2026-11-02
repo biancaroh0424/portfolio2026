@@ -6,6 +6,8 @@
  * - 그 외 → chromadb SDK (로컬 서버 또는 CloudClient)
  */
 export type { VectorDocument } from './vector-store-chroma-http'
+import { getProjects } from './data'
+import { publicSearchResults } from './project-visibility'
 
 type Impl = typeof import('./vector-store-chroma-http')
 let implCache: Impl | null = null
@@ -62,7 +64,8 @@ export async function searchVectorStore(
   filter?: { projectId?: string; language?: 'en' | 'ko' | 'it' }
 ): Promise<Array<{ id: string; content: { id: string; title: string; content: string; projectId?: string; language?: 'en' | 'ko' | 'it'; type: 'project' | 'about' | 'general' | 'resume' }; score: number }>> {
   const m = await getImpl()
-  return m.searchVectorStore(queryEmbedding, limit, filter)
+  const results = await m.searchVectorStore(queryEmbedding, limit, filter)
+  return publicSearchResults(results, await getProjects())
 }
 
 export async function listVectorStoreDocuments(): Promise<Array<{ id: string; content: { title: string } }>> {
