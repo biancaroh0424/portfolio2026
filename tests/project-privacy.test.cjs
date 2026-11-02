@@ -55,6 +55,7 @@ const mediaApi = load('app/api/admin/media/[id]/route.ts')
 const mediaRegisterApi = load('app/api/admin/media/route.ts')
 const data = load('lib/data.ts')
 const vector = load('lib/vector-store.ts')
+const { getAdminProjectTitle } = load('lib/utils.ts')
 const origin = 'http://127.0.0.1:3000'
 const adminCookie = `portfolio_admin_session=${session.createAdminSession('admin2026')}`
 function request(url, { admin = false, method = 'GET', body } = {}) {
@@ -64,6 +65,16 @@ function request(url, { admin = false, method = 'GET', body } = {}) {
   })
 }
 const translation = title => ({ en: { title, content: `<p>${title} body</p>` } })
+
+test('CMS titles use the populated language when a new private document has an empty English translation', () => {
+  const project = { id: 'private-document', visibility: 'private', translations: {
+    en: { title: '' }, ko: { title: '비공개 문서 제목' },
+  } }
+  assert.equal(getAdminProjectTitle(project), '비공개 문서 제목')
+  assert.equal(getAdminProjectTitle({ ...project, translations: { en: { title: '   ' }, it: { title: 'Titolo' } } }), 'Titolo')
+  assert.equal(getAdminProjectTitle({ ...project, title: 'Legacy title', translations: { en: { title: '' } } }), 'Legacy title')
+  assert.equal(getAdminProjectTitle({ id: 'untitled-document', translations: { en: { title: '' } } }), 'untitled-document')
+})
 
 test('legacy visibility remains public; private and invalid visibility never leak', () => {
   const projects = [{ id: 'legacy' }, { id: 'public', visibility: 'public' }, { id: 'draft', visibility: 'private' }, { id: 'invalid', visibility: null }]

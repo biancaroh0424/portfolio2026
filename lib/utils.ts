@@ -9,3 +9,22 @@ export function formatProjectTitle(title: string): string {
   return title
 }
 
+/** Empty translations must not hide a title written in another language. */
+export function getAdminProjectTitle(project: {
+  id?: string
+  title?: string
+  translations?: Partial<Record<'en' | 'ko' | 'it', { title?: string }>>
+}): string {
+  const candidates = [
+    project.translations?.en?.title,
+    project.translations?.ko?.title,
+    project.translations?.it?.title,
+    project.title,
+    project.id,
+  ]
+  for (const title of candidates) {
+    if (typeof title === 'string' && title.trim()) return title.trim()
+  }
+  return '프로젝트'
+}
+

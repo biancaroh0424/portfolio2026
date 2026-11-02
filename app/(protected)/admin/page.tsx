@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import RichTextEditor from '@/components/RichTextEditor'
-import { formatProjectTitle } from '@/lib/utils'
+import { formatProjectTitle, getAdminProjectTitle } from '@/lib/utils'
 import { optimizeImageForUpload } from '@/lib/client-image-upload'
 import { isPublicProject, type ProjectVisibility } from '@/lib/project-visibility'
 
@@ -1655,12 +1655,7 @@ export default function AdminPage() {
           <>
             <div className="space-y-2">
               {projects.map((project) => {
-                const projectTitle = (() => {
-                  if (project.translations?.en) return project.translations.en.title
-                  if (project.translations?.ko) return project.translations.ko.title
-                  if (project.translations?.it) return project.translations.it.title
-                  return project.title || '프로젝트'
-                })()
+                const projectTitle = getAdminProjectTitle(project)
                 
                 const projectFields = project.translations?.en?.fields || project.translations?.ko?.fields || project.translations?.it?.fields || project.fields || []
                 const period = projectFields.find(f => 
