@@ -14,7 +14,7 @@ const sessionModule = new Module(filename, module)
 sessionModule.filename = filename
 sessionModule.paths = module.paths
 sessionModule._compile(compiled, filename)
-const { createAdminSession, verifyAdminSession, matchesAdminPassword, ADMIN_SESSION_MAX_AGE } = sessionModule.exports
+const { createAdminSession, verifyAdminSession, matchesAdminPassword, getAdminPassword, ADMIN_SESSION_MAX_AGE } = sessionModule.exports
 const authFilename = path.resolve(__dirname, '../lib/admin-auth.ts')
 const authModule = new Module(authFilename, module)
 authModule.filename = authFilename
@@ -25,11 +25,20 @@ authModule._compile(ts.transpileModule(fs.readFileSync(authFilename, 'utf8'), {
 }).outputText, authFilename)
 const { rejectCrossOrigin, requireAdmin } = authModule.exports
 const { NextRequest } = require('next/server')
+const routeFilename = path.resolve(__dirname, '../app/api/admin/auth/route.ts')
+const routeModule = new Module(routeFilename, module)
+routeModule.filename = routeFilename
+routeModule.paths = module.paths
+routeModule.require = (id) => id === '@/lib/admin-session' ? sessionModule.exports
+  : id === '@/lib/admin-auth' ? authModule.exports : require(id)
+routeModule._compile(ts.transpileModule(fs.readFileSync(routeFilename, 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+}).outputText, routeFilename)
 
 const password = 'test-only-long-unique-password'
 const now = 1800000000000
 
-test('only the configured password is accepted; no default or empty password', () => {
+test('password comparison rejects incorrect and empty credentials', () => {
   assert.equal(matchesAdminPassword(password, password), true)
   assert.equal(matchesAdminPassword('admin2026', password), false)
   assert.equal(matchesAdminPassword('', ''), false)
@@ -74,7 +83,7 @@ test('origin checks accept the actual host, including loopback IPs, and reject c
   }
 })
 
-test('API authorization fails closed and enforces origin checks after authentication', () => {
+test('API authorization requires a valid session and origin with custom or default passwords', () => {
   const previous = process.env.ADMIN_PASSWORD
   try {
     const origin = 'http://127.0.0.1:3000'
@@ -87,7 +96,36 @@ test('API authorization fails closed and enforces origin checks after authentica
     assert.equal(requireAdmin(request(cookie)), null)
     assert.equal(requireAdmin(request(cookie, 'https://external.example')).status, 403)
     delete process.env.ADMIN_PASSWORD
-    assert.equal(requireAdmin(request(cookie)).status, 503)
+    assert.equal(requireAdmin(request(cookie)).status, 401)
+    const defaultCookie = `portfolio_admin_session=${createAdminSession('admin2026')}`
+    assert.equal(requireAdmin(request(defaultCookie)), null)
+    assert.equal(requireAdmin(request('admin_authenticated=true')).status, 401)
+  } finally {
+    if (previous === undefined) delete process.env.ADMIN_PASSWORD
+    else process.env.ADMIN_PASSWORD = previous
+  }
+})
+
+test('login works with admin2026 without an ADMIN_PASSWORD environment variable', async () => {
+  const previous = process.env.ADMIN_PASSWORD
+  try {
+    delete process.env.ADMIN_PASSWORD
+    assert.equal(getAdminPassword(), 'admin2026')
+    const loginRequest = (value) => new NextRequest('https://portfolio.example/api/admin/auth', {
+      method: 'POST', headers: { host: 'portfolio.example', origin: 'https://portfolio.example', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: value }),
+    })
+    assert.equal((await routeModule.exports.POST(loginRequest('incorrect-password'))).status, 401)
+    const login = await routeModule.exports.POST(loginRequest('admin2026'))
+    assert.equal(login.status, 200)
+    const cookie = login.headers.get('set-cookie')
+    assert.match(cookie, /HttpOnly/i)
+    assert.match(cookie, /Secure/i)
+    assert.equal(requireAdmin(new NextRequest('https://portfolio.example/api/admin/projects?scope=admin', {
+      headers: { cookie: cookie.split(';')[0] },
+    })), null)
+    process.env.ADMIN_PASSWORD = password
+    assert.equal(getAdminPassword(), password)
   } finally {
     if (previous === undefined) delete process.env.ADMIN_PASSWORD
     else process.env.ADMIN_PASSWORD = previous

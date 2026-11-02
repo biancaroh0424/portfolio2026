@@ -1,13 +1,13 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from './admin-session'
+import { ADMIN_SESSION_COOKIE, getAdminPassword, verifyAdminSession } from './admin-session'
 
 export function hasAdminSession(): boolean {
-  return verifyAdminSession(cookies().get(ADMIN_SESSION_COOKIE)?.value, process.env.ADMIN_PASSWORD || '')
+  return verifyAdminSession(cookies().get(ADMIN_SESSION_COOKIE)?.value, getAdminPassword())
 }
 
 export function isAdminRequest(request: NextRequest): boolean {
-  return verifyAdminSession(request.cookies.get(ADMIN_SESSION_COOKIE)?.value, process.env.ADMIN_PASSWORD || '')
+  return verifyAdminSession(request.cookies.get(ADMIN_SESSION_COOKIE)?.value, getAdminPassword())
 }
 
 export function rejectCrossOrigin(request: NextRequest): NextResponse | null {
@@ -24,10 +24,6 @@ export function rejectCrossOrigin(request: NextRequest): NextResponse | null {
 
 /** Always check in the handler itself, before reading data or performing mutations. */
 export function requireAdmin(request: NextRequest): NextResponse | null {
-  const password = process.env.ADMIN_PASSWORD || ''
-  if (!password) {
-    return NextResponse.json({ error: '관리자 비밀번호가 설정되지 않았습니다.' }, { status: 503 })
-  }
   if (!isAdminRequest(request)) {
     return NextResponse.json({ error: '관리자 로그인이 필요합니다.' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
   }

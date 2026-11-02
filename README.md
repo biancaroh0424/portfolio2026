@@ -31,7 +31,7 @@ npm install
 # Portfolio Password (CV에 적힌 비밀번호)
 NEXT_PUBLIC_PORTFOLIO_PASSWORD=your_password_here
 
-# Admin password (server only, never use a NEXT_PUBLIC_ prefix)
+# Optional admin password override (default: admin2026; server only)
 ADMIN_PASSWORD=use_a_long_unique_password
 
 # Gemini API Key (필수)

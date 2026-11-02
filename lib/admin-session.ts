@@ -3,6 +3,11 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 export const ADMIN_SESSION_COOKIE = 'portfolio_admin_session'
 export const ADMIN_SESSION_MAX_AGE = 8 * 60 * 60
 
+/** Preserve the original admin password when no server override is configured. */
+export function getAdminPassword(): string {
+  return process.env.ADMIN_PASSWORD || 'admin2026'
+}
+
 export function matchesAdminPassword(candidate: string, password: string): boolean {
   if (!password || candidate.length > 1024) return false
   const digest = (value: string) => createHash('sha256').update(value).digest()

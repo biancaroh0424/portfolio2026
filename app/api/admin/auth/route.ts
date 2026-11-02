@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rejectCrossOrigin } from '@/lib/admin-auth'
-import { ADMIN_SESSION_COOKIE, ADMIN_SESSION_MAX_AGE, createAdminSession, matchesAdminPassword } from '@/lib/admin-session'
+import { ADMIN_SESSION_COOKIE, ADMIN_SESSION_MAX_AGE, createAdminSession, getAdminPassword, matchesAdminPassword } from '@/lib/admin-session'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,10 +13,7 @@ const MAX_ATTEMPTS = 10
 export async function POST(request: NextRequest) {
   const originError = rejectCrossOrigin(request)
   if (originError) return originError
-  const password = process.env.ADMIN_PASSWORD
-  if (!password) {
-    return NextResponse.json({ error: '관리자 비밀번호가 설정되지 않았습니다.' }, { status: 503 })
-  }
+  const password = getAdminPassword()
 
   const now = Date.now()
   for (const [key, value] of attempts) {

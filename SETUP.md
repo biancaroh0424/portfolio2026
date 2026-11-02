@@ -14,10 +14,10 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 ### 비밀번호 설정
 - `NEXT_PUBLIC_PORTFOLIO_PASSWORD`: 포트폴리오 접근 비밀번호 (CV에 적힌 비밀번호)
-- `ADMIN_PASSWORD`: 관리자 페이지 전용 비밀번호. 길고 고유한 값을 사용하세요. 기본 비밀번호는 없으며, 미설정 시 관리자 접근이 잠깁니다.
-- 이전 `NEXT_PUBLIC_ADMIN_PASSWORD`는 삭제하세요. `NEXT_PUBLIC_` 값은 브라우저에 공개되므로 관리자 인증에 사용하지 않습니다. 이전에 사용하던 값과 다른 비밀번호를 설정하세요.
+- `ADMIN_PASSWORD`: 선택 사항인 관리자 비밀번호 재정의 값. 미설정 시 기존 기본값 `admin2026`으로 로그인할 수 있습니다.
+- 이전 `NEXT_PUBLIC_ADMIN_PASSWORD`는 관리자 인증에 사용하지 않습니다. 비밀번호 비교와 세션 검증은 서버에서 처리합니다.
 - `/admin`, `/admin/edit/`, `/admin/edit/[id]`, `/admin/new`, `/admin/analytics`는 로그인 후 접근할 수 있습니다. 로그인은 HttpOnly 쿠키로 8시간 유지됩니다. 로그아웃 시 쿠키를 삭제하며 비밀번호 변경 후에는 기존 세션도 무효가 됩니다.
-- Vercel의 **Settings → Environment Variables**에도 `ADMIN_PASSWORD`를 Production / Preview 각각 설정하고 재배포해야 운영 사이트에 적용됩니다. `.env.local`은 로컬 개발에만 적용됩니다.
+- 기본 비밀번호 `admin2026`을 사용할 때는 Vercel에 별도 설정이 필요하지 않습니다. 다른 비밀번호를 사용할 경우에만 **Settings → Environment Variables**의 `ADMIN_PASSWORD`를 Production / Preview 각각 설정하고 재배포하세요. `.env.local`은 로컬 개발에만 적용됩니다.
 - 프로젝트 저장·삭제, 이력서 수정·삭제, 업로드, 분석 조회, 임베딩 API는 서버에서 관리자 인증을 검사합니다. 공개 포트폴리오에서 사용하는 프로젝트·이력서 GET 및 분석 수집 POST는 계속 공개입니다.
 - 로그인 실패는 서버 인스턴스별로 IP당 15분 동안 10회까지 허용합니다. 배포 인스턴스 전체에 걸친 제한이 필요하면 Vercel Firewall에서 `/api/admin/auth` 제한을 추가하세요.
 
