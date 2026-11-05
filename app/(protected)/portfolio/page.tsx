@@ -10,6 +10,18 @@ import { isPublicProject } from '@/lib/project-visibility'
 
 const LOAD_TIMEOUT_MS = 8000 // 이 시간 지나면 무조건 로딩 해제 (스켈레톤에 갇힘 방지)
 
+const FEATURED_PROJECT_IDS = [
+  'allibee-product-improvement',
+  'payment-experience',
+  'product-funnel',
+  'allibee-landing',
+]
+
+function featuredProjectRank(project: { id: string }): number {
+  const index = FEATURED_PROJECT_IDS.indexOf(project.id)
+  return index < 0 ? FEATURED_PROJECT_IDS.length : index
+}
+
 type ProjectField = { label?: string; value?: string; type?: string }
 
 // 현재 언어의 translation을 가져오는 헬퍼 함수
@@ -72,7 +84,11 @@ export default function ProjectsPage() {
       clearTimeout(timeoutId)
       if (response.ok) {
         const data = await response.json()
-        setProjects(Array.isArray(data) ? data.filter(isPublicProject) : [])
+        setProjects(
+          Array.isArray(data)
+            ? data.filter(isPublicProject).sort((a, b) => featuredProjectRank(a) - featuredProjectRank(b))
+            : []
+        )
       } else {
         setProjects([])
       }
