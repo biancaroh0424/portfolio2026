@@ -2157,3 +2157,66 @@ a h1.projects-page-title {
   margin-top: 0;
 }
 
+/* Published case studies: readable copy and consistent section rhythm. */
+.portfolio-content-container [data-portfolio-body].prose.prose-lg {
+  padding-top: 88px !important;
+}
+
+.portfolio-content-container [data-portfolio-body].prose.prose-lg > p {
+  max-width: 760px;
+  line-height: 1.75 !important;
+}
+
+.portfolio-content-container [data-portfolio-body].prose.prose-lg :is(h2, h3, h4, h5, h6) {
+  word-break: keep-all !important;
+  overflow-wrap: break-word !important;
+}
+
+.portfolio-content-container [data-portfolio-body].prose.prose-lg > p:has(> em:only-child) {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  opacity: 0.72;
+}
+
+@container portfolio-content (max-width: 743px) {
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg {
+    padding-top: 56px !important;
+  }
+
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg h2,
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg h2 * {
+    font-size: 32px !important;
+    line-height: 1.4 !important;
+  }
+
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg h2 {
+    margin-bottom: 24px !important;
+  }
+
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg h3,
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg h3 * {
+    font-size: 26px !important;
+    line-height: 1.4 !important;
+  }
+
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg h3 {
+    margin-bottom: 20px !important;
+  }
+
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg :is(h4, h5),
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg :is(h4, h5) * {
+    font-size: 22px !important;
+    line-height: 1.45 !important;
+  }
+
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg :is(h4, h5) {
+    margin-bottom: 16px !important;
+  }
+
+  .portfolio-content-container [data-portfolio-body].prose.prose-lg [data-type="spacing"] {
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+  }
+}
+
